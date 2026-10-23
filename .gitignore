@@ -1,0 +1,15 @@
+# Environment variables & secrets
+.env
+*.local
+*.secret
+
+# Tool configurations containing private API keys
+configs/**/setting.json
+configs/**/config.json
+!configs/**/*.template.json
+
+# Cache and temporary logs
+*.log
+*.tmp
+.cache/
+downloads/

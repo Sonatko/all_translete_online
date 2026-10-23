@@ -4,9 +4,9 @@
     "theme": "auto"
   },
   "hotkeys": {
-    "ocr_recognize_and_translate": "Alt+Q",
-    "selection_translate": "Alt+W",
-    "open_main_window": "Alt+S"
+    "ocr_recognize_and_translate": "Ctrl+Shift+T",
+    "selection_translate": "Ctrl+Shift+Y",
+    "open_main_window": "Ctrl+Shift+D"
   },
   "learning_hints": {
     "dictionary": "Cambridge",

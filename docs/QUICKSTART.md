@@ -11,9 +11,9 @@ No physical `F1–F12` row is needed. All shortcuts are bound to standard, left-
 | Action | Universal Hotkey | Behavior |
 |---|---|---|
 | **Live Audio Subtitles** | `Win` + `Ctrl` + `L` | Toggles native Windows on-device speech recognition. Set source to **English (US)**. |
-| **Screen OCR Translation** | `Alt` + `Q` | Snip any screen region (games, images, comics) for instant OCR recognition and translation. |
-| **Selection Translation** | `Alt` + `W` | Highlights text in any browser, document, or chat and translates immediately. |
-| **Dictionary & Vocabulary** | `Alt` + `S` | Opens dictionary lookup card with phonetic transcription and Cambridge definitions. |
+| **Screen OCR Translation** | `Ctrl` + `Shift` + `T` | Snip any screen region (games, images, comics) for instant OCR recognition and translation. Safe from WASD gaming keys. |
+| **Selection Translation** | `Ctrl` + `Shift` + `Y` | Highlights text in any browser, document, or chat and translates immediately. |
+| **Dictionary & Vocabulary** | `Ctrl` + `Shift` + `D` | Opens dictionary lookup card with phonetic transcription and Cambridge definitions. |
 
 ---
 

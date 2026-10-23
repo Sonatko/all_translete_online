@@ -13,3 +13,5 @@ configs/**/config.json
 *.tmp
 .cache/
 downloads/
+bin/
+*.exe

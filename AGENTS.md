@@ -28,3 +28,16 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
 - **Project Configuration & Meta Files**: Written in English (`AGENTS.md`, `README.md`, config presets).
 - **Developer Journal & Analysis Notes (`dev_notes/`)**: Written in clear, pedagogical Russian for the user's daily reference.
 - **Agent Interaction**: Conducted in clear, patient Russian adhering to strict deep-research reality checks.
+
+### 5. Engine Respect, User Clarification & Golden Control Scheme
+- **Strict Engine Respect & Anti-Overengineering**:
+  - Never alter default upstream engine mechanics or invent unrequested hotkeys/controls without explicit user approval.
+  - Preserve native application conventions (e.g., LiveTranslate's middle-click dragging) rather than re-inventing standard UI patterns.
+- **Mandatory User Clarification**:
+  - If any user requirement, technical direction, or design choice is ambiguous, doubtful, or underspecified, **NEVER GUESS OR CODE ASSUMPTIONS**. Stop and ask the user directly for clarification.
+- **Golden Subtitle & Audio Pipeline Interaction Scheme**:
+  - **Master Hotkey (`F9`)**: Single master toggle that synchronously switches `Subtitles Visible + Transcription RUN` and `Subtitles Hidden + Transcription PAUSE`.
+  - **Subtitle Lock / Click-Through Toggle**: Double-click Middle Mouse Button (wheel click) over the subtitle banner to toggle `Click-through` (Lock / Unlock Move Mode).
+  - **Subtitle Window Dragging**: Strictly Middle Mouse Button (wheel click) drag ONLY. Left-click is never hijacked.
+  - **Alpha Hit-Testing Surface**: Invisible `Alpha = 1/255` background fill in `paintEvent` to ensure Windows DWM hit-testing works seamlessly across the entire banner even at 0% background opacity.
+

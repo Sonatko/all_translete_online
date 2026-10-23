@@ -1,47 +1,32 @@
 # Quickstart & Universal Reproduction Guide
 
-This guide ensures that on any Windows PC today, next month, or years from now, you can restore your real-time translation and language-learning workstation within minutes without coding knowledge.
+This guide describes how to run and use the battle-tested Stage 1 real-time audio translation and subtitle setup on Windows.
 
 ---
 
-## 1. Ergonomic Keymap for Compact Keyboards (60% / 65% / TKL)
+## 1. Stage 1: Real-Time Audio Translation & Cinema Subtitles (LiveTranslate)
 
-No physical `F1–F12` row is needed. All shortcuts are bound to standard, left-hand-friendly modifier combinations:
+### Daily Usage & Controls
+1. **Launch:** Run `bin\LiveTranslate\start.bat`.
+2. **Master Switch (`F9` key or `Sub` button on overlay):**
+   - **Press `F9`:** Shows cinema subtitles and instantly starts audio transcription (`Run`).
+   - **Press `F9` again:** Hides cinema subtitles and immediately pauses transcription (`Pause`), saving GPU and LLM tokens.
+3. **Repositioning Subtitles (Mouse Wheel Double-Click):**
+   - **Double-click mouse wheel over subtitles:** Toggles `Click-through` OFF.
+   - Hold mouse wheel and drag to desired position on screen.
+   - **Double-click mouse wheel over subtitles again:** Toggles `Click-through` back ON (subtitles lock in place and clicks pass right through into games/video).
 
-| Action | Universal Hotkey | Behavior |
-|---|---|---|
-| **Live Audio Subtitles** | `Win` + `Ctrl` + `L` | Toggles native Windows on-device speech recognition. Set source to **English (US)**. |
-| **Screen OCR Translation** | `Ctrl` + `Shift` + `T` | Snip any screen region (games, images, comics) for instant OCR recognition and translation. Safe from WASD gaming keys. |
-| **Selection Translation** | `Ctrl` + `Shift` + `Y` | Highlights text in any browser, document, or chat and translates immediately. |
-| **Dictionary & Vocabulary** | `Ctrl` + `Shift` + `D` | Opens dictionary lookup card with phonetic transcription and Cambridge definitions. |
-
----
-
-## 2. Fast 1-Click Installation (Any Machine)
-
-Open PowerShell and run the setup script:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-```
-
-### What this script does automatically:
-1. Installs **Pot-Desktop** using Microsoft's official Windows Package Manager (`winget install --id Pylogmon.pot`).
-2. Downloads the standalone **LiveCaptions-Translator** (bundled with `.NET` runtime) into the local `bin/` directory.
-3. Automatically deploys the **Educational Preset** (`configs/livecaptions-translator/setting.template.json`) which enables the dual-line subtitle format:
-   - Line 1: Natural Russian translation.
-   - Line 2: `💡` Educational breakdown of idioms, phrasal verbs, and B2–C2 vocabulary.
+### Architecture Summary
+* **Capture:** WASAPI Loopback (direct hardware stereo mix).
+* **ASR:** FunASR SenseVoice Small on CUDA 12.8 (~60–90 ms latency).
+* **LLM Translation:** Groq Cloud API (`openai/gpt-oss-20b`) with pedagogical CEFR A1–A2 prompt.
+* **Subtitles:** Yellow 28pt bold English (primary focus), muted 20pt Russian (support), black outline, transparent background, auto-hide on pause.
 
 ---
 
-## 3. Daily Workflow (Playing Games & Learning English)
+## 2. Stage 2: Screen OCR & Selection Translation (Upcoming)
 
-1. **Before launching your game or video:**
-   - Press `Win` + `Ctrl` + `L` once to activate Windows Live Captions.
-   - Run `bin/LiveCaptionsTranslator.exe` (or let it launch with Windows).
-2. **In games:**
-   - Set the game's display mode to **Borderless Windowed** (so overlays render seamlessly).
-   - Position the subtitle overlay where you want (it is click-through, so you can shoot and click right through it).
-3. **When reading text or menus:**
-   - Press `Alt` + `Q` and draw a box around any dialogue box or text.
-   - Press `Esc` to dismiss the translation popup and continue playing.
+* **Tool:** [Pot-Desktop](https://github.com/pot-app/pot-desktop) (`winget install --id Pylogmon.pot`)
+* **Features:**
+  - `Ctrl + Shift + T`: Snip any screen region (games, images, comics) for instant OCR recognition and translation.
+  - `Ctrl + Shift + Y`: Instant selection translation in any browser, document, or chat.

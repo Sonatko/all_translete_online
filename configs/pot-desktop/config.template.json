@@ -1,0 +1,16 @@
+{
+  "general": {
+    "target_language": "ru",
+    "theme": "auto"
+  },
+  "hotkeys": {
+    "ocr_recognize_and_translate": "Alt+Q",
+    "selection_translate": "Alt+W",
+    "open_main_window": "Alt+S"
+  },
+  "learning_hints": {
+    "dictionary": "Cambridge",
+    "auto_pronounce_tts": true,
+    "save_to_vocabulary": true
+  }
+}

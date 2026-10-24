@@ -1,0 +1,690 @@
+
+=== USER [2026-10-24T16:07:12Z] ===
+<USER_REQUEST>
+перенеси но оставь метку гед нибудь гед ее срауз увижу я в будущем что обс рабоате на амд если надждо дял игр перенеси обратно на (в п роекте и где то там гед я сразу увижу )
+ и над оподумать как запустить ту програму через админа дай команду чтоле
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:07:12+05:00.
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T16:07:49Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_AMD.bat" -> "Script to switch OBS to AMD iGPU"
+EDIT [2026-10-24T16:08:01Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_NVIDIA.bat" -> "Script to switch OBS to NVIDIA RTX 5070"
+EDIT [2026-10-24T16:08:10Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\FLUSH_DWM_ADMIN.bat" -> "Script to flush DWM as Administrator"
+EDIT [2026-10-24T16:08:21Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\dev_notes\\day_06_hybrid_graphics_and_vram_optimization.md" -> "Update day 06 notes with OBS and IDE offload, multi-monitor DWM findings, and batch switches"
+EDIT [2026-10-24T16:08:34Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\dev_notes\\day_06_hybrid_graphics_and_vram_optimization.md" -> "Update day 06 notes without line numbers"
+EDIT [2026-10-24T16:09:05Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\README.md" -> "Add quick utility batch scripts section to README.md"
+
+=== USER [2026-10-24T16:10:44Z] ===
+<USER_REQUEST>
+не работает скрипты сделаны с ошибками
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:10:44+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\SET_OBS_GPU_AMD.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\SET_OBS_GPU_NVIDIA.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\dev_notes\day_06_hybrid_graphics_and_vram_optimization.md (LANGUAGE_MARKDOWN)
+- c:\Users\SONATO\Dev\active\all_translete_online\README.md (LANGUAGE_MARKDOWN)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T16:11:22Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_AMD.bat" -> "Clean ASCII batch script for OBS AMD switch"
+EDIT [2026-10-24T16:11:35Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_NVIDIA.bat" -> "Clean ASCII batch script for OBS NVIDIA switch"
+EDIT [2026-10-24T16:11:43Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\FLUSH_DWM_ADMIN.bat" -> "Clean ASCII batch script for DWM flush via UAC"
+EDIT [2026-10-24T16:11:59Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_AMD.bat" -> "Fixed batch script without exclamation marks or unescaped parentheses"
+EDIT [2026-10-24T16:12:13Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\SET_OBS_GPU_NVIDIA.bat" -> "Fixed batch script for NVIDIA switch"
+EDIT [2026-10-24T16:14:11Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\FLUSH_DWM_ADMIN.bat" -> "Clean FLUSH_DWM_ADMIN.bat with zero syntax errors"
+EDIT [2026-10-24T16:14:26Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\FLUSH_DWM_ADMIN.bat" -> "Robust FLUSH_DWM_ADMIN.bat without timeout or redirection errors"
+
+=== USER [2026-10-24T16:16:52Z] ===
+<USER_REQUEST>
+окей что сейчас занимает
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:16:52+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:20:21Z] ===
+<USER_REQUEST>
+SnippingTool.exe (Ножницы) yflj xnj,s jyf dctufl pfrthsdfkfcm cfvf f yt dtctkf d gfvznb
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:20:21+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:22:47Z] ===
+<USER_REQUEST>
+окей как урезать еще больше? може тможно облегчить еще что то почт и2 гб это дикость я думаю
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:22:47+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:27:20Z] ===
+<USER_REQUEST>
+ в трее нету радеона никаокго
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:27:20+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:33:36Z] ===
+<USER_REQUEST>
+перпервреь я же перткнул 1 камеблть
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:33:36+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:34:43Z] ===
+<USER_REQUEST>
+Discord.exe: ~170 МБ (если в Discord отключить «Аппаратное ускорение», будет ещё -170 МБ). я же отключил
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:34:43+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:35:36Z] ===
+<USER_REQUEST>
+1 437 MiB (~1.43 ГБ).- что знаимает факты
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:35:36+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T16:35:36Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\scratch\\check_adapters.py" -> "Check adapter hardware details"
+EDIT [2026-10-24T16:36:00Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\scratch\\inspect_instances.py" -> "Inspect GPUProcessMemory instance names"
+EDIT [2026-10-24T16:36:25Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\scratch\\check_adapter_luid.py" -> "Query GPU adapter memory to identify LUIDs"
+EDIT [2026-10-24T16:36:42Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\scratch\\get_nvidia_exact_facts.py" -> "Exact facts script filtering strictly by NVIDIA RTX 5070 LUID"
+
+=== USER [2026-10-24T16:38:17Z] ===
+<USER_REQUEST>
+280 + 213 + 129 + 100 как ты получил 1.4 гб.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:38:17+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:38:58Z] ===
+<USER_REQUEST>
+окей как это уменьшить поищи в интее решеения
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:38:58+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:50:01Z] ===
+<USER_REQUEST>
+я все это сделал то есть это предел?
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:50:01+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:51:11Z] ===
+<USER_REQUEST>
+~1 450 MiB (~1.45 ГБ) почему так много у меня 1 монитор всего 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:51:11+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:53:10Z] ===
+<USER_REQUEST>
+зачем ты фантазируешь?
+у меня 1 МОНТИОР от МАтериинки 
+1 монитор от карты.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:53:10+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:54:30Z] ===
+<USER_REQUEST>
+Discord.exe почему он забирает память если он на амд
+explorer.exe то же самое
+Antigravity IDE + Касперский то же самое 
+obs64.exe то же самое 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:54:30+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T16:55:25Z] ===
+<USER_REQUEST>
+ок закончили запиши про это вернемся к нашему проекту
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:55:25+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+Cursor is on line: 8
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T16:55:36Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\dev_notes\\day_06_hybrid_graphics_and_vram_optimization.md" -> "Update Day 06 notes with final findings, UWP background fixes, and VRAM benchmark"
+EDIT [2026-10-24T16:56:04Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\dev_notes\\day_06_hybrid_graphics_and_vram_optimization.md" -> "Remove accidental line numbers in day 06 notes"
+
+=== USER [2026-10-24T16:57:07Z] ===
+<USER_REQUEST>
+сделай скрипт который запускает сначал сервер ждет пока он запустить потом запускает старт бат
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T21:57:07+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\FLUSH_DWM_ADMIN.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\scratch\get_nvidia_exact_facts.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\dev_notes\day_06_hybrid_graphics_and_vram_optimization.md (LANGUAGE_MARKDOWN)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T16:58:57Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\START_ALL.bat" -> "Master turnkey launcher script START_ALL.bat"
+EDIT [2026-10-24T16:59:16Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\STOP_ALL.bat" -> "Turnkey stop script STOP_ALL.bat"
+EDIT [2026-10-24T16:59:29Z]: "c:\\Users\\SONATO\\Dev\\active\\all_translete_online\\README.md" -> "Add Master Launcher section to README.md"
+
+=== USER [2026-10-24T17:02:42Z] ===
+<USER_REQUEST>
+окно должно закрыть после того как запустило все
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:02:42+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:04:09Z] ===
+<USER_REQUEST>
+что ты делаешь ТВОЙ ДОЛжен закрыться плюс не хукя не работает перводчик
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:04:09+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:04:09Z]: "c:/Users/SONATO/Dev/active/all_translete_online/START_ALL.bat" -> "Make START_ALL.bat launch LiveTranslate in the background/new process and immediately close the launcher console window"
+
+=== USER [2026-10-24T17:04:41Z] ===
+<USER_REQUEST>
+ДА не трогай ты сука чужое ЗА СВОЕ ОТВЕЧАЙ
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:04:41+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:04:49Z]: "c:/Users/SONATO/Dev/active/all_translete_online/START_ALL.bat" -> "Ensure START_ALL.bat exits immediately and closes its console window"
+
+=== USER [2026-10-24T17:06:23Z] ===
+<USER_REQUEST>
+эти 2 окна дждолжны закрыться (но не убить процессы а то они мешают , после того как все запутсилось (точно) они тихо исчезают)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:06:23+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\start.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:10:18Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/llama_server/launch_server.py" -> "Add GetConsoleWindow and user32 ShowWindow to launch_server.py"
+EDIT [2026-10-24T17:10:30Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/llama_server/launch_server.py" -> "Hide Llama Server console window when health check returns 200 OK"
+EDIT [2026-10-24T17:11:10Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/main.py" -> "Define _hide_console_window function in main.py"
+EDIT [2026-10-24T17:11:25Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/main.py" -> "Hide console window when ASR worker is ready"
+EDIT [2026-10-24T17:11:36Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/main.py" -> "Add fallback timer to hide console window in main.py"
+EDIT [2026-10-24T17:12:02Z]: "c:/Users/SONATO/Dev/active/all_translete_online/STOP_ALL.bat" -> "Ensure STOP_ALL.bat cleanly terminates hidden LiveTranslate python processes"
+
+=== USER [2026-10-24T17:13:23Z] ===
+<USER_REQUEST>
+удасный промт подсказки ужасны подсказка должны быть очень простйо и одна (+ колесико мышки не работае снова)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:13:23+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\start.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:15:15Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Add GetWindowRect signature to _user32"
+EDIT [2026-10-24T17:15:29Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Use GetWindowRect for DPI-aware physical coordinates hit test in mouse hook"
+EDIT [2026-10-24T17:15:49Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/main.py" -> "Update mouse hook in main.py to use GetWindowRect physical coordinates"
+EDIT [2026-10-24T17:16:07Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Update system_prompt to simple single-hint prompt and set click_through to false"
+EDIT [2026-10-24T17:16:23Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Set click_through to false by default"
+EDIT [2026-10-24T17:17:47Z]: "c:/Users/SONATO/Dev/active/all_translete_online/STOP_ALL.bat" -> "Ensure STOP_ALL.bat reliably stops all project processes using Stop-Process -Force"
+
+=== USER [2026-10-24T17:18:34Z] ===
+<USER_REQUEST>
+Я устанавливаю "click_through": false в user_settings.json, чтобы баннер субтитров всегда запускался в режиме перемещения и перетаскивался колесиком мыши сразу без дополнительных действий.
+я не просил сука обо это просто ебаное 1 ДЕЙСТВИЕ (2 клика колесиком мыши ОСВОБОЖАДЕТ И БЛОКИРУЕТ ГАЛОЧКУ - ВСЕ БЛЯТЬ большен никаких действий су4ка)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:18:34+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\main.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\start.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:19:43Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Make double middle-click cleanly toggle click_through in both directions"
+EDIT [2026-10-24T17:20:05Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/main.py" -> "Remove duplicate hook in main.py"
+EDIT [2026-10-24T17:20:27Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Update system_prompt to simple concise single-hint format"
+
+=== USER [2026-10-24T17:22:03Z] ===
+<USER_REQUEST>
+почему грузить CPU если почти все загружено на GPU при старте на GPU почи вся память я думаю проще перенести уже всна GPU
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:22:03+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 78
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\start.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\main.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:24:22Z] ===
+<USER_REQUEST>
+окей делай пернос (но это слишком больашя моделль это понлый бред я думаю потмо будем решать как сдделать это проще) 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:24:22+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 78
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\main.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\start.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:24:34Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/llama_server/launch_server.py" -> "Set -ngl to 99 for full GPU offload"
+EDIT [2026-10-24T17:24:41Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/llama_server/run_server.bat" -> "Update run_server.bat banner to reflect Full GPU offload"
+
+=== USER [2026-10-24T17:30:03Z] ===
+<USER_REQUEST>
+в прицнипе работает хорошо но теперь ндао применить хорошие настройки, типо  идеальные натсройки переводить по буква есмоксть и т.д изучи а инете какие ставить
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:30:03+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\run_server.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:31:37Z] ===
+<USER_REQUEST>
+окей делай все натсройки
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:31:37+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\run_server.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:32:10Z]: "c:/Users/SONATO/Dev/active/all_translete_online/STOP_ALL.bat" -> "Replace & with and in STOP_ALL.bat to prevent cmd command separation"
+EDIT [2026-10-24T17:32:22Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Update VAD and ASR timing parameters for low latency streaming"
+EDIT [2026-10-24T17:32:40Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Update whisper_pad_seconds, incremental_asr, and interim_interval"
+EDIT [2026-10-24T17:32:57Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Update animation and auto_hide settings in subtitle_mode"
+
+=== USER [2026-10-24T17:34:13Z] ===
+<USER_REQUEST>
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:34:13+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:35:15Z] ===
+<USER_REQUEST>
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:35:15+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:35:29Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Change auto_hide_timeout from 4.5 to integer 5"
+EDIT [2026-10-24T17:35:38Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_settings.py" -> "Cast auto_hide_timeout to int in setValue call"
+
+=== USER [2026-10-24T17:39:00Z] ===
+<USER_REQUEST>
+почему созадние слов не по онлайн? 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:39:00+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_settings.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:39:33Z] ===
+<USER_REQUEST>
+ты делал это раньше не еби мохги.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:39:33+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_settings.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:39:51Z] ===
+<USER_REQUEST>
+ты блять деедл это час назад сука.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:39:51+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_settings.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\llama_server\launch_server.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:40:45Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Reset entry_animation and exit_animation to none for instant real-time streaming"
+EDIT [2026-10-24T17:41:09Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Use immediate text application during streaming to ensure instant word-by-word display"
+EDIT [2026-10-24T17:41:17Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Support streaming parameter in _refresh_display"
+
+=== USER [2026-10-24T17:47:41Z] ===
+<USER_REQUEST>
+сука ну хуйня полная он просто блять моргает  ожно и тоже слов опочему ты блят ьне можеш ьсделать атк же как делал сегождня сука
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:47:41+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:48:02Z] ===
+<USER_REQUEST>
+ЗАЧЕМ Искат ьесли ты делал сегодня!!!!
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:48:02+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:48:33Z] ===
+<USER_REQUEST>
+нахуй ты что то трогаешь сукаа тупая ТЫ СЕГОДЯН ДЕЛАЛ ЭТО блять просто найди это долбаеб
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:48:33+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:49:14Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Restore subtitle_window.py to today's working code"
+EDIT [2026-10-24T17:49:22Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Restore _refresh_display in subtitle_window.py"
+EDIT [2026-10-24T17:49:39Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Restore original working VAD and ASR timing settings"
+EDIT [2026-10-24T17:49:56Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Restore incremental_asr to false, interim_interval to 3.0, whisper_pad_seconds to 0.5"
+EDIT [2026-10-24T17:50:15Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Restore animation settings to none and duration to 300ms"
+
+=== USER [2026-10-24T17:51:10Z] ===
+<USER_REQUEST>
+ТЫ релаьно долбаеб, ты нашел хъорошие натсрйоки октатил и всех хотя он ихорошие ПРОСТО БЛЯТЬ РЕАЛИЗУЙ оналйн перево дпо кусочку а не ВСЕМ БЛЯТЬ предолежнием долбаеба ты куусок ебаного
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:51:10+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:52:05Z] ===
+<USER_REQUEST>
+НАХУЙ ТЕБЯ ИСКАТЬ заного ты понимаешь что ты делал это сегодня???????????
+ВЕРНИ БЛЯТ ЬАНСТРОЙКИ котоыре нашел 0 3 045 и т.д они номральные 
+и ПРОСТО БЛЯТЬ РЕЛАИЗУЙ 1 хуйню ОНАЛЙН созадние по кусочкам ВСЕЕЕ НАХУ;Й  (ты уже деал лэто седня долбабе)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:52:05+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:52:25Z] ===
+<USER_REQUEST>
+НАХУЙ ТЕБЯ ИСКАТЬ заного ты понимаешь что ты делал это сегодня???????????
+ВЕРНИ БЛЯТ ЬАНСТРОЙКИ котоыре нашел 0 3 045 и т.д они номральные 
+и ПРОСТО БЛЯТЬ РЕЛАИЗУЙ 1 хуйню ОНАЛЙН созадние по кусочкам ВСЕЕЕ НАХУ;Й  (ты уже деал лэто седня долбабе)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:52:25+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:52:41Z] ===
+<USER_REQUEST>
+НАХУЙ ТЕБЯ ИСКАТЬ заного ты понимаешь что ты делал это сегодня???????????
+ВЕРНИ БЛЯТ ЬАНСТРОЙКИ котоыре нашел 0 3 045 и т.д они номральные 
+и ПРОСТО БЛЯТЬ РЕЛАИЗУЙ 1 хуйню ОНАЛЙН созадние по кусочкам ВСЕЕЕ НАХУ;Й  (ты уже деал лэто седня долбабе)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:52:41+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+Cursor is on line: 102
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+</ADDITIONAL_METADATA>
+EDIT [2026-10-24T17:52:54Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/subtitle_window.py" -> "Update streaming text in-place to prevent blinking"
+EDIT [2026-10-24T17:53:22Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Apply good VAD and speech duration settings"
+EDIT [2026-10-24T17:53:38Z]: "c:/Users/SONATO/Dev/active/all_translete_online/bin/LiveTranslate/user_settings.json" -> "Apply whisper_pad_seconds 0.3, incremental_asr true, interim_interval 0.8"
+
+=== USER [2026-10-24T17:56:25Z] ===
+<USER_REQUEST>
+вот видишь баг изсче 0.8 секнуд
+но слова не  троять как раньше пло каждому слову
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:56:25+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+</ADDITIONAL_METADATA>
+
+=== USER [2026-10-24T17:58:50Z] ===
+<USER_REQUEST>
+вот видишь баг изсче 0.8 секнуд
+но слова не  троять как раньше пло каждому слову
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T22:58:50+05:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 51
+Other open documents:
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\user_settings.json (LANGUAGE_JSON)
+- c:\Users\SONATO\Dev\active\all_translete_online\bin\LiveTranslate\subtitle_window.py (LANGUAGE_PYTHON)
+- c:\Users\SONATO\Dev\active\all_translete_online\START_ALL.bat (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>

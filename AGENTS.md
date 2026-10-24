@@ -37,7 +37,7 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - If any user requirement, technical direction, or design choice is ambiguous, doubtful, or underspecified, **NEVER GUESS OR CODE ASSUMPTIONS**. Stop and ask the user directly for clarification.
 - **Golden Subtitle & Audio Pipeline Interaction Scheme**:
   - **Master Hotkey (`F9`)**: Single master toggle that synchronously switches `Subtitles Visible + Transcription RUN` and `Subtitles Hidden + Transcription PAUSE`.
-  - **Subtitle Lock / Click-Through Toggle**: Double-click Middle Mouse Button (wheel click) over the subtitle banner to toggle `Click-through` (Lock / Unlock Move Mode).
-  - **Subtitle Window Dragging**: Strictly Middle Mouse Button (wheel click) drag ONLY. Left-click is never hijacked.
+  - **Subtitle Lock / Click-Through Toggle**: Double-click Middle Mouse Button (2x MMB / wheel click) over the subtitle banner to toggle Click-through (включение / выключение галочки прозрачности). Left-click is never hijacked.
+  - **Subtitle Window Dragging**: Native Middle Mouse Button (wheel click) drag ONLY.
   - **Alpha Hit-Testing Surface**: Invisible `Alpha = 1/255` background fill in `paintEvent` to ensure Windows DWM hit-testing works seamlessly across the entire banner even at 0% background opacity.
 

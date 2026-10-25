@@ -20,12 +20,12 @@ Write-Host "==========================================================" -Foregro
 Write-Host " Universal Real-Time Translation & Language Ecosystem Setup" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-$WorkspaceRoot = Split-Path -Parent $PSScriptRoot
+$WorkspaceRoot = (Get-Item "$PSScriptRoot\..\..").FullName
 $Stage1Dir = Join-Path $WorkspaceRoot "stage_1_audio"
 $Stage2Dir = Join-Path $WorkspaceRoot "stage_2_screen"
 $Stage3Dir = Join-Path $WorkspaceRoot "stage_3_anki"
 $Stage4Dir = Join-Path $WorkspaceRoot "stage_4_voice"
-$ConfigsDir = Join-Path $WorkspaceRoot "configs"
+$ConfigsDir = Join-Path $WorkspaceRoot "archive\configs"
 
 # ---------------------------------------------------------------------
 # 1. Check Python & Audio Pipeline (Stage 1)

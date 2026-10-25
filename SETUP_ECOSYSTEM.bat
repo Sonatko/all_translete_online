@@ -7,7 +7,7 @@ echo ======================================================================
 echo  UNIVERSAL SETUP & ENVIRONMENT VERIFIER
 echo ======================================================================
 echo.
-powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\setup.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0archive\scripts\setup.ps1"
 echo.
 pause
 exit /b 0

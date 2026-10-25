@@ -86,36 +86,37 @@ def detect_src_lang(text: str) -> str:
     return "eng_Latn"
 
 
-def translate_text(text: str) -> str:
+def translate_text(text: str, target_lang: str = "rus_Cyrl") -> str:
     clean = text.strip()
     if not clean:
         return ""
-    if clean in CACHE:
-        return CACHE[clean]
+    cache_key = f"{target_lang}:{clean}"
+    if cache_key in CACHE:
+        return CACHE[cache_key]
 
     src_lang = detect_src_lang(clean)
-    # If source is already Russian Cyrillic, return directly
-    if src_lang == "rus_Cyrl":
+    # If source is already the target language, return directly
+    if src_lang == target_lang:
         return clean
 
     _tokenizer.src_lang = src_lang
     tokens = _tokenizer.convert_ids_to_tokens(_tokenizer.encode(clean))
     res = _translator.translate_batch(
         [tokens],
-        target_prefix=[["rus_Cyrl"]],
+        target_prefix=[[target_lang]],
         beam_size=4,
         length_penalty=1.0,
         repetition_penalty=1.1,
         max_decoding_length=64,
     )
     tgt = res[0].hypotheses[0]
-    if tgt and tgt[0] == "rus_Cyrl":
+    if tgt and tgt[0] == target_lang:
         tgt = tgt[1:]
     translated = _tokenizer.decode(_tokenizer.convert_tokens_to_ids(tgt))
 
     if len(CACHE) >= MAX_CACHE:
         CACHE.clear()
-    CACHE[clean] = translated
+    CACHE[cache_key] = translated
     return translated
 
 
@@ -172,16 +173,27 @@ class OpenAIProxyHandler(http.server.BaseHTTPRequestHandler):
         is_stream = bool(req_json.get("stream", False))
 
         source_text = ""
+        target_lang = "rus_Cyrl"
         for m in reversed(messages):
             if m.get("role") == "user":
                 source_text = m.get("content", "")
                 break
 
+        # Detect target language from instruction / prompt (default: Russian rus_Cyrl, supported: Chinese zho_Hans, English eng_Latn)
+        for m in messages:
+            content_lower = m.get("content", "").lower()
+            if any(k in content_lower for k in ("chinese", "中文", "zh-cn", "zho_hans", "to chinese")):
+                target_lang = "zho_Hans"
+                break
+            elif any(k in content_lower for k in ("to english", "eng_latn")):
+                target_lang = "eng_Latn"
+                break
+
         t0 = time.monotonic()
         try:
-            translated_text = translate_text(source_text)
+            translated_text = translate_text(source_text, target_lang=target_lang)
             elapsed_ms = int((time.monotonic() - t0) * 1000)
-            log.info(f"[{elapsed_ms}ms] \"{source_text}\" -> \"{translated_text}\"")
+            log.info(f"[{elapsed_ms}ms] [{target_lang}] \"{source_text}\" -> \"{translated_text}\"")
         except Exception as e:
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             log.error(f"[{elapsed_ms}ms] Translation failed for \"{source_text}\": {e}")

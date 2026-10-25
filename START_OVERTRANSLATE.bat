@@ -45,6 +45,6 @@ echo ======================================================================
 echo  Tray Icon is active in Windows notification area (near the clock).
 echo ======================================================================
 echo.
-echo Press any key to close this launcher console...
-pause >nul
+echo This launcher will close automatically in 3 seconds...
+ping 127.0.0.1 -n 4 >nul
 exit /b 0

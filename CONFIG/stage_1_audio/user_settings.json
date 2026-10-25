@@ -36,7 +36,7 @@
   "system_prompt": "You are a real-time subtitle translator for casual conversation. Translate {source_lang} into {target_lang}.\nRules:\n- Output ONLY one single best translation, nothing else.\n- Never include alternatives, parenthetical options, annotations, or explanations.\n- Keep proper nouns, names, and brand names untranslated.\n- Use natural, casual, everyday language. Keep it conversational and concise.\n- Auto-correct likely ASR errors based on context and common sense.",
   "timeout": 10,
   "incremental_asr": false,
-  "interim_interval": 0.3,
+  "interim_interval": 1.0,
   "auto_save_transcript": true,
   "style": {
     "preset": "custom",
@@ -66,7 +66,7 @@
     "auto_hide_timeout": 5,
     "auto_hide_animation": "fade",
     "auto_hide_duration": 300,
-    "click_through": false,
+    "click_through": true,
     "lines": [
       {
         "align": "left",
@@ -105,8 +105,8 @@
         "type": "translation"
       }
     ],
-    "window_x": 685,
-    "window_y": 47
+    "window_x": 633,
+    "window_y": 41
   },
   "overlay_x": 1514,
   "overlay_y": 590,

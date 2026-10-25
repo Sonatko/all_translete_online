@@ -31,17 +31,18 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
 +---------------------------------------------------------------------------------+
 ```
 
-## Directory Layout
-- `AGENTS.md` - Agent instruction file and operational constraints.
-- `README.md` - Technical architecture and project roadmap.
-- `dev_notes/` - Daily developer journal and comparative tool analyses (in Russian).
-- `configs/` - Exported presets and configuration templates for selected tools.
-- `scripts/` - Easy launcher shortcuts and batch setup scripts (if needed).
+## Directory Layout (Root)
+- `stage_1_audio/` - Stage 1: Real-Time System Audio & Subtitles (LiveTranslate + NLLB-200 Server).
+- `stage_2_screen/` - Stage 2: Screen In-Place OCR & AI Context Learning (OverTranslate).
+- `stage_3_anki/` - Stage 3: Spaced Repetition Memory Bridge (Anki Desktop + AnkiConnect).
+- `stage_4_voice/` - Stage 4: Real-Time Voice Cloning & Speech-to-Speech Translation (Roadmap).
+- `archive/` - Archived logs, developer journals (`dev_notes/`), legacy tools, and setup scripts.
 
 ## Master Turnkey Launchers (Project Root)
-- `START_EN_RU.bat` (or `START_ALL.bat`) - 1-Click launcher for **English -> Russian Audio** (Whisper medium INT8 + Meta NLLB-200 1.3B on CUDA).
+- `START_EN_RU.bat` - 1-Click launcher for **English -> Russian Audio** (Whisper medium INT8 + Meta NLLB-200 1.3B on CUDA).
 - `START_ZH_RU.bat` - 1-Click launcher for **Chinese -> Russian Audio** (Whisper medium INT8 Chinese ASR + Meta NLLB-200 1.3B direct ZH->RU on CUDA).
-- `START_OVERTRANSLATE.bat` - 1-Click launcher for **In-Place Screen & Image Translation** (OverTranslate + OpenRouter educational breakdown).
+- `START_OVERTRANSLATE.bat` - 1-Click launcher for **In-Place Screen & Image Translation** (OverTranslate + Groq LPU educational breakdown).
+- `SETUP_ECOSYSTEM.bat` - 1-Click universal environment validator & installer for any Windows PC.
 - `STOP_ALL.bat` - 1-Click clean terminator: gracefully stops all server, transcription, and overlay processes.
 
 ## Project Roadmap & Status

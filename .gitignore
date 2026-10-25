@@ -19,5 +19,20 @@ stage_1_audio/nllb_server/models/
 stage_2_screen/OverTranslate/current/
 bin/
 *.exe
+stage_3_anki/*.pyd
+stage_3_anki/*.dll
+stage_3_anki/*.zip
+stage_3_anki/python*
+stage_3_anki/app/
+stage_3_anki/app_packages/
+stage_3_anki/_installer/
 stage_3_anki/installer/
+stage_3_anki/__install__.json
+stage_3_anki/LICENSE.txt
+stage_3_anki/icon.ico
 *.msi
+archive/scratch/
+
+# Explicitly track CONFIG directory
+!CONFIG/
+!CONFIG/**

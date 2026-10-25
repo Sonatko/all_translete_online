@@ -1,32 +1,43 @@
-# Quickstart & Universal Reproduction Guide
+# Quickstart & Universal Ecosystem Guide
 
-This guide describes how to run and use the battle-tested Stage 1 real-time audio translation and subtitle setup on Windows.
-
----
-
-## 1. Stage 1: Real-Time Audio Translation & Cinema Subtitles (LiveTranslate)
-
-### Daily Usage & Controls
-1. **Launch:** Run `bin\LiveTranslate\start.bat`.
-2. **Master Switch (`F9` key or `Sub` button on overlay):**
-   - **Press `F9`:** Shows cinema subtitles and instantly starts audio transcription (`Run`).
-   - **Press `F9` again:** Hides cinema subtitles and immediately pauses transcription (`Pause`), saving GPU and LLM tokens.
-3. **Repositioning Subtitles (Mouse Wheel Double-Click):**
-   - **Double-click mouse wheel over subtitles:** Toggles `Click-through` OFF.
-   - Hold mouse wheel and drag to desired position on screen.
-   - **Double-click mouse wheel over subtitles again:** Toggles `Click-through` back ON (subtitles lock in place and clicks pass right through into games/video).
-
-### Architecture Summary
-* **Capture:** WASAPI Loopback (direct hardware stereo mix).
-* **ASR:** FunASR SenseVoice Small on CUDA 12.8 (~60–90 ms latency).
-* **LLM Translation:** Groq Cloud API (`openai/gpt-oss-20b`) with pedagogical CEFR A1–A2 prompt.
-* **Subtitles:** Yellow 28pt bold English (primary focus), muted 20pt Russian (support), black outline, transparent background, auto-hide on pause.
+Это пошаговое руководство по использованию всех готовых инструментов экосистемы на Windows.
 
 ---
 
-## 2. Stage 2: Screen OCR & Selection Translation (Upcoming)
+## 1. Этап 1: Живой звук и субтитры (LiveTranslate + NLLB-200 + Whisper)
 
-* **Tool:** [Pot-Desktop](https://github.com/pot-app/pot-desktop) (`winget install --id Pylogmon.pot`)
-* **Features:**
-  - `Ctrl + Shift + T`: Snip any screen region (games, images, comics) for instant OCR recognition and translation.
-  - `Ctrl + Shift + Y`: Instant selection translation in any browser, document, or chat.
+- **Назначение:** перевод речи из YouTube, стримов, Discord и любых игр в реальном времени.
+- **Быстрый запуск:**
+  - `START_EN_RU.bat` — для английского звука (фильмы, англоязычные игры).
+  - `START_ZH_RU.bat` — для китайского звука (маньхуа, китайские стримы).
+- **Горячие клавиши управления:**
+  - **`F9`** — Главный выключатель: показывает субтитры и включает перевод. Повторное нажатие — скрывает субтитры и ставит перевод на паузу (0% нагрузки на ПК).
+  - **Двойной клик колёсиком мыши (2x MMB):** отключает сквозной клик (позволяет перетащить субтитры зажатием колёсика в любое удобное место). Повторный двойной клик колёсиком — снова фиксирует субтитры.
+
+---
+
+## 2. Этап 2: Экранный перевод и обучалка (OverTranslate + Groq LPU)
+
+- **Назначение:** замена текста прямо на текстурах в играх (Google Lens эффект) и обучающие словарные карточки.
+- **Быстрый запуск:**
+  - `START_OVERTRANSLATE.bat`
+- **Горячие клавиши управления:**
+  - **`Ctrl + Alt + A`** — Захват области экрана (обвести рамкой текст в игре или на картинке $\rightarrow$ текст моментально заменится на русский).
+  - **`Ctrl + Alt + S`** — Непрерывный мониторинг субтитров в реальном времени с параллельным показом оригинала и перевода.
+  - **`Ctrl + C + C`** — Мгновенный вызов обучающей карточки (транскрипция, грамматический нюанс, примеры от Groq LPU).
+  - **`Ctrl + Alt + W`** — Показать / скрыть окно настроек.
+
+---
+
+## 3. Этап 3: Сохранение слов в Anki (В процессе)
+
+- **Назначение:** сохранение слов и контекстных карточек в долговременную память на телефон.
+- **Файлы:**
+  - Установщик: `downloads/anki-26.09.3-win-x64.msi`.
+  - Мост: плагин AnkiConnect + AnkiWeb.
+
+---
+
+## 4. Остановка всех процессов в один клик
+
+- **`STOP_ALL.bat`** — чисто завершает все процессы экосистемы (аудиосервер NLLB, LiveTranslate, OverTranslate).

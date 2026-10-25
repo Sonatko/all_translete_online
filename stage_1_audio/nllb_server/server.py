@@ -50,19 +50,31 @@ MODEL_13B = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "
 MODEL_DIR = MODEL_13B if os.path.exists(MODEL_13B) else MODEL_600M
 MODEL_NAME = "nllb-200-1.3b" if MODEL_DIR == MODEL_13B else "nllb-200-600m"
 
-log.info(f"Loading {MODEL_NAME} (int8) on CUDA (RTX 5070)...")
-_translator = ctranslate2.Translator(
-    MODEL_DIR,
-    device="cuda",
-    device_index=0,
-    compute_type="int8_float16",
-    inter_threads=1,
-    intra_threads=4,
-)
+try:
+    log.info(f"Loading {MODEL_NAME} (int8) on CUDA...")
+    _translator = ctranslate2.Translator(
+        MODEL_DIR,
+        device="cuda",
+        device_index=0,
+        compute_type="int8_float16",
+        inter_threads=1,
+        intra_threads=4,
+    )
+    log.info(f"{MODEL_NAME} loaded and ready on CUDA (int8_float16)!")
+except Exception as e:
+    log.warning(f"CUDA initialization failed ({e}). Gracefully falling back to CPU...")
+    _translator = ctranslate2.Translator(
+        MODEL_DIR,
+        device="cpu",
+        compute_type="int8",
+        inter_threads=2,
+        intra_threads=4,
+    )
+    log.info(f"{MODEL_NAME} loaded and ready on CPU (int8)!")
+
 _tokenizer = transformers.NllbTokenizer.from_pretrained(
     MODEL_DIR, src_lang="eng_Latn", local_files_only=True
 )
-log.info(f"{MODEL_NAME} loaded and ready on CUDA (int8_float16, beam_size=4, quality-tuned)!")
 
 CACHE: Dict[str, str] = {}
 MAX_CACHE = 1000
@@ -130,6 +142,15 @@ class OpenAIProxyHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
             self.wfile.write(b'{"status":"ok"}')
+            return
+
+        if self.path in ("/shutdown", "/exit"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b'{"status":"shutting down"}')
+            import threading
+            threading.Thread(target=lambda: (time.sleep(0.3), os._exit(0))).start()
             return
 
         if self.path in ("/v1/models", "/models"):

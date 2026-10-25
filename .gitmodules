@@ -1,0 +1,3 @@
+[submodule "stage_1_audio/LiveTranslate"]
+	path = stage_1_audio/LiveTranslate
+	url = https://github.com/TheDeathDragon/LiveTranslate

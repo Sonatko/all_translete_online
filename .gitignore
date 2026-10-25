@@ -14,7 +14,15 @@ configs/**/config.json
 .cache/
 __pycache__/
 .venv/
-stage_1_audio/LiveTranslate/.venv/
+# Heavy weights and binary models (pulled by SETUP_ECOSYSTEM.bat)
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.zip
+*.tar.gz
+.pip-cache/
 stage_1_audio/nllb_server/models/
 stage_2_screen/OverTranslate/current/
 bin/

@@ -77,10 +77,10 @@ $AnkiCmd = Get-Command "anki" -ErrorAction SilentlyContinue
 if ($AnkiCmd) {
     Write-Host "  [OK] Anki is already installed on this machine: $($AnkiCmd.Source)" -ForegroundColor Green
 } else {
-    $AnkiMsi = Join-Path $DownloadsDir "anki-26.09.3-win-x64.msi"
+    $AnkiMsi = Join-Path $WorkspaceRoot "stage_3_anki\installer\anki-26.09.3-win-x64.msi"
     if (Test-Path $AnkiMsi) {
         if (-not $SkipAnki) {
-            Write-Host "  -> Launching Anki installer from downloads directory..." -ForegroundColor Cyan
+            Write-Host "  -> Launching Anki installer from stage_3_anki\installer..." -ForegroundColor Cyan
             Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$AnkiMsi`"" -Wait
             Write-Host "  [OK] Anki installation process finished!" -ForegroundColor Green
         } else {

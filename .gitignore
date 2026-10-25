@@ -12,6 +12,7 @@ configs/**/config.json
 *.log
 *.tmp
 .cache/
-downloads/
 bin/
 *.exe
+stage_3_anki/installer/
+*.msi

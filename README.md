@@ -32,21 +32,35 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
 ```
 
 ## Directory Layout (Root)
-- `stage_1_audio/` - Stage 1: Real-Time System Audio & Subtitles (LiveTranslate + NLLB-200 Server).
-- `stage_2_screen/` - Stage 2: Screen In-Place OCR & AI Context Learning (OverTranslate).
-- `stage_4_voice/` - Stage 3: Real-Time Voice Cloning & Speech-to-Speech Translation (Planned).
+- `CONFIG/` - Authoritative configuration files and custom patches (`F9` Master Toggle, `2x MMB`, `Alpha=1/255` surface).
+- `stage_1_audio/` - Stage 1: Real-Time System Audio & Subtitles (NLLB-200 Server & LiveTranslate integration).
+- `stage_2_screen/` - Stage 2: Screen In-Place OCR & AI Context Learning (OverTranslate integration).
+- `stage_3_voice/` - Stage 3: Real-Time Voice Cloning & TTS Speech Synthesis (Piper TTS ONNX).
 - `dev_notes/` - Chronological developer logs & architecture specifications.
 
-## Master Turnkey Launchers (Project Root)
-- `START.bat` - 1-Click launcher for the entire ecosystem (Audio Subtitles + Screen OCR & QuickLookup).
-- `STOP.bat` - 1-Click clean terminator: gracefully stops all servers, LiveTranslate, and OverTranslate.
-- `SETUP_ECOSYSTEM.bat` - 1-Click universal environment validator & bootstrapper.
+## Quickstart (1-Click Setup)
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://gitee.com/Sonatko/ll_translete_online.git
+   cd ll_translete_online
+   ```
+2. **Run Installer & Bootstrapper:**
+   Double-click `SETUP_ECOSYSTEM.bat`. It will automatically:
+   - Download clean upstream engines (`LiveTranslate` & `OverTranslate Portable`).
+   - Apply our custom patches from `CONFIG/stage_1_audio/patches/`.
+   - Download NLLB-200 1.3B INT8 translation weights via fast mirrors (`hf-mirror.com`).
+   - Synchronize authoritative configuration profiles.
+3. **Start the Ecosystem:**
+   Double-click `START.bat`.
+4. **Stop everything:**
+   Double-click `STOP.bat`.
 
 ## Project Roadmap & Status
 
 - **Stage 1: Real-Time Audio & Subtitle Translation** — **COMPLETED & OPERATIONAL**
   - **Core Engines:** Faster-Whisper `medium` (INT8 CUDA) + Meta NLLB-200 `1.3B` (INT8 CUDA / CPU).
-  - **Pipeline:** English Speech -> English Subtitle (Line 1) + Russian Translation (Line 2).
+  - **Pipeline:** English Speech -> English Subtitle (Line 1) + Russian / Chinese Translation (Line 2).
   - **Latency:** ~180 ms end-to-end, 100% offline without internet.
   - **Controls:** Master Hotkey (`F9`), Subtitle Lock / Click-Through (`2x MMB`), Window Drag (`MMB Drag`).
 
@@ -56,12 +70,10 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
   - **Continuous Game Monitoring:** Real-time continuous translation block via `Ctrl + Alt + S`.
   - **AI Linguistic Breakdown:** Instant dictionary and grammar learning cards via `Ctrl + C + C`.
 
-- **Stage 3: Real-Time Voice Cloning & Speech-to-Speech (S2ST / TTS)** — **FUTURE / PLANNED**
-  - **Goal:** Real-time offline speech synthesis and voice cloning for incoming translations.
-  - **Architecture:** Zero-VRAM offline TTS (Piper ONNX / FastSpeech) in `stage_4_voice/`.
+- **Stage 3: Real-Time Voice Cloning & Speech-to-Speech (S2ST / TTS)** — **READY FOR IMPLEMENTATION**
+  - **Goal:** Real-time offline speech synthesis and voice dubbing for incoming translations.
+  - **Architecture:** Zero-VRAM offline TTS (Piper ONNX / CPU, < 50ms latency) in `stage_3_voice/`.
+  - **Design Document:** See [`dev_notes/day_13_stage_3_voice_tts_roadmap_and_architecture.md`](file:///dev_notes/day_13_stage_3_voice_tts_roadmap_and_architecture.md).
 
-## Master Turnkey Control
-- `START.bat` - Launches all active services.
-- `STOP.bat` - Gracefully stops all active services.
 
 

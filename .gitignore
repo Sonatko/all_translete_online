@@ -22,11 +22,8 @@ __pycache__/
 *.pth
 *.zip
 *.tar.gz
-# LiveTranslate local venv and models
-stage_1_audio/LiveTranslate/.venv/
-stage_1_audio/LiveTranslate/models/
-stage_1_audio/LiveTranslate/.pip-cache/
-stage_1_audio/LiveTranslate/.tmp/
+# Third-party upstream applications (downloaded and patched by SETUP_ECOSYSTEM.bat)
+stage_1_audio/LiveTranslate/
 stage_1_audio/nllb_server/models/
 stage_2_screen/OverTranslate/current/
 bin/

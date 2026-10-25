@@ -12,10 +12,6 @@ echo.
 :: 1. Stage 1 Audio: Python Virtual Environment & CUDA Dependencies
 :: ---------------------------------------------------------------------
 echo [1/4] Checking Python Virtual Environment (LiveTranslate + NLLB)...
-if not exist "%~dp0stage_1_audio\LiveTranslate\start.bat" (
-    echo   [CLONE] Submodule files missing. Fetching LiveTranslate repository...
-    git submodule update --init --recursive 2>nul
-)
 if exist "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" (
     echo   [OK] Python virtual environment verified in stage_1_audio\LiveTranslate\.venv
     goto check_overtranslate

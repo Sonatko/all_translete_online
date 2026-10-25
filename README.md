@@ -35,17 +35,17 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
 - `stage_1_audio/` - Stage 1: Real-Time System Audio & Subtitles (LiveTranslate + NLLB-200 Server).
 - `stage_2_screen/` - Stage 2: Screen In-Place OCR & AI Context Learning (OverTranslate).
 - `stage_4_voice/` - Stage 3: Real-Time Voice Cloning & Speech-to-Speech Translation (Planned).
-- `archive/` - Archived logs, developer journals (`dev_notes/`), legacy tools, and setup scripts.
+- `dev_notes/` - Chronological developer logs & architecture specifications.
 
 ## Master Turnkey Launchers (Project Root)
 - `START.bat` - 1-Click launcher for the entire ecosystem (Audio Subtitles + Screen OCR & QuickLookup).
 - `STOP.bat` - 1-Click clean terminator: gracefully stops all servers, LiveTranslate, and OverTranslate.
-- `SETUP_ECOSYSTEM.bat` - 1-Click universal environment validator.
+- `SETUP_ECOSYSTEM.bat` - 1-Click universal environment validator & bootstrapper.
 
 ## Project Roadmap & Status
 
 - **Stage 1: Real-Time Audio & Subtitle Translation** — **COMPLETED & OPERATIONAL**
-  - **Core Engines:** Faster-Whisper `medium` (INT8 CUDA) + Meta NLLB-200 `1.3B` (INT8 CUDA).
+  - **Core Engines:** Faster-Whisper `medium` (INT8 CUDA) + Meta NLLB-200 `1.3B` (INT8 CUDA / CPU).
   - **Pipeline:** English Speech -> English Subtitle (Line 1) + Russian Translation (Line 2).
   - **Latency:** ~180 ms end-to-end, 100% offline without internet.
   - **Controls:** Master Hotkey (`F9`), Subtitle Lock / Click-Through (`2x MMB`), Window Drag (`MMB Drag`).
@@ -63,9 +63,5 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
 ## Master Turnkey Control
 - `START.bat` - Launches all active services.
 - `STOP.bat` - Gracefully stops all active services.
-
-## Archive Directory
-- `archive/` - Archived experimental and unused tools (legacy `llama.cpp` server, cloud proxy, diagnostics scripts, OBS/DWM toggles).
-- `dev_notes/` - Chronological developer logs (Days 01 to 10).
 
 

@@ -46,19 +46,33 @@ A curated catalog and integration workbench for open-source, turnkey Windows app
 
 ## Project Roadmap & Status
 
-- **Stage 1: Real-Time Audio & Subtitle Translation** — **COMPLETED & QUALITY-TUNED**
-  - High-quality offline pipeline on NVIDIA RTX 5070 CUDA (~100 ms ASR + ~80 ms MT).
-  - Faster-Whisper `medium` INT8 + Meta NLLB-200 `1.3B` INT8 with 4-beam search.
-  - Natural conversational VAD timing (`silence_duration = 0.42s`, `max_speech_duration = 7.0s`).
-  - Dual 1-click launchers: `START_EN_RU.bat` (English -> Russian) and `START_ZH_RU.bat` (Chinese -> Russian).
-  - Golden Control Scheme: Master Hotkey (`F9`), Subtitle Lock/Click-Through Toggle (`2x MMB`), Window Drag (`MMB Drag`), Left Click 100% untouched.
+- **Stage 1: Real-Time Audio & Subtitle Translation** — **COMPLETED & OPERATIONAL**
+  - **Core Engines:** Faster-Whisper `medium` (INT8 CUDA) + Meta NLLB-200 `1.3B` (INT8 CUDA).
+  - **Latency:** ~180 ms end-to-end, 100% offline without internet.
+  - **Launchers:** `START_EN_RU.bat` (English -> Russian) and `START_ZH_RU.bat` (Chinese -> Russian).
+  - **Controls:** Master Hotkey (`F9`), Subtitle Lock / Click-Through (`2x MMB`), Window Drag (`MMB Drag`).
 
-- **Stage 2: On-Screen OCR, Image & Instant Text Translation** — **COMPLETED & INTEGRATED**
-  - **In-Place Visual Translation**: Replaces text directly on top of images and games (Google Lens effect) via `Ctrl + Alt + A`.
-  - **Continuous Game Monitoring**: Real-time continuous translation block via `Ctrl + Alt + S`.
-  - **Educational Learning Breakdown**: Instant dictionary and linguistic analysis via `Ctrl + C + C` powered by OpenRouter (`google/gemini-2.5-flash` / `deepseek/deepseek-chat`).
-  - Standalone portable Windows integration in `bin/OverTranslate/current/`.
+- **Stage 2: In-Place Screen OCR & Visual Translation** — **COMPLETED & OPERATIONAL**
+  - **Core Engines:** OverTranslate (RapidOCR ONNX) + Groq Cloud LPU (`openai/gpt-oss-120b`).
+  - **In-Place Visual Translation:** Replaces text directly on top of images and games via `Ctrl + Alt + A`.
+  - **Continuous Game Monitoring:** Real-time continuous translation block via `Ctrl + Alt + S`.
+  - **AI Linguistic Breakdown:** Instant dictionary and grammar learning cards via `Ctrl + C + C`.
+  - **Launcher:** `START_OVERTRANSLATE.bat`.
+
+- **Stage 3: Spaced Repetition Memory Bridge (Anki Integration)** — **IN PROGRESS**
+  - **Goal:** One-click save of vocabulary, game context, and audio to mobile Anki cards.
+  - **Architecture:** Local Anki desktop (`anki-26.09.3-win-x64.msi`) + `AnkiConnect` plugin (port 8765) + cloud sync via AnkiWeb.
+  - **Status:** Installer downloaded and preserved in `downloads/anki-26.09.3-win-x64.msi`. Next step: setup AnkiConnect bridge.
+
+- **Stage 4: Real-Time Speech-to-Speech Translation & Voice Cloning (S2ST)** — **FUTURE / PLANNED**
+  - **Goal:** Speak Russian into microphone -> Transmitted as fluent English speech in Discord / games with voice cloning.
+  - **Architecture:** Whisper streaming ASR -> Fast NLLB MT -> F5-TTS / XTTS-v2 -> VB-Audio Virtual Cable.
+
+## Master Turnkey Control
+- `STOP_ALL.bat` - 1-Click clean terminator: gracefully stops all audio servers, LiveTranslate, and OverTranslate processes.
 
 ## Archive Directory
 - `archive/` - Archived experimental and unused tools (legacy `llama.cpp` server, cloud proxy, diagnostics scripts, OBS/DWM toggles).
+- `dev_notes/` - Chronological developer logs (Days 01 to 10).
+
 

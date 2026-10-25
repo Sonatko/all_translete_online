@@ -38,6 +38,14 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
 - **Golden Subtitle & Audio Pipeline Interaction Scheme**:
   - **Master Hotkey (`F9`)**: Single master toggle that synchronously switches `Subtitles Visible + Transcription RUN` and `Subtitles Hidden + Transcription PAUSE`.
   - **Subtitle Lock / Click-Through Toggle**: Double-click Middle Mouse Button (2x MMB / wheel click) over the subtitle banner to toggle Click-through (включение / выключение галочки прозрачности). Left-click is never hijacked.
-  - **Subtitle Window Dragging**: Native Middle Mouse Button (wheel click) drag ONLY.
   - **Alpha Hit-Testing Surface**: Invisible `Alpha = 1/255` background fill in `paintEvent` to ensure Windows DWM hit-testing works seamlessly across the entire banner even at 0% background opacity.
+
+### 6. Mandatory Git Tracking & Configuration Preservation Rule (The Zero-Loss Invariant)
+- **Mandatory Git Tracking on Every File Edit**:
+  - Whenever ANY configuration file, launcher script, application engine code, or template is modified or created, it MUST be staged and committed to Git immediately.
+  - NEVER leave working configs, tuned parameters, or engine fixes as untracked files or ignored in `.gitignore`.
+  - All critical runtime configurations MUST have an authoritative, version-controlled copy in the dedicated `CONFIG/` directory (`CONFIG/stage_1_audio/`, `CONFIG/stage_2_screen/`).
+- **Pre-Clean & Refactoring Safety Gate**:
+  - NEVER reorganize directories, archive folders, or delete files without first running `git status` and verifying that all active configurations, custom UI styles, and model tuning parameters are safely committed and mirrored in `CONFIG/`.
+  - If any file is excluded by `.gitignore` in upstream submodules (e.g., `user_settings.json`), it must either be explicitly un-ignored or tracked via `CONFIG/` so that no user settings can ever be lost during cleanups.
 

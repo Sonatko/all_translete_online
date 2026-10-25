@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Real-Time Translation Hub [CHINESE -> RUSSIAN]
+title Real-Time Translation Hub [CHINESE --^> RUSSIAN]
 
 echo ======================================================================
-echo  UNIVERSAL REAL-TIME TRANSLATION ECOSYSTEM [CHINESE -> RUSSIAN]
+echo  UNIVERSAL REAL-TIME TRANSLATION ECOSYSTEM [CHINESE --^> RUSSIAN]
 echo ======================================================================
 echo.
 
@@ -47,9 +47,9 @@ echo [OK] Translation Gateway is ONLINE and healthy! (HTTP 200 OK)
 :launch_livetranslate
 echo.
 echo ======================================================================
-echo  LAUNCHING LIVETRANSLATE SUBTITLE OVERLAY [CHINESE -> RUSSIAN]
+echo  LAUNCHING LIVETRANSLATE SUBTITLE OVERLAY [CHINESE --^> RUSSIAN]
 echo ======================================================================
-echo  [Mode]         - Chinese Speech -> Hanzi (Line 1) + Russian (Line 2)
+echo  [Mode]         - Chinese Speech --^> Hanzi (Line 1) + Russian (Line 2)
 echo  [F9]           - Master Toggle: Show/Hide Subtitles + Run/Pause Audio
 echo  [2x MMB]        - Double click Middle Button (wheel) to toggle Click-through
 echo  [MMB Drag]      - Drag subtitle banner with Middle Mouse Button (wheel)

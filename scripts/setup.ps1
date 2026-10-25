@@ -21,39 +21,41 @@ Write-Host " Universal Real-Time Translation & Language Ecosystem Setup" -Foregr
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $WorkspaceRoot = Split-Path -Parent $PSScriptRoot
-$BinDir = Join-Path $WorkspaceRoot "bin"
-$DownloadsDir = Join-Path $WorkspaceRoot "downloads"
+$Stage1Dir = Join-Path $WorkspaceRoot "stage_1_audio"
+$Stage2Dir = Join-Path $WorkspaceRoot "stage_2_screen"
+$Stage3Dir = Join-Path $WorkspaceRoot "stage_3_anki"
+$Stage4Dir = Join-Path $WorkspaceRoot "stage_4_voice"
 $ConfigsDir = Join-Path $WorkspaceRoot "configs"
 
 # ---------------------------------------------------------------------
 # 1. Check Python & Audio Pipeline (Stage 1)
 # ---------------------------------------------------------------------
 Write-Host "`n[Stage 1/4] Checking Real-Time Audio Pipeline (LiveTranslate + NLLB)..." -ForegroundColor Yellow
-$LiveTranslateDir = Join-Path $BinDir "LiveTranslate"
-$NllbDir = Join-Path $BinDir "nllb_server"
+$LiveTranslateDir = Join-Path $Stage1Dir "LiveTranslate"
+$NllbDir = Join-Path $Stage1Dir "nllb_server"
 
 if (Test-Path (Join-Path $LiveTranslateDir "start.bat")) {
     Write-Host "  [OK] LiveTranslate installed at: $LiveTranslateDir" -ForegroundColor Green
 } else {
-    Write-Warning "  [!] LiveTranslate directory missing in bin/LiveTranslate."
+    Write-Warning "  [!] LiveTranslate directory missing in stage_1_audio/LiveTranslate."
 }
 
 if (Test-Path (Join-Path $NllbDir "run_server.bat")) {
     Write-Host "  [OK] NLLB-200 offline translation server present at: $NllbDir" -ForegroundColor Green
 } else {
-    Write-Warning "  [!] nllb_server missing in bin/nllb_server."
+    Write-Warning "  [!] nllb_server missing in stage_1_audio/nllb_server."
 }
 
 # ---------------------------------------------------------------------
 # 2. Check OverTranslate (Stage 2)
 # ---------------------------------------------------------------------
 Write-Host "`n[Stage 2/4] Checking Screen In-Place Translator (OverTranslate)..." -ForegroundColor Yellow
-$OverTranslateExe = Join-Path $BinDir "OverTranslate\current\OverTranslate.exe"
+$OverTranslateExe = Join-Path $Stage2Dir "OverTranslate\current\OverTranslate.exe"
 
 if (Test-Path $OverTranslateExe) {
     Write-Host "  [OK] OverTranslate installed at: $OverTranslateExe" -ForegroundColor Green
 } else {
-    Write-Warning "  [!] OverTranslate.exe not found in bin/OverTranslate/current/."
+    Write-Warning "  [!] OverTranslate.exe not found in stage_2_screen/OverTranslate/current/."
 }
 
 # Deploy configuration template if appsettings.json does not exist yet

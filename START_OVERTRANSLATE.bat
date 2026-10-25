@@ -12,13 +12,13 @@ echo [1/3] Closing any previous or background instances...
 taskkill /F /IM OverTranslate.exe >nul 2>&1
 
 echo [2/3] Launching OverTranslate on your desktop...
-cd /d "%~dp0bin\OverTranslate\current"
+cd /d "%~dp0stage_2_screen\OverTranslate\current"
 start "" OverTranslate.exe
 cd /d "%~dp0"
 
 echo [3/3] Opening OverTranslate main window...
 ping 127.0.0.1 -n 3 >nul
-cd /d "%~dp0bin\OverTranslate\current"
+cd /d "%~dp0stage_2_screen\OverTranslate\current"
 start "" OverTranslate.exe
 cd /d "%~dp0"
 

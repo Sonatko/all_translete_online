@@ -16,7 +16,7 @@ if %errorlevel% equ 0 (
 )
 
 echo [2/3] Launching Meta NLLB-200 Server in background (Hidden)...
-start "" "%~dp0bin\LiveTranslate\.venv\Scripts\pythonw.exe" "%~dp0bin\nllb_server\server.py"
+start "" "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\pythonw.exe" "%~dp0stage_1_audio\nllb_server\server.py"
 
 echo [3/3] Waiting for NLLB-200 Server to initialize on CUDA...
 set /a ATTEMPTS=0
@@ -27,7 +27,7 @@ set /a ATTEMPTS+=1
 if %ATTEMPTS% gtr %MAX_ATTEMPTS% (
     echo.
     echo [ERROR] Server timed out after %MAX_ATTEMPTS% seconds.
-    echo Please check bin\nllb_server\server.log for details.
+    echo Please check stage_1_audio\nllb_server\server.log for details.
     pause
     exit /b 1
 )
@@ -55,7 +55,7 @@ echo  [2x MMB]        - Double click Middle Button (wheel) to toggle Click-throu
 echo  [MMB Drag]      - Drag subtitle banner with Middle Mouse Button (wheel)
 echo ======================================================================
 echo.
-set "LIVETRANSLATE_SETTINGS_FILE=%~dp0bin\LiveTranslate\user_settings.json"
-cd /d "%~dp0bin\LiveTranslate"
+set "LIVETRANSLATE_SETTINGS_FILE=%~dp0stage_1_audio\LiveTranslate\user_settings.json"
+cd /d "%~dp0stage_1_audio\LiveTranslate"
 start "" start.bat
 exit

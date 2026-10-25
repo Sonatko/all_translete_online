@@ -16,4 +16,3 @@ echo.
 echo [3/3] All translation ecosystem processes stopped cleanly!
 ping 127.0.0.1 -n 2 >nul
 exit /b 0
-99

@@ -16,13 +16,31 @@
   "target_language": "ru",
   "models": [
     {
-      "name": "Meta NLLB-200 1.3B (In-Process, 100% Offline)",
+      "name": "[Быстро] Meta NLLB-200 600M (Ультра-скорость, ~70ms)",
+      "api_base": "local",
+      "api_key": "not-needed",
+      "model": "nllb-200-600m",
+      "proxy": "none",
+      "thinking_style": "off",
+      "streaming": true
+    },
+    {
+      "name": "[Точно] Meta NLLB-200 1.3B (Высокая точность, ~140ms)",
       "api_base": "local",
       "api_key": "not-needed",
       "model": "nllb-200-1.3b",
       "proxy": "none",
       "thinking_style": "off",
       "streaming": true
+    },
+    {
+      "name": "[Откл] Без перевода (Чистый ASR / Только оригинал)",
+      "api_base": "none",
+      "api_key": "not-needed",
+      "model": "disabled",
+      "proxy": "none",
+      "thinking_style": "off",
+      "streaming": false
     }
   ],
   "active_model": 0,

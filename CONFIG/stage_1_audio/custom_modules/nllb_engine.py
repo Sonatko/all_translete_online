@@ -107,10 +107,17 @@ class LocalNLLBEngine:
     _init_lock = threading.Lock()
 
     @classmethod
-    def get_instance(cls) -> "LocalNLLBEngine":
+    def get_instance(cls, requested_variant: str = "auto") -> "LocalNLLBEngine":
         with cls._init_lock:
+            req_str = str(requested_variant or "").lower()
+            if cls._instance is not None and requested_variant != "auto":
+                cur_is_600m = "600m" in cls._instance.model_name.lower()
+                req_is_600m = "600m" in req_str
+                if cur_is_600m != req_is_600m:
+                    log.info(f"Model variant switch requested: {cls._instance.model_name} -> {requested_variant}")
+                    cls.unload()
             if cls._instance is None:
-                cls._instance = LocalNLLBEngine()
+                cls._instance = LocalNLLBEngine(variant=requested_variant)
             return cls._instance
 
     @classmethod
@@ -139,12 +146,13 @@ class LocalNLLBEngine:
                     pass
                 log.info("LocalNLLBEngine unloaded successfully. RAM released.")
 
-    def __init__(self):
+    def __init__(self, variant: str = "auto"):
         import ctranslate2
         import transformers
 
         self.cache = LRUCache(1000)
-        self.model_dir = self._find_model_dir()
+        self.variant = str(variant or "auto").lower()
+        self.model_dir = self._find_model_dir(self.variant)
         self.model_name = os.path.basename(self.model_dir)
 
         # Attempt CUDA first with INT8_FLOAT16; fallback gracefully to CPU INT8
@@ -175,13 +183,30 @@ class LocalNLLBEngine:
         )
         self.translate_lock = threading.Lock()
 
-    def _find_model_dir(self) -> str:
-        candidates = [
-            os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-1.3b-int8"),
-            os.path.join(_cur_dir, "models", "nllb-200-1.3b-int8"),
-            os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-600m-int8"),
-            os.path.join(_cur_dir, "models", "nllb-200-600m-int8"),
-        ]
+        # Warmup kernels once so first user translation has 0ms cold start
+        try:
+            w_toks = self.tokenizer.convert_ids_to_tokens(self.tokenizer.encode("warmup"))
+            self.translator.translate_batch([w_toks], target_prefix=[["rus_Cyrl"]], beam_size=1, max_decoding_length=8)
+            log.info(f"{self.model_name} warmup completed (0ms user cold start)!")
+        except Exception as we:
+            log.debug(f"Warmup notice: {we}")
+
+    def _find_model_dir(self, variant: str = "auto") -> str:
+        is_600m = "600m" in str(variant).lower()
+        if is_600m:
+            candidates = [
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-600m-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-600m-int8"),
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-1.3b-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-1.3b-int8"),
+            ]
+        else:
+            candidates = [
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-1.3b-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-1.3b-int8"),
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-600m-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-600m-int8"),
+            ]
         for p in candidates:
             resolved = os.path.abspath(p)
             if os.path.exists(resolved) and os.path.exists(os.path.join(resolved, "model.bin")):
@@ -234,7 +259,7 @@ class LocalNLLBEngine:
             res = self.translator.translate_batch(
                 [tokens],
                 target_prefix=[[tgt_code]],
-                beam_size=4,
+                beam_size=1,
                 length_penalty=1.0,
                 repetition_penalty=1.1,
                 max_decoding_length=64,

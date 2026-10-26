@@ -26,7 +26,7 @@ diff --git a/control_panel.py b/control_panel.py
                  f"[{t('asr_fast')}] FunASR",
                  "Anime-Whisper (ja, anime/galgame)",
                  "Remote Whisper (remote GPU server)",
-+                "⚡ Sherpa-ONNX: SenseVoice (Все языки)",
++                "⚡ Sherpa-ONNX: SenseVoice (EN, ZH, JA, KO)",
 +                "⚡ Sherpa-ONNX: Parakeet (Только английский)",
              ]
          )
@@ -118,7 +118,26 @@ diff --git a/main.py b/main.py
  
      for noisy in (
          "httpcore",
-@@ -603,6 +606,8 @@
+@@ -295,6 +298,7 @@
+             key in settings
+             for key in (
+                 "asr_engine",
++                "asr_profile",
+                 "asr_device",
+                 "whisper_model_size",
+                 "funasr_model",
+@@ -534,6 +538,10 @@
+         elif engine_type == "remote-whisper":
+             # URL is part of the identity so editing it triggers a reconnect.
+             signature_model = remote_asr_url
++        elif engine_type == "sherpa_onnx":
++            profile = settings.get("asr_profile", "multilingual")
++            signature_model = f"sherpa_{profile}"
++            cache_model_key = profile
+         else:
+             signature_model = engine_type
+         signature = (engine_type, signature_model, device, hub, compute)
+@@ -603,6 +611,8 @@
              "download_root": str((MODELS_DIR / "huggingface" / "hub").resolve()),
              "display_name": display_name,
              "remote_asr_url": remote_asr_url,
@@ -127,7 +146,7 @@ diff --git a/main.py b/main.py
          }
          target_state = {
              "type": engine_type,
-@@ -1129,6 +1134,8 @@
+@@ -1129,6 +1139,8 @@
              self._transcript.finalize_no_translation(msg_id)
              if self._overlay:
                  self._overlay.update_translation(msg_id, f"[error: {e}]", 0)
@@ -136,7 +155,7 @@ diff --git a/main.py b/main.py
  
      def _translate_extra_langs(self, text, source_lang, extra_langs, tl_dict):
          """Translate into additional languages for subtitle window (parallel)."""
-@@ -1357,18 +1364,28 @@
+@@ -1357,18 +1369,28 @@
  
      @staticmethod
      def _get_segmenter(lang: str):
@@ -174,7 +193,7 @@ diff --git a/main.py b/main.py
          if len(parts) > 1:
              return parts
  
-@@ -2022,10 +2039,14 @@
+@@ -2022,10 +2044,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -191,7 +210,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2056,28 @@
+@@ -2035,14 +2061,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)
@@ -386,7 +405,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 diff --git a/translator.py b/translator.py
 --- a/translator.py
 +++ b/translator.py
-@@ -222,6 +222,40 @@
+@@ -222,6 +222,45 @@
          self._temperature = temperature
          self._streaming = streaming
          self._timeout = timeout
@@ -417,6 +436,11 @@ diff --git a/translator.py b/translator.py
 +        ):
 +            self._is_local_nllb = True
 +            log.info(f"Translator: using in-process LocalNLLBEngine for {model} (zero-network, ultra-fast)")
++            try:
++                from nllb_engine import LocalNLLBEngine
++                LocalNLLBEngine.get_instance(requested_variant=model_str)
++            except Exception as le:
++                log.warning(f"Could not initialize LocalNLLBEngine for {model}: {le}")
 +        else:
 +            self._is_local_nllb = False
 +            try:
@@ -427,7 +451,7 @@ diff --git a/translator.py b/translator.py
          self._overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
          self._extra_body = dict(extra_body) if extra_body else {}
          if self._overrides:
-@@ -268,6 +302,7 @@
+@@ -268,6 +307,7 @@
          """Create a new Translator with a different target language, sharing the same client."""
          t = Translator.__new__(Translator)
          t._client = self._client
@@ -435,7 +459,7 @@ diff --git a/translator.py b/translator.py
          t._no_system_role = self._no_system_role
          t._thinking_style = self._thinking_style
          t._json_response = self._json_response
-@@ -360,6 +395,15 @@
+@@ -360,6 +400,15 @@
          return kwargs
  
      def translate(self, text: str, source_language: str = "en"):
@@ -443,7 +467,7 @@ diff --git a/translator.py b/translator.py
 +            return ""
 +        if getattr(self, "_is_local_nllb", False):
 +            from nllb_engine import LocalNLLBEngine
-+            result = LocalNLLBEngine.get_instance().translate(
++            result = LocalNLLBEngine.get_instance(self._model).translate(
 +                text, target_language=self._target_language, source_language=source_language
 +            )
 +            self._append_history(text, result)
@@ -451,7 +475,7 @@ diff --git a/translator.py b/translator.py
          system_prompt = self._build_system_prompt(source_language)
          if self._streaming:
              result = self._translate_streaming(system_prompt, text)
-@@ -378,6 +422,17 @@
+@@ -378,6 +427,17 @@
          The final yielded value is always the complete translation.
          Caller should use the last yielded value as the final result.
          """

@@ -61,6 +61,8 @@ try:
         _user32.SetWindowsHookExW.restype = ctypes.c_void_p
         _user32.UnhookWindowsHookEx.argtypes = [ctypes.c_void_p]
         _user32.UnhookWindowsHookEx.restype = wintypes.BOOL
+        _user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+        _user32.GetWindowRect.restype = wintypes.BOOL
 except Exception:
     _HOOKPROC = None
     _MSLLHOOKSTRUCT = None
@@ -818,14 +820,13 @@ class SubtitleWindow(QWidget):
                     ctypes.windll.user32.SetWindowLongW(
                         hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
                     )
-                if self.isVisible():
-                    self._install_mouse_hook()
             else:
                 if style & _WS_EX_TRANSPARENT:
                     ctypes.windll.user32.SetWindowLongW(
                         hwnd, _GWL_EXSTYLE, style & ~_WS_EX_TRANSPARENT
                     )
-                self._uninstall_mouse_hook()
+            if self.isVisible():
+                self._install_mouse_hook()
         except Exception:
             pass
 
@@ -836,17 +837,21 @@ class SubtitleWindow(QWidget):
         def _hook_callback(nCode, wParam, lParam):
             if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
                 try:
-                    ms = ctypes.cast(lParam, ctypes.POINTER(_MSLLHOOKSTRUCT)).contents
-                    gx, gy = ms.pt.x, ms.pt.y
-                    if self.isVisible() and self.geometry().contains(gx, gy):
-                        now = time.time()
-                        dt = ctypes.windll.user32.GetDoubleClickTime() / 1000.0
-                        if now - self._last_mmb_down_time <= dt:
-                            self._last_mmb_down_time = 0.0
-                            QTimer.singleShot(0, self._on_double_click_toggle_off)
-                            return 1
-                        else:
-                            self._last_mmb_down_time = now
+                    if self.isVisible():
+                        ms = ctypes.cast(lParam, ctypes.POINTER(_MSLLHOOKSTRUCT)).contents
+                        hwnd = int(self.winId())
+                        rect = wintypes.RECT()
+                        if _user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                            # Physical screen coordinates comparison (100% DPI-independent and exact across whole banner)
+                            if rect.left <= ms.pt.x <= rect.right and rect.top <= ms.pt.y <= rect.bottom:
+                                now = time.time()
+                                dt = ctypes.windll.user32.GetDoubleClickTime() / 1000.0
+                                if now - self._last_mmb_down_time <= dt:
+                                    self._last_mmb_down_time = 0.0
+                                    QTimer.singleShot(0, self._on_double_click_toggle)
+                                    return 1
+                                else:
+                                    self._last_mmb_down_time = now
                 except Exception:
                     pass
             return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
@@ -865,9 +870,10 @@ class SubtitleWindow(QWidget):
             self._mouse_hook = None
             self._hook_proc = None
 
-    def _on_double_click_toggle_off(self):
-        self.set_click_through(False)
-        self.click_through_toggled.emit(False)
+    def _on_double_click_toggle(self):
+        new_val = not self._click_through
+        self.set_click_through(new_val)
+        self.click_through_toggled.emit(new_val)
 
     def showEvent(self, event):
         super().showEvent(event)

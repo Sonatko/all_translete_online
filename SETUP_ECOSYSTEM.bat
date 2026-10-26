@@ -15,10 +15,12 @@ echo [1/4] Checking Audio Engine (LiveTranslate + NLLB)...
 if not exist "%~dp0stage_1_audio\LiveTranslate\start.bat" (
     echo   [DOWNLOAD] LiveTranslate missing. Downloading upstream engine...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip = '%~dp0stage_1_audio\lt.zip'; $urls = @('https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip', 'https://ghproxy.net/https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip'); $downloaded = $false; foreach ($u in $urls) { try { Invoke-WebRequest -Uri $u -OutFile $zip -TimeoutSec 60 -ErrorAction Stop; $downloaded = $true; break } catch {} }; if ($downloaded) { Expand-Archive -Path $zip -DestinationPath '%~dp0stage_1_audio\lt_tmp' -Force; if (-not (Test-Path '%~dp0stage_1_audio\LiveTranslate')) { New-Item -ItemType Directory -Path '%~dp0stage_1_audio\LiveTranslate' | Out-Null }; Copy-Item -Path '%~dp0stage_1_audio\lt_tmp\LiveTranslate-main\*' -Destination '%~dp0stage_1_audio\LiveTranslate' -Recurse -Force; Remove-Item $zip -Force; Remove-Item '%~dp0stage_1_audio\lt_tmp' -Recurse -Force }"
-    echo   [PATCH] Applying custom features (F9 Master Toggle, 2x MMB, Alpha surface)...
+    echo   [PATCH] Applying custom features (F9 Master Toggle, 2x MMB, In-Process NLLB)...
     copy /Y "%~dp0CONFIG\stage_1_audio\patches\subtitle_window.py" "%~dp0stage_1_audio\LiveTranslate\subtitle_window.py" >nul
     copy /Y "%~dp0CONFIG\stage_1_audio\patches\control_panel.py" "%~dp0stage_1_audio\LiveTranslate\control_panel.py" >nul
     copy /Y "%~dp0CONFIG\stage_1_audio\patches\main.py" "%~dp0stage_1_audio\LiveTranslate\main.py" >nul
+    copy /Y "%~dp0CONFIG\stage_1_audio\patches\translator.py" "%~dp0stage_1_audio\LiveTranslate\translator.py" >nul
+    copy /Y "%~dp0CONFIG\stage_1_audio\nllb_engine.py" "%~dp0stage_1_audio\LiveTranslate\nllb_engine.py" >nul
     copy /Y "%~dp0CONFIG\stage_1_audio\user_settings.json" "%~dp0stage_1_audio\LiveTranslate\user_settings.json" >nul
 )
 if exist "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" (

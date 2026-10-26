@@ -10,20 +10,20 @@ Rather than bundling tens of gigabytes of model weights or forking upstream code
 - **Zero Third-Party Bloat**: Upstream engines (`LiveTranslate`, `OverTranslate Portable`) are downloaded and provisioned automatically on first run via `SETUP_ECOSYSTEM.bat`.
 - **Authoritative Configuration (`CONFIG/`)**: Centralized, version-controlled presets and templates that override active runtime settings.
 - **Micro-Patches (`CONFIG/stage_1_audio/patches/`)**: Direct, surgical patches applied to upstream engines (e.g., Master Hotkey `F9`, Double-MMB lock, Alpha surface).
-- **Custom Local Translation Gateway**: High-speed, local CTranslate2 FastAPI gateway running Meta NLLB-200 1.3B with dynamic language switching and CUDA-to-CPU fallback.
+- **In-Process Local Translation Engine**: Zero-network, ultra-fast CTranslate2 engine running Meta NLLB-200 1.3B directly in memory with LRU caching and CUDA-to-CPU fallback (eliminates external server processes and network ports).
 
 ```
 +-----------------------------------------------------------------------------------------+
 |                                    WINDOWS DESKTOP PC                                   |
 +-----------------------------------------------------------------------------------------+
-|  STAGE 1: REAL-TIME SYSTEM AUDIO SUBTITLES (LiveTranslate + Local NLLB-200 Gateway)    |
+|  STAGE 1: REAL-TIME SYSTEM AUDIO SUBTITLES (LiveTranslate + In-Process NLLB Engine)     |
 |     System Audio / WASAPI Loopback (Games, Browser, Discord, Media Player)             |
 |              |                                                                          |
 |              v                                                                          |
 |     Faster-Whisper `medium` (INT8 CUDA) + Silero VAD (~120ms ASR)                       |
 |              |                                                                          |
 |              v                                                                          |
-|     Meta NLLB-200 1.3B INT8 Server (Local CTranslate2 CUDA / CPU, ~45ms)                |
+|     Meta NLLB-200 1.3B INT8 In-Process Engine (CTranslate2 CUDA / CPU, ~45ms)           |
 |              |                                                                          |
 |              v                                                                          |
 |     Always-on-Top Dual Subtitle Overlay:                                                |
@@ -111,13 +111,11 @@ This automated script will:
 
 ### Launch Ecosystem
 Double-click `START.bat`. It automatically:
-- Checks if the NLLB-200 server is running; launches it in the background if needed.
-- Waits for healthcheck (`http://127.0.0.1:8080/health -> HTTP 200 OK`).
-- Starts `LiveTranslate` dual-subtitle overlay with loaded audio capture.
+- Starts `LiveTranslate` dual-subtitle overlay with built-in in-process NLLB-200 translation and audio capture.
 - Starts `OverTranslate` screen translator and docks it in the system tray.
 
 ### Stop Ecosystem
-Double-click `STOP.bat`. It cleanly terminates all child processes, frees TCP port `8080`, and releases VRAM.
+Double-click `STOP.bat`. It cleanly terminates all child processes and releases resources safely.
 
 ---
 

@@ -14,8 +14,8 @@
   "target_language": "ru",
   "models": [
     {
-      "name": "Meta NLLB-200 1.3B (CUDA, 100% Offline)",
-      "api_base": "http://127.0.0.1:8080/v1",
+      "name": "Meta NLLB-200 1.3B (In-Process, 100% Offline)",
+      "api_base": "local",
       "api_key": "not-needed",
       "model": "nllb-200-1.3b",
       "proxy": "none",

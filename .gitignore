@@ -25,6 +25,8 @@ __pycache__/
 *.tar.gz
 # Third-party upstream applications (downloaded and patched by SETUP_ECOSYSTEM.bat)
 stage_1_audio/LiveTranslate/
+!stage_1_audio/LiveTranslate/asr_sherpa.py
+!stage_1_audio/LiveTranslate/vad_sherpa.py
 stage_1_audio/nllb_server/models/
 stage_2_screen/OverTranslate/current/
 bin/

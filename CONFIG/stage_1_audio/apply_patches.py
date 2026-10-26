@@ -21,6 +21,7 @@ def apply_all():
         "translator.patch",
         "asr_worker.patch",
         "sherpa_main.patch",
+        "model_manager.patch",
     ]
 
     for p in patches:

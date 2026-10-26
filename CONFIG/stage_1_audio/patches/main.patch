@@ -1,69 +1,157 @@
 --- a/main.py
 +++ b/main.py
-@@ -2042,13 +2042,61 @@
-         w._settings["click_through"] = checked
+@@ -85,14 +85,17 @@
  
-     subwin_ct_action.toggled.connect(on_toggle_subwin_ct)
-+    subwin.click_through_toggled.connect(subwin_ct_action.setChecked)
-     menu.addAction(subwin_ct_action)
- 
--    # Connect overlay subtitle button
--    def _on_overlay_subtitle_toggle():
--        subwin_toggle_action.setChecked(not subwin_toggle_action.isChecked())
+     file_handler = logging.FileHandler(log_file, encoding="utf-8")
+     file_handler.setLevel(logging.DEBUG)
+-    console_handler = logging.StreamHandler(sys.stdout)
+-    console_handler.setLevel(logging.INFO)
 -
--    overlay.subtitle_toggled.connect(_on_overlay_subtitle_toggle)
-+    # Master toggle for Subtitles + Transcription (Run/Stop)
-+    def _on_master_sub_run_toggle():
-+        sub_visible = subwin_toggle_action.isChecked()
-+        running = _is_running[0]
-+        if sub_visible or running:
-+            # Turn both OFF: Hide subtitles and Pause transcription
-+            subwin_toggle_action.setChecked(False)
-+            on_pause()
-+        else:
-+            # Turn both ON: Show subtitles and Start/Resume transcription
-+            subwin_toggle_action.setChecked(True)
-+            if not getattr(live_trans, "_running", False):
-+                on_start()
-+            else:
-+                on_resume()
+     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+     file_handler.setFormatter(fmt)
+-    console_handler.setFormatter(fmt)
+-
+-    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler])
++    handlers = [file_handler]
 +
-+    overlay.subtitle_toggled.connect(_on_master_sub_run_toggle)
++    if sys.stdout is not None:
++        console_handler = logging.StreamHandler(sys.stdout)
++        console_handler.setLevel(logging.INFO)
++        console_handler.setFormatter(fmt)
++        handlers.append(console_handler)
 +
-+    # --- Global F9 Hotkey for Subtitle + Run/Stop Master Toggle ---
-+    try:
-+        import ctypes
-+        from ctypes import wintypes
-+        from PyQt6.QtCore import QAbstractNativeEventFilter
-+
-+        class _GlobalHotkeyFilter(QAbstractNativeEventFilter):
-+            def __init__(self, hotkey_id, callback):
-+                super().__init__()
-+                self._id = hotkey_id
-+                self._cb = callback
-+
-+            def nativeEventFilter(self, event_type, message):
-+                if event_type == b"windows_generic_MSG":
-+                    msg = wintypes.MSG.from_address(message.__int__())
-+                    if msg.message == 0x0312 and msg.wParam == self._id:  # WM_HOTKEY
-+                        self._cb()
-+                        return True, 0
-+                return False, 0
-+
-+        _F9_HOTKEY_ID = 0xF901
-+        _MOD_NOREPEAT = 0x4000
-+        _VK_F9 = 0x78
-+        _user32 = ctypes.windll.user32
-+        if _user32.RegisterHotKey(None, _F9_HOTKEY_ID, _MOD_NOREPEAT, _VK_F9):
-+            _f9_filter = _GlobalHotkeyFilter(_F9_HOTKEY_ID, _on_master_sub_run_toggle)
-+            app._f9_filter = _f9_filter  # keep Python reference alive
-+            app.installNativeEventFilter(_f9_filter)
-+            app.aboutToQuit.connect(lambda: _user32.UnregisterHotKey(None, _F9_HOTKEY_ID))
-+            log.info("Global hotkey F9 registered for Master Sub+Run toggle")
-+        else:
-+            log.warning("Could not register global hotkey F9 (key may be occupied)")
-+    except Exception as _e:
-+        log.warning(f"Failed to setup global hotkey F9: {_e}")
++    logging.basicConfig(level=logging.DEBUG, handlers=handlers)
  
-     # Connect panel subtitle settings changes
-     def _on_panel_subtitle_changed(s):
+     for noisy in (
+         "httpcore",
+@@ -603,6 +606,8 @@
+             "download_root": str((MODELS_DIR / "huggingface" / "hub").resolve()),
+             "display_name": display_name,
+             "remote_asr_url": remote_asr_url,
++            "asr_profile": settings.get("asr_profile", "multilingual"),
++            "asr_cpu_threads": settings.get("asr_cpu_threads", 2),
+         }
+         target_state = {
+             "type": engine_type,
+@@ -821,7 +826,7 @@
+         self._mem_last_mb = snap["rss"]
+         log.info(
+             f"MEM[asr#{self._mem_asr_call_count}:{kind}] RSS={snap['rss']:.1f}MB "
+-            f"(О”{delta:+.2f} since last, {total_delta:+.1f} since start) "
++            f"(Δ{delta:+.2f} since last, {total_delta:+.1f} since start) "
+             f"worker_rss={snap['worker_rss']:.0f}MB "
+             f"GPU(main alloc/reserved)={snap['gpu_alloc']:.0f}/{snap['gpu_reserved']:.0f}MB "
+             f"audio={audio_seconds:.1f}s asr={asr_ms:.0f}ms "
+@@ -1351,7 +1356,7 @@
+             except RuntimeError:
+                 log.warning("Translation executor shut down, skipping")
+ 
+-    # в”Ђв”Ђ Incremental ASR в”Ђв”Ђ
++    # ── Incremental ASR ──
+ 
+     _segmenter_cache = {}  # lang -> yasbd pysbd_adapter.Segmenter
+ 
+@@ -1372,12 +1377,12 @@
+         if len(parts) > 1:
+             return parts
+ 
+-        # Comma fallback for long unsplit text вЂ” split at last balanced comma
+-        # CJK гЂЊгЂЃгЂЌat 25 chars; all commas at 60 chars (long sentence, reduce latency)
+-        min_len = 25 if any(c == 'гЂЃ' for c in text) else 60
++        # Comma fallback for long unsplit text — split at last balanced comma
++        # CJK 「、」at 25 chars; all commas at 60 chars (long sentence, reduce latency)
++        min_len = 25 if any(c == '、' for c in text) else 60
+         if len(text) > min_len:
+             for i in range(len(text) - 8, 5, -1):
+-                if text[i] in ',пјЊ;пј›гЂЃ':
++                if text[i] in ',，;；、':
+                     before = text[:i + 1].strip()
+                     after = text[i + 1:].strip()
+                     if before and after and len(before) > 15 and len(after) > 3:
+@@ -1387,7 +1392,7 @@
+ 
+     @staticmethod
+     def _is_short_utterance(text: str) -> bool:
+-        """Check if text has в‰¤8 alphanumeric chars (likely noise/filler/fragment)."""
++        """Check if text has ≤8 alphanumeric chars (likely noise/filler/fragment)."""
+         alnum = sum(1 for c in text if c.isalnum())
+         return alnum <= 8
+ 
+@@ -1527,7 +1532,7 @@
+         return True
+ 
+     def _process_segment_text(self, text: str, source_lang: str, asr_ms: float = 0):
+-        """Output a text result (from interim or final) вЂ” similar to _process_segment but skips ASR."""
++        """Output a text result (from interim or final) — similar to _process_segment but skips ASR."""
+         original_text = text.strip()
+         if not original_text or not any(c.isalnum() for c in original_text):
+             return
+@@ -1655,7 +1660,7 @@
+                 speech_segment = self._vad.process_chunk(chunk)
+ 
+             if speech_segment is None:
+-                # Still accumulating вЂ” check for interim ASR
++                # Still accumulating — check for interim ASR
+                 if (self._incremental_enabled and self._asr_ready
+                         and self._vad._is_speaking):
+                     buf_samples = self._vad._speech_samples
+@@ -1780,7 +1785,7 @@
+     _app_icon = create_app_icon()
+     app.setWindowIcon(_app_icon)
+ 
+-    # First launch в†’ setup wizard (hub + download) в†’ configure translation API
++    # First launch → setup wizard (hub + download) → configure translation API
+     if not SETTINGS_FILE.exists():
+         wizard = SetupWizardDialog()
+         if wizard.exec() != QDialog.DialogCode.Accepted:
+@@ -1814,7 +1819,7 @@
+                 log.info(f"Translation API configured: {data['name']}")
+         # If user skips, ControlPanel will create default placeholder from config.yaml
+ 
+-    # Non-first launch but models missing в†’ download dialog
++    # Non-first launch but models missing → download dialog
+     else:
+         saved = saved or {}
+         current_engine = saved.get("asr_engine", config["asr"].get("asr_engine", "funasr"))
+@@ -2154,7 +2159,7 @@
+     autoscroll_action.setChecked(True)
+     taskbar_action = QAction(t("taskbar"), checkable=True)
+ 
+-    # Tray в†’ overlay sync
++    # Tray → overlay sync
+     ct_action.toggled.connect(lambda v: overlay._handle._ct_check.setChecked(v))
+     topmost_action.toggled.connect(
+         lambda v: overlay._handle._topmost_check.setChecked(v)
+@@ -2166,7 +2171,7 @@
+         lambda v: overlay._handle._taskbar_check.setChecked(v)
+     )
+ 
+-    # Overlay в†’ tray sync
++    # Overlay → tray sync
+     overlay._handle.click_through_toggled.connect(lambda v: ct_action.setChecked(v))
+     overlay._handle.topmost_toggled.connect(lambda v: topmost_action.setChecked(v))
+     overlay._handle.auto_scroll_toggled.connect(
+@@ -2265,7 +2270,7 @@
+         panel._current_settings["target_language"] = lang_code
+         _save_settings(settings)
+ 
+-    # Overlay в†’ tray lang sync
++    # Overlay → tray lang sync
+     def _on_overlay_lang_changed(lang_code):
+         if lang_code in _lang_actions:
+             _lang_actions[lang_code].setChecked(True)
+@@ -2345,12 +2350,12 @@
+     overlay.target_language_changed.connect(live_trans._on_target_language_changed)
+ 
+     def _on_overlay_source_lang(code):
+-        """Overlay source language combo в†’ sync to panel + ASR engine + tray."""
++        """Overlay source language combo → sync to panel + ASR engine + tray."""
+         _on_tray_asr_lang(code)
+         overlay.set_source_language(code)
+ 
+     def _on_panel_asr_lang_changed(_index):
+-        """Panel ASR language combo в†’ sync to overlay."""
++        """Panel ASR language combo → sync to overlay."""
+         code = panel._asr_lang.currentData() or "auto"
+         overlay.set_source_language(code)
+ 

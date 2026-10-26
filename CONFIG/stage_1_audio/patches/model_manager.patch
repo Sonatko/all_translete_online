@@ -1,0 +1,20 @@
+--- a/model_manager.py
++++ b/model_manager.py
+@@ -398,6 +398,8 @@
+ 
+ 
+ def is_asr_cached(engine_type, model_size="medium", hub="ms") -> bool:
++    if engine_type.startswith("sherpa_"):
++        return True
+     if engine_type == "funasr" or engine_type in FUNASR_LEGACY_ENGINE_ALIASES:
+         model_key = (
+             FUNASR_LEGACY_ENGINE_ALIASES[engine_type]
+@@ -454,6 +456,8 @@
+ 
+ 
+ def get_missing_models(engine, model_size, hub) -> list:
++    if engine.startswith("sherpa_"):
++        return []
+     missing = []
+     if not is_silero_cached():
+         missing.append(

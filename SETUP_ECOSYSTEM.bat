@@ -44,18 +44,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip = '%~dp0stage_2_scr
 
 :check_models
 :: ---------------------------------------------------------------------
-:: 3. Translation Models: Meta NLLB-200 1.3B INT8 (Local CUDA Gateway)
+:: 3. Neural Models: SenseVoice-Small ONNX & Meta NLLB-200 1.3B INT8
 :: ---------------------------------------------------------------------
 echo.
-echo [3/4] Checking Neural Translation Models (Meta NLLB-200 1.3B INT8)...
-if exist "%~dp0stage_1_audio\nllb_server\models\nllb-200-1.3b-int8\model.bin" (
-    echo   [OK] NLLB-200 1.3B INT8 model is present: 1.34 GB, CUDA ready.
-    goto check_config
+echo [3/4] Checking Neural Models (ASR SenseVoice ONNX & NLLB-200 1.3B)...
+set "HF_ENDPOINT=https://hf-mirror.com"
+
+if not exist "%~dp0stage_1_audio\LiveTranslate\models\sherpa-onnx\sensevoice\model.int8.onnx" (
+    echo   [DOWNLOAD] SenseVoice-Small ONNX missing. Pre-downloading via mirror (228 MB)...
+    "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" -c "import os; from huggingface_hub import hf_hub_download; d = os.path.abspath(r'%~dp0stage_1_audio\LiveTranslate\models\sherpa-onnx\sensevoice'); os.makedirs(d, exist_ok=True); hf_hub_download('csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17', 'model.int8.onnx', local_dir=d); hf_hub_download('csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17', 'tokens.txt', local_dir=d)"
+) else (
+    echo   [OK] SenseVoice-Small ONNX is present (228 MB)
 )
 
-echo   [DOWNLOAD] NLLB model weights missing. Downloading via high-speed mirror...
-set "HF_ENDPOINT=https://hf-mirror.com"
-"%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" -c "import os; from huggingface_hub import snapshot_download; model_dir = os.path.abspath(r'%~dp0stage_1_audio\nllb_server\models\nllb-200-1.3b-int8'); os.makedirs(model_dir, exist_ok=True); print('Downloading NLLB-200 1.3B INT8 via hf-mirror.com...'); snapshot_download(repo_id='haoranxu/nllb-200-1.3B-ctranslate2-int8', local_dir=model_dir, local_dir_use_symlinks=False)"
+if not exist "%~dp0stage_1_audio\nllb_server\models\nllb-200-1.3b-int8\model.bin" (
+    echo   [DOWNLOAD] NLLB model weights missing. Downloading via high-speed mirror (1.3 GB)...
+    "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" -c "import os; from huggingface_hub import snapshot_download; model_dir = os.path.abspath(r'%~dp0stage_1_audio\nllb_server\models\nllb-200-1.3b-int8'); os.makedirs(model_dir, exist_ok=True); print('Downloading NLLB-200 1.3B INT8 via hf-mirror.com...'); snapshot_download(repo_id='haoranxu/nllb-200-1.3B-ctranslate2-int8', local_dir=model_dir, local_dir_use_symlinks=False)"
+) else (
+    echo   [OK] NLLB-200 1.3B INT8 model is present: 1.34 GB, CUDA ready.
+)
 
 :check_config
 :: ---------------------------------------------------------------------

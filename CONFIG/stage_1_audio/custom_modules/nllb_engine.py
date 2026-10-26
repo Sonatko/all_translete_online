@@ -158,11 +158,33 @@ class LocalNLLBEngine:
         ]
         for p in candidates:
             resolved = os.path.abspath(p)
-            if os.path.exists(resolved):
+            if os.path.exists(resolved) and os.path.exists(os.path.join(resolved, "model.bin")):
                 return resolved
-        raise FileNotFoundError(
-            f"NLLB-200 model weights not found in any of candidate directories: {candidates}"
-        )
+
+        # On-Demand Auto-Download: download Meta NLLB-200 1.3B INT8 automatically if missing!
+        target_dir = os.path.abspath(os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-1.3b-int8"))
+        os.makedirs(target_dir, exist_ok=True)
+        log.info(f"NLLB-200 model weights missing locally. Auto-downloading 1.3B INT8 on-demand to {target_dir}...")
+        repo_id = "haoranxu/nllb-200-1.3B-ctranslate2-int8"
+        try:
+            from huggingface_hub import snapshot_download
+
+            try:
+                snapshot_download(repo_id=repo_id, local_dir=target_dir, local_dir_use_symlinks=False)
+            except Exception as e:
+                log.warning(f"Direct HuggingFace download failed ({e}). Retrying via hf-mirror.com...")
+                old_endpoint = os.environ.get("HF_ENDPOINT")
+                os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+                try:
+                    snapshot_download(repo_id=repo_id, local_dir=target_dir, local_dir_use_symlinks=False)
+                finally:
+                    if old_endpoint:
+                        os.environ["HF_ENDPOINT"] = old_endpoint
+                    else:
+                        os.environ.pop("HF_ENDPOINT", None)
+            return target_dir
+        except Exception as err:
+            raise FileNotFoundError(f"Failed to auto-download NLLB model: {err}")
 
     def translate(self, text: str, target_language: str = "ru", source_language: Optional[str] = None) -> str:
         clean = (text or "").strip()

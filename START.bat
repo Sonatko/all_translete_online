@@ -31,8 +31,9 @@ echo.
 echo ======================================================================
 echo  TRANSLATION ECOSYSTEM IS ONLINE AND READY!
 echo ======================================================================
-echo  [Stage 1: Audio Subtitles - LiveTranslate]
-echo  - In-Process MT: Meta NLLB-200 1.3B INT8 (Zero-Network, Ultra-Fast)
+echo  [Stage 1.1: Audio Transcription - LiveTranslate]
+echo  - Engine: Sherpa-ONNX INT8 (SenseVoice-Small / Parakeet-TDT)
+echo  - Status: Pure Transcription (Translation disabled for testing)
 echo  - F9:           Master Toggle (Subtitles Show/Hide + Audio Run/Pause)
 echo  - 2x MMB:       Double Middle Click to toggle Click-through (Lock/Unlock)
 echo  - MMB Drag:     Drag subtitle banner with Middle Mouse Button (wheel)

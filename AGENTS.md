@@ -37,7 +37,12 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - If any user requirement, technical direction, or design choice is ambiguous, doubtful, or underspecified, **NEVER GUESS OR CODE ASSUMPTIONS**. Stop and ask the user directly for clarification.
 - **Golden Subtitle & Audio Pipeline Interaction Scheme**:
   - **Master Hotkey (`F9`)**: Single master toggle that synchronously switches `Subtitles Visible + Transcription RUN` and `Subtitles Hidden + Transcription PAUSE`.
-  - **Subtitle Lock / Click-Through Toggle**: Double-click Middle Mouse Button (2x MMB / wheel click) over the subtitle banner to toggle Click-through (включение / выключение галочки прозрачности). Left-click is never hijacked.
+  - **Subtitle Lock / Click-Through Two-Way Sync**:
+    - **Physical gesture**: Double-click Middle Mouse Button (2x MMB / wheel click) over the subtitle banner toggles Click-through.
+    - **Panel Checkbox**: The `Click-through` checkbox on the main overlay header is bidirectionally wired to the subtitle banner: clicking it toggles subtitle click-through, and 2x MMB on the banner updates the checkbox.
+    - **Safety**: Left-click is never hijacked.
+  - **Subtitle Dragging (MMB Drag)**: Middle-mouse-button press and drag moves the subtitle banner across the screen; position is auto-saved to settings.
+  - **Language Selection Authority**: The `Target Language` combo on the main panel is the authoritative target selector. When `target_lang == source_lang`, the subtitle banner shows pure original text with 0ms translation delay and no LLM calls.
   - **Alpha Hit-Testing Surface**: Invisible `Alpha = 1/255` background fill in `paintEvent` to ensure Windows DWM hit-testing works seamlessly across the entire banner even at 0% background opacity.
 
 ### 6. Mandatory Git Tracking & Configuration Preservation Rule (The Zero-Loss Invariant)
@@ -59,8 +64,9 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - No task or checklist item may be marked complete simply with a checkbox.
   - Completion requires tangible, reproducible instrumental output (Inference Latency in ms, RAM/VRAM in MB, Word/Character Error Rate, CPU Load %) captured via test scripts and logged in `dev_notes/`.
   - A feature branch is merged into `main` ONLY after passing the end-to-end regression check:
-    1. Clean process lifecycle (START.bat & STOP.bat).
-    2. Golden Control Scheme verification (`F9` Master Toggle, `2x MMB` Click-through, `MMB Drag`).
-    3. Performance budget compliance (<200–350 ms latency, 0 MB game stutter).
+    1. Automated smoke gate (`stage_1_audio\.venv\Scripts\python.exe tests\test_stage1_smoke.py` passes all checks).
+    2. Clean process lifecycle (START.bat & STOP.bat).
+    3. Golden Control Scheme verification (`F9` Master Toggle, `2x MMB` Click-through, `MMB Drag`).
+    4. Performance budget compliance (<200–350 ms latency, 0 MB game stutter).
 
 

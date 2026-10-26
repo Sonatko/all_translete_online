@@ -73,6 +73,21 @@ def _download_hf_file(repo_id: str, filename: str, local_dir: str = None) -> str
 class SherpaASREngine:
     """Unified ASR Engine powered by Sherpa-ONNX C++ runtime."""
 
+    @staticmethod
+    def _normalize_language(lang: str) -> str:
+        clean = (lang or "").strip().lower()
+        if clean in ("zh", "chinese", "zh-cn", "zh-hans", "zh-hant"):
+            return "zh"
+        elif clean in ("en", "english"):
+            return "en"
+        elif clean in ("ja", "japanese"):
+            return "ja"
+        elif clean in ("ko", "korean"):
+            return "ko"
+        elif clean in ("yue", "cantonese"):
+            return "yue"
+        return "auto"
+
     def __init__(
         self,
         profile: str = Profile.MULTILINGUAL,
@@ -80,20 +95,30 @@ class SherpaASREngine:
         provider: str = "cpu",
         hotwords_file: str = "",
         hotwords_score: float = 1.5,
+        language: str = "auto",
     ):
         self.profile = profile.lower()
         self.num_threads = get_optimal_asr_threads(num_threads)
         self.provider = provider
         self.hotwords_file = hotwords_file
         self.hotwords_score = hotwords_score
+        self.language = self._normalize_language(language)
         self._recognizer = None
         self._load_model()
+
+    def set_language(self, language: str):
+        norm = self._normalize_language(language)
+        if norm != self.language:
+            self.language = norm
+            log.info(f"SherpaASREngine language hint updated to: {self.language}")
+            if self.profile == Profile.MULTILINGUAL:
+                self._load_model()
 
     def _load_model(self):
         t0 = time.perf_counter()
         log.info(
             f"Loading Sherpa-ONNX model | Profile: {self.profile} | "
-            f"Threads: {self.num_threads} | Provider: {self.provider}"
+            f"Language: {self.language} | Threads: {self.num_threads} | Provider: {self.provider}"
         )
 
         app_models_dir = os.path.join(os.path.dirname(__file__), "models", "sherpa-onnx")
@@ -115,10 +140,10 @@ class SherpaASREngine:
                 tokens=tokens_path,
                 num_threads=self.num_threads,
                 use_itn=True,
-                language="auto",
+                language=self.language,
                 provider=self.provider,
             )
-            log.info(f"SenseVoice-Small INT8 loaded in {time.perf_counter() - t0:.2f}s")
+            log.info(f"SenseVoice-Small INT8 loaded in {time.perf_counter() - t0:.2f}s (lang={self.language})")
 
         elif self.profile == Profile.PURE_ENGLISH:
             # NVIDIA Parakeet-TDT 0.6B INT8

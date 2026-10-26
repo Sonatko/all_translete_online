@@ -1,7 +1,7 @@
 diff --git a/asr_worker.py b/asr_worker.py
 --- a/asr_worker.py
 +++ b/asr_worker.py
-@@ -78,6 +78,16 @@
+@@ -78,6 +78,17 @@
  
          worker_device = parsed_device if parsed_device == "cpu" else f"cuda:{device_index}"
          engine = AnimeWhisperEngine(device=worker_device, hub=hub)
@@ -14,6 +14,7 @@ diff --git a/asr_worker.py b/asr_worker.py
 +            profile=profile,
 +            num_threads=cpu_threads,
 +            provider="cpu",
++            language=language,
 +        )
      else:
          from asr_engine import ASREngine
@@ -559,7 +560,7 @@ diff --git a/vad_processor.py b/vad_processor.py
 +
 +        if getattr(self, "_use_sherpa_vad", False):
 +            self._sherpa_vad.accept_waveform(chunk)
-+            return 0.95 if self._sherpa_vad.is_speech_detected() else 0.05
++            return 0.95 if self._sherpa_vad.is_speech_detected() else 0.0
 +
 +        import torch
          with torch.inference_mode():

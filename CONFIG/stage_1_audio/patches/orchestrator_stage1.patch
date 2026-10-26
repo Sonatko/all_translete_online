@@ -221,7 +221,40 @@ diff --git a/main.py b/main.py
          if len(parts) > 1:
              return parts
  
-@@ -2022,10 +2044,14 @@
+@@ -1441,6 +1463,14 @@
+ 
+         full_text = result["text"].strip()
+         if not full_text or not any(c.isalnum() for c in full_text):
++            return False
++
++        asr_lang_setting = self._panel.get_settings().get("asr_language", "auto") if self._panel else "auto"
++        if asr_lang_setting != "auto" and result["language"] != asr_lang_setting:
++            log.info(
++                f"Interim language filter: expected '{asr_lang_setting}' but got '{result['language']}', "
++                f"discarding: {full_text[:60]}"
++            )
+             return False
+ 
+         # Strip echo from previous commit's overlap
+@@ -1618,7 +1648,16 @@
+             log.debug(f"Noise filter: {seg_len:.1f}s segment produced only '{original_text}', skipping")
+             return
+ 
+-        self._process_segment_text(original_text, result["language"], asr_ms)
++        source_lang = result["language"]
++        asr_lang_setting = self._panel.get_settings().get("asr_language", "auto") if self._panel else "auto"
++        if asr_lang_setting != "auto" and source_lang != asr_lang_setting:
++            log.info(
++                f"Language filter: expected '{asr_lang_setting}' but got '{source_lang}', "
++                f"discarding: {original_text[:60]}"
++            )
++            return
++
++        self._process_segment_text(original_text, source_lang, asr_ms)
+ 
+     def _capture_loop(self):
+         silence_chunk = np.zeros(
+@@ -2022,10 +2061,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -238,7 +271,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2061,28 @@
+@@ -2035,14 +2078,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)

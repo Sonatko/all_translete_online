@@ -49,3 +49,18 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - NEVER reorganize directories, archive folders, or delete files without first running `git status` and verifying that all active configurations, custom UI styles, and model tuning parameters are safely committed and mirrored in `CONFIG/`.
   - If any file is excluded by `.gitignore` in upstream submodules (e.g., `user_settings.json`), it must either be explicitly un-ignored or tracked via `CONFIG/` so that no user settings can ever be lost during cleanups.
 
+### 7. Professional Git Flow, Branching Protocol & Test-Driven Verification Gate
+- **Strict Branching Strategy**:
+  - `main`: Protected, production-ready release branch. Never code experimental features directly on `main`.
+  - `feature/<stage>-<name>`: Isolated branches for discrete improvements (e.g., `feature/stage1-asr-optimization`, `feature/stage1-mt-speedup`).
+  - `refactor/<name>`: Architectural cleanups and technical debt elimination.
+  - `test/<name>`: Benchmarking suites and diagnostic testbeds.
+- **The Test-Driven Verification Gate (Evidence Before Claims)**:
+  - No task or checklist item may be marked complete simply with a checkbox.
+  - Completion requires tangible, reproducible instrumental output (Inference Latency in ms, RAM/VRAM in MB, Word/Character Error Rate, CPU Load %) captured via test scripts and logged in `dev_notes/`.
+  - A feature branch is merged into `main` ONLY after passing the end-to-end regression check:
+    1. Clean process lifecycle (START.bat & STOP.bat).
+    2. Golden Control Scheme verification (`F9` Master Toggle, `2x MMB` Click-through, `MMB Drag`).
+    3. Performance budget compliance (<200–350 ms latency, 0 MB game stutter).
+
+

@@ -11,6 +11,7 @@ configs/**/config.json
 # Cache and temporary logs
 *.log
 *.tmp
+scratch/
 .cache/
 __pycache__/
 .venv/

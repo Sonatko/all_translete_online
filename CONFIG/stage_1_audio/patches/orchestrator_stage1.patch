@@ -60,7 +60,35 @@ diff --git a/control_panel.py b/control_panel.py
          else:
              self._audio_device.setCurrentIndex(1)  # system default
          asr_layout.addWidget(QLabel(t("label_audio")), 6, 0)
-@@ -1442,15 +1450,21 @@
+@@ -544,6 +552,7 @@
+ 
+         self._model_list = QListWidget()
+         self._model_list.setFont(QFont("Consolas", 9))
++        self._model_list.itemClicked.connect(self._on_model_clicked)
+         self._model_list.itemDoubleClicked.connect(self._on_model_double_clicked)
+         self._refresh_model_list()
+         models_layout.addWidget(self._model_list)
+@@ -1314,6 +1323,19 @@
+         _save_settings(self._current_settings)
+         self._emit_models_list_changed()
+ 
++    def _on_model_clicked(self, item):
++        row = self._model_list.row(item)
++        models = self._current_settings.get("models", [])
++        if 0 <= row < len(models):
++            current_active = self._current_settings.get("active_model", 0)
++            if row != current_active:
++                self._current_settings["active_model"] = row
++                self._refresh_model_list()
++                _save_settings(self._current_settings)
++                self._emit_models_list_changed()
++                self.model_changed.emit(models[row])
++                log.info(f"Model switched via list click: [{row}] {models[row].get('name')}")
++
+     def _on_model_double_clicked(self, item):
+         row = self._model_list.row(item)
+         models = self._current_settings.get("models", [])
+@@ -1442,15 +1464,21 @@
  
      def _apply_settings(self):
          self._current_settings["asr_language"] = self._get_asr_lang_code()

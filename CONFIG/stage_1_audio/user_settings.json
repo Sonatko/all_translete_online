@@ -12,35 +12,17 @@
   "max_speech_duration": 7.0,
   "silence_mode": "fixed",
   "silence_duration": 0.25,
-  "asr_language": "en",
+  "asr_language": "auto",
   "target_language": "ru",
   "models": [
     {
-      "name": "[Быстро] Meta NLLB-200 600M (Ультра-скорость, ~70ms)",
+      "name": "Meta NLLB-200 (Локальный перевод, 100% Offline)",
       "api_base": "local",
       "api_key": "not-needed",
       "model": "nllb-200-600m",
       "proxy": "none",
       "thinking_style": "off",
       "streaming": true
-    },
-    {
-      "name": "[Точно] Meta NLLB-200 1.3B (Высокая точность, ~140ms)",
-      "api_base": "local",
-      "api_key": "not-needed",
-      "model": "nllb-200-1.3b",
-      "proxy": "none",
-      "thinking_style": "off",
-      "streaming": true
-    },
-    {
-      "name": "[Откл] Без перевода (Чистый ASR / Только оригинал)",
-      "api_base": "none",
-      "api_key": "not-needed",
-      "model": "disabled",
-      "proxy": "none",
-      "thinking_style": "off",
-      "streaming": false
     }
   ],
   "active_model": 0,
@@ -125,11 +107,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 250,
-    "window_y": 59
+    "window_x": 711,
+    "window_y": 29
   },
-  "overlay_x": 396,
-  "overlay_y": 333,
+  "overlay_x": 515,
+  "overlay_y": 370,
   "overlay_w": 620,
   "overlay_h": 500
 }

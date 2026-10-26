@@ -236,8 +236,25 @@ class SherpaASREngine:
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
         raw_text = stream.result.text.strip()
-        if not raw_text:
+        if not raw_text or "<|nospeech|>" in raw_text:
             return None
+
+        # Parse language tag from raw SenseVoice output before stripping
+        detected_lang = "en"
+        lang_name = "English"
+        if self.profile == Profile.MULTILINGUAL:
+            lang_tag_map = {
+                "<|zh|>": ("zh", "Chinese"),
+                "<|en|>": ("en", "English"),
+                "<|ja|>": ("ja", "Japanese"),
+                "<|ko|>": ("ko", "Korean"),
+                "<|yue|>": ("yue", "Cantonese"),
+            }
+            for tag, (code, name) in lang_tag_map.items():
+                if tag in raw_text:
+                    detected_lang = code
+                    lang_name = name
+                    break
 
         # Clean tags (e.g. SenseVoice emotion/event tags <|HAPPY|>, <|BGM|>, etc.)
         import re
@@ -255,20 +272,18 @@ class SherpaASREngine:
             except Exception as pe:
                 log.debug(f"Punctuation restoration error ({pe}), using raw text")
 
-        # Detect language cues
-        lang = "en"
-        lang_name = "English"
-        if self.profile == Profile.MULTILINGUAL:
+        # Refine detected language via characters if no explicit tag was found
+        if self.profile == Profile.MULTILINGUAL and detected_lang == "en":
             if any("\u0400" <= c <= "\u04ff" for c in clean_text):
-                lang, lang_name = "ru", "Russian"
+                detected_lang, lang_name = "ru", "Russian"
             elif any("\u4e00" <= c <= "\u9fff" for c in clean_text):
-                lang, lang_name = "zh", "Chinese"
+                detected_lang, lang_name = "zh", "Chinese"
             elif any("\u3040" <= c <= "\u30ff" for c in clean_text):
-                lang, lang_name = "ja", "Japanese"
+                detected_lang, lang_name = "ja", "Japanese"
 
         return {
             "text": clean_text,
-            "language": lang,
+            "language": detected_lang,
             "language_name": lang_name,
             "latency_ms": elapsed_ms,
         }

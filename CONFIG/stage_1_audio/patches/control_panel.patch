@@ -1,0 +1,12 @@
+--- a/control_panel.py
++++ b/control_panel.py
+@@ -54,7 +54,8 @@
+ 
+ log = logging.getLogger("LiveTranslate.Panel")
+ 
+-SETTINGS_FILE = Path(__file__).parent / "user_settings.json"
++_env_settings = os.environ.get("LIVETRANSLATE_SETTINGS_FILE")
++SETTINGS_FILE = Path(_env_settings) if _env_settings else Path(__file__).parent / "user_settings.json"
+ 
+ 
+ def _load_saved_settings() -> dict | None:

@@ -37,7 +37,7 @@
   "mic_device": null,
   "system_prompt": "You are a real-time subtitle translator for casual conversation. Translate {source_lang} into {target_lang}.\nRules:\n- Output ONLY one single best translation, nothing else.\n- Never include alternatives, parenthetical options, annotations, or explanations.\n- Keep proper nouns, names, and brand names untranslated.\n- Use natural, casual, everyday language. Keep it conversational and concise.\n- Auto-correct likely ASR errors based on context and common sense.",
   "timeout": 10,
-  "incremental_asr": false,
+  "incremental_asr": true,
   "interim_interval": 1.0,
   "auto_save_transcript": true,
   "style": {

@@ -21,19 +21,45 @@ class Profile:
     PURE_ENGLISH = "pure_english"
 
 
+def get_optimal_asr_threads(requested: int = None) -> int:
+    """Dynamically determine optimal CPU threads based on hardware topology.
+    Protects lower-end CPUs (4-core laptops) while unleashing high-end CPUs (8+ cores).
+    """
+    if requested is not None:
+        try:
+            req = int(requested)
+            if req > 0:
+                return req
+        except (ValueError, TypeError):
+            pass
+
+    try:
+        import psutil
+        physical = psutil.cpu_count(logical=False) or os.cpu_count() or 4
+    except Exception:
+        physical = os.cpu_count() or 4
+
+    if physical <= 4:
+        return 2  # Leave 2 physical cores free for Windows, game, or video player
+    elif physical == 6:
+        return 3
+    else:
+        return 4  # Sweet spot for ONNX runtime intra-op parallelism on 8+ core CPUs
+
+
 class SherpaASREngine:
     """Unified ASR Engine powered by Sherpa-ONNX C++ runtime."""
 
     def __init__(
         self,
         profile: str = Profile.MULTILINGUAL,
-        num_threads: int = 2,
+        num_threads: int = None,
         provider: str = "cpu",
         hotwords_file: str = "",
         hotwords_score: float = 1.5,
     ):
         self.profile = profile.lower()
-        self.num_threads = max(1, int(num_threads))
+        self.num_threads = get_optimal_asr_threads(num_threads)
         self.provider = provider
         self.hotwords_file = hotwords_file
         self.hotwords_score = hotwords_score

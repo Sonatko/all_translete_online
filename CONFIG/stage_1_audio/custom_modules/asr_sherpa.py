@@ -154,6 +154,26 @@ class SherpaASREngine:
                 provider=self.provider,
             )
             log.info(f"Parakeet-TDT 0.6B INT8 loaded in {time.perf_counter() - t0:.2f}s")
+
+            # C++ ONNX Punctuation restoration for Parakeet (1.3ms per sentence)
+            try:
+                punct_dir = os.path.join(app_models_dir, "punctuation")
+                punct_model = os.path.join(punct_dir, "model.onnx")
+                if not (os.path.exists(punct_model) and os.path.getsize(punct_model) > 0):
+                    repo_id = "csukuangfj/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12"
+                    punct_model = _download_hf_file(repo_id, "model.onnx", punct_dir)
+                punct_cfg = sherpa_onnx.OfflinePunctuationConfig(
+                    model=sherpa_onnx.OfflinePunctuationModelConfig(
+                        ct_transformer=punct_model,
+                        num_threads=1,
+                        provider=self.provider,
+                    )
+                )
+                self._punct = sherpa_onnx.OfflinePunctuation(punct_cfg)
+                log.info("Parakeet C++ OfflinePunctuation initialized successfully")
+            except Exception as pe:
+                log.warning(f"Could not initialize OfflinePunctuation ({pe}), will output raw text")
+                self._punct = None
         else:
             raise ValueError(f"Unknown ASR profile: {self.profile}. Choose 'multilingual' or 'pure_english'.")
 
@@ -199,6 +219,16 @@ class SherpaASREngine:
         clean_text = re.sub(r"<\|.*?\|>", "", raw_text).strip()
         if not clean_text:
             return None
+
+        # Apply C++ ONNX punctuation restoration for Parakeet (1.3ms per sentence)
+        if getattr(self, "_punct", None) is not None and self.profile == Profile.PURE_ENGLISH:
+            try:
+                punctuated = self._punct.add_punctuation(clean_text)
+                punctuated = punctuated.replace("。", ". ").replace("？", "? ").replace("！", "! ").replace("，", ", ")
+                punctuated = re.sub(r"(^|[.!?]\s+)([a-z])", lambda m: m.group(1) + m.group(2).upper(), punctuated.strip())
+                clean_text = punctuated
+            except Exception as pe:
+                log.debug(f"Punctuation restoration error ({pe}), using raw text")
 
         # Detect language cues
         lang = "en"

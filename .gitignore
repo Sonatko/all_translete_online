@@ -23,10 +23,13 @@ __pycache__/
 *.pth
 *.zip
 *.tar.gz
-# Third-party upstream applications (downloaded and patched by SETUP_ECOSYSTEM.bat)
-stage_1_audio/LiveTranslate/
-!stage_1_audio/LiveTranslate/asr_sherpa.py
-!stage_1_audio/LiveTranslate/vad_sherpa.py
+# LiveTranslate runtime caches, virtual environments, and weights
+stage_1_audio/LiveTranslate/.venv/
+stage_1_audio/LiveTranslate/models/
+stage_1_audio/LiveTranslate/logs/
+stage_1_audio/LiveTranslate/transcripts/
+stage_1_audio/LiveTranslate/user_settings.json
+stage_1_audio/LiveTranslate/screenshot/
 stage_1_audio/nllb_server/models/
 stage_2_screen/OverTranslate/current/
 bin/

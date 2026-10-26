@@ -19,6 +19,8 @@ def apply_all():
         "main.patch",
         "subtitle_window.patch",
         "translator.patch",
+        "asr_worker.patch",
+        "sherpa_main.patch",
     ]
 
     for p in patches:

@@ -1,0 +1,9 @@
+--- a/main.py
++++ b/main.py
+@@ -603,4 +603,6 @@
+             "download_root": str((MODELS_DIR / "huggingface" / "hub").resolve()),
+             "display_name": display_name,
+             "remote_asr_url": remote_asr_url,
++            "asr_profile": settings.get("asr_profile", "multilingual"),
++            "asr_cpu_threads": settings.get("asr_cpu_threads", 2),
+         }

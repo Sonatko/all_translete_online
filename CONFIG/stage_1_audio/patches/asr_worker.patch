@@ -1,0 +1,15 @@
+--- a/asr_worker.py
++++ b/asr_worker.py
+@@ -80,2 +80,12 @@
+         engine = AnimeWhisperEngine(device=worker_device, hub=hub)
++    elif engine_type == "sherpa_onnx":
++        from asr_sherpa import SherpaASREngine
++
++        profile = config.get("asr_profile", "multilingual")
++        cpu_threads = config.get("asr_cpu_threads", 2)
++        engine = SherpaASREngine(
++            profile=profile,
++            num_threads=cpu_threads,
++            provider="cpu",
++        )
+     else:

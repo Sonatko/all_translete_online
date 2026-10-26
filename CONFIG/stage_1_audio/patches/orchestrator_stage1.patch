@@ -1,0 +1,461 @@
+diff --git a/asr_worker.py b/asr_worker.py
+index b8d8fbc..213d2af 100644
+--- a/asr_worker.py
++++ b/asr_worker.py
+@@ -78,6 +78,16 @@ def _load_engine(config: dict):
+ 
+         worker_device = parsed_device if parsed_device == "cpu" else f"cuda:{device_index}"
+         engine = AnimeWhisperEngine(device=worker_device, hub=hub)
++    elif engine_type == "sherpa_onnx":
++        from asr_sherpa import SherpaASREngine
++
++        profile = config.get("asr_profile", "multilingual")
++        cpu_threads = config.get("asr_cpu_threads", 2)
++        engine = SherpaASREngine(
++            profile=profile,
++            num_threads=cpu_threads,
++            provider="cpu",
++        )
+     else:
+         from asr_engine import ASREngine
+ 
+diff --git a/control_panel.py b/control_panel.py
+index ab9684d..c9c9e69 100644
+--- a/control_panel.py
++++ b/control_panel.py
+@@ -219,15 +219,21 @@ class ControlPanel(QWidget):
+                 f"[{t('asr_fast')}] FunASR",
+                 "Anime-Whisper (ja, anime/galgame)",
+                 "Remote Whisper (remote GPU server)",
++                "⚡ Sherpa-ONNX: SenseVoice (Все языки)",
++                "⚡ Sherpa-ONNX: Parakeet (Только английский)",
+             ]
+         )
+-        engine_map_idx = {
+-            "whisper": 0,
+-            "funasr": 1,
+-            "anime-whisper": 2,
+-            "remote-whisper": 3,
+-        }
+-        engine_idx = engine_map_idx.get(s.get("asr_engine"), 0)
++        saved_engine = s.get("asr_engine")
++        if saved_engine == "sherpa_onnx":
++            engine_idx = 5 if s.get("asr_profile") == "pure_english" else 4
++        else:
++            engine_map_idx = {
++                "whisper": 0,
++                "funasr": 1,
++                "anime-whisper": 2,
++                "remote-whisper": 3,
++            }
++            engine_idx = engine_map_idx.get(saved_engine, 4)
+         self._asr_engine.setCurrentIndex(engine_idx)
+         asr_layout.addWidget(QLabel(t("label_engine")), 0, 0)
+         asr_layout.addWidget(self._asr_engine, 0, 1)
+@@ -334,6 +340,8 @@ class ControlPanel(QWidget):
+             idx = self._audio_device.findText(saved_audio)
+             if idx >= 0:
+                 self._audio_device.setCurrentIndex(idx)
++            else:
++                self._audio_device.setCurrentIndex(1)  # fallback to system default if device unplugged
+         else:
+             self._audio_device.setCurrentIndex(1)  # system default
+         asr_layout.addWidget(QLabel(t("label_audio")), 6, 0)
+@@ -1442,15 +1450,21 @@ class ControlPanel(QWidget):
+ 
+     def _apply_settings(self):
+         self._current_settings["asr_language"] = self._get_asr_lang_code()
+-        engine_map = {
+-            0: "whisper",
+-            1: "funasr",
+-            2: "anime-whisper",
+-            3: "remote-whisper",
+-        }
+-        self._current_settings["asr_engine"] = engine_map.get(
+-            self._asr_engine.currentIndex(), "whisper"
+-        )
++        idx = self._asr_engine.currentIndex()
++        if idx == 4:
++            self._current_settings["asr_engine"] = "sherpa_onnx"
++            self._current_settings["asr_profile"] = "multilingual"
++        elif idx == 5:
++            self._current_settings["asr_engine"] = "sherpa_onnx"
++            self._current_settings["asr_profile"] = "pure_english"
++        else:
++            engine_map = {
++                0: "whisper",
++                1: "funasr",
++                2: "anime-whisper",
++                3: "remote-whisper",
++            }
++            self._current_settings["asr_engine"] = engine_map.get(idx, "whisper")
+         self._current_settings["funasr_model"] = self._selected_funasr_model()
+         if hasattr(self, "_remote_url_edit"):
+             url = self._remote_url_edit.text().strip()
+diff --git a/main.py b/main.py
+index aa6f3c1..867b3da 100644
+--- a/main.py
++++ b/main.py
+@@ -85,14 +85,17 @@ def setup_logging():
+ 
+     file_handler = logging.FileHandler(log_file, encoding="utf-8")
+     file_handler.setLevel(logging.DEBUG)
+-    console_handler = logging.StreamHandler(sys.stdout)
+-    console_handler.setLevel(logging.INFO)
+-
+     fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+     file_handler.setFormatter(fmt)
+-    console_handler.setFormatter(fmt)
++    handlers = [file_handler]
++
++    if sys.stdout is not None:
++        console_handler = logging.StreamHandler(sys.stdout)
++        console_handler.setLevel(logging.INFO)
++        console_handler.setFormatter(fmt)
++        handlers.append(console_handler)
+ 
+-    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler])
++    logging.basicConfig(level=logging.DEBUG, handlers=handlers)
+ 
+     for noisy in (
+         "httpcore",
+@@ -603,6 +606,8 @@ class LiveTranslateApp:
+             "download_root": str((MODELS_DIR / "huggingface" / "hub").resolve()),
+             "display_name": display_name,
+             "remote_asr_url": remote_asr_url,
++            "asr_profile": settings.get("asr_profile", "multilingual"),
++            "asr_cpu_threads": settings.get("asr_cpu_threads", 2),
+         }
+         target_state = {
+             "type": engine_type,
+@@ -1129,6 +1134,8 @@ class LiveTranslateApp:
+             self._transcript.finalize_no_translation(msg_id)
+             if self._overlay:
+                 self._overlay.update_translation(msg_id, f"[error: {e}]", 0)
++            if self._subwin and self._subwin.isVisible():
++                self._subwin.update_text(text, {self._target_language: ""})
+ 
+     def _translate_extra_langs(self, text, source_lang, extra_langs, tl_dict):
+         """Translate into additional languages for subtitle window (parallel)."""
+@@ -1357,18 +1364,28 @@ class LiveTranslateApp:
+ 
+     @staticmethod
+     def _get_segmenter(lang: str):
+-        from yasbd import get_supported_langs, pysbd_adapter
+-        if lang not in LiveTranslateApp._segmenter_cache:
+-            seg_lang = lang if lang in get_supported_langs() else "en"
+-            LiveTranslateApp._segmenter_cache[lang] = pysbd_adapter.Segmenter(
+-                language=seg_lang, clean=False
+-            )
+-        return LiveTranslateApp._segmenter_cache[lang]
++        try:
++            from yasbd import get_supported_langs, pysbd_adapter
++            if lang not in LiveTranslateApp._segmenter_cache:
++                seg_lang = lang if lang in get_supported_langs() else "en"
++                LiveTranslateApp._segmenter_cache[lang] = pysbd_adapter.Segmenter(
++                    language=seg_lang, clean=False
++                )
++            return LiveTranslateApp._segmenter_cache[lang]
++        except ImportError:
++            return None
+ 
+     def _split_sentences(self, text: str, lang: str = "en") -> list[str]:
+-        """Split text into sentences using yasbd, with comma fallback for long text."""
++        """Split text into sentences using yasbd, with zero-dependency regex fallback."""
+         seg = self._get_segmenter(lang)
+-        parts = [p for p in seg.segment(text) if p.strip()]
++        if seg is not None:
++            parts = [p for p in seg.segment(text) if p.strip()]
++        else:
++            # Zero-dependency regex fallback: split after sentence-ending punctuation (.!?。！？)
++            import re
++            raw_parts = re.split(r'(?<=[.!?])\s+|(?<=[。！？])', text)
++            parts = [p.strip() for p in raw_parts if p.strip()]
++
+         if len(parts) > 1:
+             return parts
+ 
+@@ -2022,10 +2039,14 @@ def main():
+ 
+     menu.addAction(subwin_toggle_action)
+ 
+-    # Quick toggle for subtitle-window click-through (mirrors the settings checkbox).
++    # Quick toggle for subtitle-window click-through (mirrors the settings checkbox and overlay panel).
+     subwin_ct_action = QAction(t("subwin_click_through_tray"), checkable=True)
+     _subwin_init = panel.get_settings().get("subtitle_mode") or {}
+-    subwin_ct_action.setChecked(bool(_subwin_init.get("click_through", False)))
++    _init_ct = bool(_subwin_init.get("click_through", False))
++    subwin_ct_action.setChecked(_init_ct)
++    overlay._handle._ct_check.blockSignals(True)
++    overlay._handle._ct_check.setChecked(_init_ct)
++    overlay._handle._ct_check.blockSignals(False)
+ 
+     def on_toggle_subwin_ct(checked):
+         subwin.set_click_through(checked)
+@@ -2035,14 +2056,28 @@ def main():
+         settings["subtitle_mode"] = sm
+         panel._current_settings["subtitle_mode"] = sm
+         _save_settings(settings)
++        # Sync settings dialog
+         w = panel._subtitle_widget
+         w._click_through_check.blockSignals(True)
+         w._click_through_check.setChecked(checked)
+         w._click_through_check.blockSignals(False)
+         w._settings["click_through"] = checked
++        # Sync tray action
++        subwin_ct_action.blockSignals(True)
++        subwin_ct_action.setChecked(checked)
++        subwin_ct_action.blockSignals(False)
++        # Sync main overlay header checkbox
++        overlay._handle._ct_check.blockSignals(True)
++        overlay._handle._ct_check.setChecked(checked)
++        overlay._handle._ct_check.blockSignals(False)
+ 
+     subwin_ct_action.toggled.connect(on_toggle_subwin_ct)
+-    subwin.click_through_toggled.connect(subwin_ct_action.setChecked)
++    overlay._handle.click_through_toggled.connect(on_toggle_subwin_ct)
++
++    def _on_subwin_ct_changed(checked):
++        on_toggle_subwin_ct(checked)
++
++    subwin.click_through_toggled.connect(_on_subwin_ct_changed)
+     menu.addAction(subwin_ct_action)
+ 
+     # Master toggle for Subtitles + Transcription (Run/Stop)
+diff --git a/model_manager.py b/model_manager.py
+index fbbf185..22b1a34 100644
+--- a/model_manager.py
++++ b/model_manager.py
+@@ -398,6 +398,22 @@ def _hf_repo_complete(org: str, name: str, min_bytes: int = 50_000_000) -> bool:
+ 
+ 
+ def is_asr_cached(engine_type, model_size="medium", hub="ms") -> bool:
++    if engine_type == "sherpa_onnx" or engine_type.startswith("sherpa_"):
++        sherpa_dir = MODELS_DIR / "sherpa-onnx"
++        if model_size == "pure_english" or engine_type == "sherpa_parakeet":
++            parakeet_dir = sherpa_dir / "parakeet_tdt"
++            return (
++                (parakeet_dir / "encoder.int8.onnx").exists()
++                and (parakeet_dir / "decoder.int8.onnx").exists()
++                and (parakeet_dir / "joiner.int8.onnx").exists()
++                and (parakeet_dir / "tokens.txt").exists()
++            )
++        else:
++            sense_dir = sherpa_dir / "sensevoice"
++            return (
++                (sense_dir / "model.int8.onnx").exists()
++                and (sense_dir / "tokens.txt").exists()
++            )
+     if engine_type == "funasr" or engine_type in FUNASR_LEGACY_ENGINE_ALIASES:
+         model_key = (
+             FUNASR_LEGACY_ENGINE_ALIASES[engine_type]
+@@ -480,6 +496,15 @@ def get_missing_models(engine, model_size, hub) -> list:
+             key = engine if engine != "whisper" else f"whisper-{model_size}"
+             display = f"Whisper {model_size}"
+             estimated_bytes = _MODEL_SIZE_BYTES.get(key, 0)
++        elif engine == "sherpa_onnx" or engine.startswith("sherpa_"):
++            if model_size == "pure_english" or engine == "sherpa_parakeet":
++                display = "Sherpa-ONNX Parakeet-TDT (en)"
++                key = "sherpa_parakeet"
++                estimated_bytes = 280_000_000
++            else:
++                display = "Sherpa-ONNX SenseVoice (multi)"
++                key = "sherpa_sensevoice"
++                estimated_bytes = 150_000_000
+         else:
+             key = engine
+             display = ASR_DISPLAY_NAMES.get(engine, engine)
+@@ -666,6 +691,16 @@ def download_asr(engine, model_size="medium", hub="ms", proxy="system"):
+             model_id = f"Systran/faster-whisper-{model_size}"
+             log.info(f"Downloading {model_id} from HuggingFace...")
+             snapshot_download(repo_id=model_id, cache_dir=hf_cache)
++        elif engine == "sherpa_onnx" or engine.startswith("sherpa_"):
++            from huggingface_hub import snapshot_download
++            if model_size == "pure_english" or engine == "sherpa_parakeet":
++                repo_id = "csukuangfj/sherpa-onnx-nemo-parakeet-tdt-ctc-110m-en-30000hrs"
++                target = str(MODELS_DIR / "sherpa-onnx" / "parakeet_tdt")
++            else:
++                repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
++                target = str(MODELS_DIR / "sherpa-onnx" / "sensevoice")
++            log.info(f"Downloading {repo_id} from HuggingFace...")
++            snapshot_download(repo_id=repo_id, local_dir=target)
+     log.info(f"ASR model downloaded: {engine}")
+ 
+ 
+diff --git a/requirements.txt b/requirements.txt
+index 48fb0d4..ba05d2f 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -37,6 +37,9 @@ huggingface_hub>=0.20.0
+ # UI
+ PyQt6>=6.5.0
+ 
++# Sentence segmentation for incremental ASR
++yasbd-lib>=0.15,<1.0
++
+ # torch & torchaudio - install separately with CUDA support:
+ #   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126
+ #   Blackwell GPUs (RTX 50xx, sm_120) require cu128:
+diff --git a/start.bat b/start.bat
+index 4a5b480..982cb89 100644
+--- a/start.bat
++++ b/start.bat
+@@ -19,5 +19,5 @@ if not exist ".venv\.livetranslate-ready" (
+ )
+ 
+ echo Starting LiveTranslate...
+-start "" ".venv\Scripts\pythonw.exe" main.py
++start "" "%~dp0.venv\Scripts\pythonw.exe" "%~dp0main.py"
+ exit /b 0
+diff --git a/subtitle_window.py b/subtitle_window.py
+index 652701e..e6e28ba 100644
+--- a/subtitle_window.py
++++ b/subtitle_window.py
+@@ -61,6 +61,8 @@ try:
+         _user32.SetWindowsHookExW.restype = ctypes.c_void_p
+         _user32.UnhookWindowsHookEx.argtypes = [ctypes.c_void_p]
+         _user32.UnhookWindowsHookEx.restype = wintypes.BOOL
++        _user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
++        _user32.GetWindowRect.restype = wintypes.BOOL
+ except Exception:
+     _HOOKPROC = None
+     _MSLLHOOKSTRUCT = None
+@@ -818,14 +820,13 @@ class SubtitleWindow(QWidget):
+                     ctypes.windll.user32.SetWindowLongW(
+                         hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
+                     )
+-                if self.isVisible():
+-                    self._install_mouse_hook()
+             else:
+                 if style & _WS_EX_TRANSPARENT:
+                     ctypes.windll.user32.SetWindowLongW(
+                         hwnd, _GWL_EXSTYLE, style & ~_WS_EX_TRANSPARENT
+                     )
+-                self._uninstall_mouse_hook()
++            if self.isVisible():
++                self._install_mouse_hook()
+         except Exception:
+             pass
+ 
+@@ -836,17 +837,21 @@ class SubtitleWindow(QWidget):
+         def _hook_callback(nCode, wParam, lParam):
+             if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
+                 try:
+-                    ms = ctypes.cast(lParam, ctypes.POINTER(_MSLLHOOKSTRUCT)).contents
+-                    gx, gy = ms.pt.x, ms.pt.y
+-                    if self.isVisible() and self.geometry().contains(gx, gy):
+-                        now = time.time()
+-                        dt = ctypes.windll.user32.GetDoubleClickTime() / 1000.0
+-                        if now - self._last_mmb_down_time <= dt:
+-                            self._last_mmb_down_time = 0.0
+-                            QTimer.singleShot(0, self._on_double_click_toggle_off)
+-                            return 1
+-                        else:
+-                            self._last_mmb_down_time = now
++                    if self.isVisible():
++                        ms = ctypes.cast(lParam, ctypes.POINTER(_MSLLHOOKSTRUCT)).contents
++                        hwnd = int(self.winId())
++                        rect = wintypes.RECT()
++                        if _user32.GetWindowRect(hwnd, ctypes.byref(rect)):
++                            # Physical screen coordinates comparison (100% DPI-independent and exact across whole banner)
++                            if rect.left <= ms.pt.x <= rect.right and rect.top <= ms.pt.y <= rect.bottom:
++                                now = time.time()
++                                dt = ctypes.windll.user32.GetDoubleClickTime() / 1000.0
++                                if now - self._last_mmb_down_time <= dt:
++                                    self._last_mmb_down_time = 0.0
++                                    QTimer.singleShot(0, self._on_double_click_toggle)
++                                    return 1
++                                else:
++                                    self._last_mmb_down_time = now
+                 except Exception:
+                     pass
+             return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
+@@ -865,9 +870,10 @@ class SubtitleWindow(QWidget):
+             self._mouse_hook = None
+             self._hook_proc = None
+ 
+-    def _on_double_click_toggle_off(self):
+-        self.set_click_through(False)
+-        self.click_through_toggled.emit(False)
++    def _on_double_click_toggle(self):
++        new_val = not self._click_through
++        self.set_click_through(new_val)
++        self.click_through_toggled.emit(new_val)
+ 
+     def showEvent(self, event):
+         super().showEvent(event)
+diff --git a/translator.py b/translator.py
+index ca0cda9..5ea42e8 100644
+--- a/translator.py
++++ b/translator.py
+@@ -222,6 +222,28 @@ class Translator:
+         self._temperature = temperature
+         self._streaming = streaming
+         self._timeout = timeout
++
++        # In-process local NLLB-200 support (eliminates external server.py and TCP port 8080)
++        self._is_local_nllb = False
++        self._is_disabled = False
++        api_base_str = str(api_base or "").lower()
++        model_str = str(model or "").lower()
++        if (
++            "disabled" in api_base_str
++            or "no-translation" in model_str
++            or api_base_str in ("none", "off", "offline-direct")
++            or model_str in ("none", "off", "disabled")
++        ):
++            self._is_disabled = True
++            log.info("Translator: disabled (pure ASR transcription mode)")
++        elif (
++            "127.0.0.1:8080" in api_base_str
++            or "localhost:8080" in api_base_str
++            or api_base_str in ("local", "nllb", "offline")
++            or "nllb" in model_str
++        ):
++            self._is_local_nllb = True
++            log.info(f"Translator: using in-process LocalNLLBEngine for {model} (zero-network, ultra-fast)")
+         self._overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
+         self._extra_body = dict(extra_body) if extra_body else {}
+         if self._overrides:
+@@ -268,6 +290,7 @@ class Translator:
+         """Create a new Translator with a different target language, sharing the same client."""
+         t = Translator.__new__(Translator)
+         t._client = self._client
++        t._is_local_nllb = getattr(self, "_is_local_nllb", False)
+         t._no_system_role = self._no_system_role
+         t._thinking_style = self._thinking_style
+         t._json_response = self._json_response
+@@ -360,6 +383,15 @@ class Translator:
+         return kwargs
+ 
+     def translate(self, text: str, source_language: str = "en"):
++        if getattr(self, "_is_disabled", False):
++            return ""
++        if getattr(self, "_is_local_nllb", False):
++            from nllb_engine import LocalNLLBEngine
++            result = LocalNLLBEngine.get_instance().translate(
++                text, target_language=self._target_language, source_language=source_language
++            )
++            self._append_history(text, result)
++            return result
+         system_prompt = self._build_system_prompt(source_language)
+         if self._streaming:
+             result = self._translate_streaming(system_prompt, text)
+@@ -378,6 +410,17 @@ class Translator:
+         The final yielded value is always the complete translation.
+         Caller should use the last yielded value as the final result.
+         """
++        if getattr(self, "_is_disabled", False):
++            yield ""
++            return
++        if getattr(self, "_is_local_nllb", False):
++            from nllb_engine import LocalNLLBEngine
++            result = LocalNLLBEngine.get_instance().translate(
++                text, target_language=self._target_language, source_language=source_language
++            )
++            self._append_history(text, result)
++            yield result
++            return
+         system_prompt = self._build_system_prompt(source_language)
+         if not self._streaming:
+             result = self._translate_sync(system_prompt, text)

@@ -107,11 +107,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 633,
-    "window_y": 225
+    "window_x": 250,
+    "window_y": 59
   },
-  "overlay_x": 1514,
-  "overlay_y": 590,
+  "overlay_x": 396,
+  "overlay_y": 333,
   "overlay_w": 620,
   "overlay_h": 500
 }

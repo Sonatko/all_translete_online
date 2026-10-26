@@ -15,20 +15,17 @@ echo [1/4] Checking Audio Engine (LiveTranslate + NLLB)...
 if not exist "%~dp0stage_1_audio\LiveTranslate\start.bat" (
     echo   [DOWNLOAD] LiveTranslate missing. Downloading upstream engine...
     powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip = '%~dp0stage_1_audio\lt.zip'; $urls = @('https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip', 'https://ghproxy.net/https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip'); $downloaded = $false; foreach ($u in $urls) { try { Invoke-WebRequest -Uri $u -OutFile $zip -TimeoutSec 60 -ErrorAction Stop; $downloaded = $true; break } catch {} }; if ($downloaded) { Expand-Archive -Path $zip -DestinationPath '%~dp0stage_1_audio\lt_tmp' -Force; if (-not (Test-Path '%~dp0stage_1_audio\LiveTranslate')) { New-Item -ItemType Directory -Path '%~dp0stage_1_audio\LiveTranslate' | Out-Null }; Copy-Item -Path '%~dp0stage_1_audio\lt_tmp\LiveTranslate-main\*' -Destination '%~dp0stage_1_audio\LiveTranslate' -Recurse -Force; Remove-Item $zip -Force; Remove-Item '%~dp0stage_1_audio\lt_tmp' -Recurse -Force }"
-    echo   [PATCH] Applying surgical patches (F9 Master Toggle, 2x MMB, In-Process NLLB)...
-    "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" "%~dp0CONFIG\stage_1_audio\apply_patches.py"
-    copy /Y "%~dp0CONFIG\stage_1_audio\nllb_engine.py" "%~dp0stage_1_audio\LiveTranslate\nllb_engine.py" >nul
-    copy /Y "%~dp0CONFIG\stage_1_audio\user_settings.json" "%~dp0stage_1_audio\LiveTranslate\user_settings.json" >nul
-)
-if exist "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" (
-    echo   [OK] Python virtual environment verified in stage_1_audio\LiveTranslate\.venv
-    goto check_overtranslate
 )
 
-echo   [INSTALL] Virtual environment missing. Launching automatic installer...
-cd /d "%~dp0stage_1_audio\LiveTranslate"
-powershell -ExecutionPolicy Bypass -File "%~dp0stage_1_audio\LiveTranslate\install.ps1"
-cd /d "%~dp0"
+if not exist "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" (
+    echo   [INSTALL] Virtual environment missing. Launching automatic installer...
+    cd /d "%~dp0stage_1_audio\LiveTranslate"
+    powershell -ExecutionPolicy Bypass -File "%~dp0stage_1_audio\LiveTranslate\install.ps1"
+    cd /d "%~dp0"
+)
+
+echo   [ORCHESTRATE] Applying surgical patches, custom modules, and settings...
+"%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" "%~dp0CONFIG\stage_1_audio\apply_patches.py"
 
 :check_overtranslate
 :: ---------------------------------------------------------------------

@@ -37,6 +37,9 @@ huggingface_hub>=0.20.0
 # UI
 PyQt6>=6.5.0
 
+# Sentence segmentation for incremental ASR
+yasbd-lib>=0.15,<1.0
+
 # torch & torchaudio - install separately with CUDA support:
 #   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126
 #   Blackwell GPUs (RTX 50xx, sm_120) require cu128:

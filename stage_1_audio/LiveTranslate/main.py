@@ -1364,18 +1364,28 @@ class LiveTranslateApp:
 
     @staticmethod
     def _get_segmenter(lang: str):
-        from yasbd import get_supported_langs, pysbd_adapter
-        if lang not in LiveTranslateApp._segmenter_cache:
-            seg_lang = lang if lang in get_supported_langs() else "en"
-            LiveTranslateApp._segmenter_cache[lang] = pysbd_adapter.Segmenter(
-                language=seg_lang, clean=False
-            )
-        return LiveTranslateApp._segmenter_cache[lang]
+        try:
+            from yasbd import get_supported_langs, pysbd_adapter
+            if lang not in LiveTranslateApp._segmenter_cache:
+                seg_lang = lang if lang in get_supported_langs() else "en"
+                LiveTranslateApp._segmenter_cache[lang] = pysbd_adapter.Segmenter(
+                    language=seg_lang, clean=False
+                )
+            return LiveTranslateApp._segmenter_cache[lang]
+        except ImportError:
+            return None
 
     def _split_sentences(self, text: str, lang: str = "en") -> list[str]:
-        """Split text into sentences using yasbd, with comma fallback for long text."""
+        """Split text into sentences using yasbd, with zero-dependency regex fallback."""
         seg = self._get_segmenter(lang)
-        parts = [p for p in seg.segment(text) if p.strip()]
+        if seg is not None:
+            parts = [p for p in seg.segment(text) if p.strip()]
+        else:
+            # Zero-dependency regex fallback: split after sentence-ending punctuation (.!?。！？)
+            import re
+            raw_parts = re.split(r'(?<=[.!?])\s+|(?<=[。！？])', text)
+            parts = [p.strip() for p in raw_parts if p.strip()]
+
         if len(parts) > 1:
             return parts
 

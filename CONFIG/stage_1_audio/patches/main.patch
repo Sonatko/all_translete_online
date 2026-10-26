@@ -42,7 +42,17 @@
              f"worker_rss={snap['worker_rss']:.0f}MB "
              f"GPU(main alloc/reserved)={snap['gpu_alloc']:.0f}/{snap['gpu_reserved']:.0f}MB "
              f"audio={audio_seconds:.1f}s asr={asr_ms:.0f}ms "
-@@ -1351,7 +1356,7 @@
+@@ -1310,6 +1315,9 @@
+         self._last_original = original_text
+         self._last_msg_id = msg_id
+ 
++        if self._subwin and self._subwin.isVisible():
++            self._subwin.update_text(original_text, {target_lang: ""})
++
+         target_lang = self._target_language
+ 
+         # Collect extra languages needed by subtitle window (beyond the primary target)
+@@ -1351,7 +1359,7 @@
              except RuntimeError:
                  log.warning("Translation executor shut down, skipping")
  
@@ -51,7 +61,7 @@
  
      _segmenter_cache = {}  # lang -> yasbd pysbd_adapter.Segmenter
  
-@@ -1372,12 +1377,12 @@
+@@ -1372,12 +1380,12 @@
          if len(parts) > 1:
              return parts
  
@@ -68,7 +78,7 @@
                      before = text[:i + 1].strip()
                      after = text[i + 1:].strip()
                      if before and after and len(before) > 15 and len(after) > 3:
-@@ -1387,7 +1392,7 @@
+@@ -1387,7 +1395,7 @@
  
      @staticmethod
      def _is_short_utterance(text: str) -> bool:
@@ -77,7 +87,7 @@
          alnum = sum(1 for c in text if c.isalnum())
          return alnum <= 8
  
-@@ -1527,7 +1532,7 @@
+@@ -1527,7 +1535,7 @@
          return True
  
      def _process_segment_text(self, text: str, source_lang: str, asr_ms: float = 0):
@@ -86,7 +96,7 @@
          original_text = text.strip()
          if not original_text or not any(c.isalnum() for c in original_text):
              return
-@@ -1655,7 +1660,7 @@
+@@ -1655,7 +1663,7 @@
                  speech_segment = self._vad.process_chunk(chunk)
  
              if speech_segment is None:
@@ -95,7 +105,7 @@
                  if (self._incremental_enabled and self._asr_ready
                          and self._vad._is_speaking):
                      buf_samples = self._vad._speech_samples
-@@ -1780,7 +1785,7 @@
+@@ -1780,7 +1788,7 @@
      _app_icon = create_app_icon()
      app.setWindowIcon(_app_icon)
  
@@ -104,7 +114,7 @@
      if not SETTINGS_FILE.exists():
          wizard = SetupWizardDialog()
          if wizard.exec() != QDialog.DialogCode.Accepted:
-@@ -1814,7 +1819,7 @@
+@@ -1814,7 +1822,7 @@
                  log.info(f"Translation API configured: {data['name']}")
          # If user skips, ControlPanel will create default placeholder from config.yaml
  
@@ -113,7 +123,7 @@
      else:
          saved = saved or {}
          current_engine = saved.get("asr_engine", config["asr"].get("asr_engine", "funasr"))
-@@ -2154,7 +2159,7 @@
+@@ -2154,7 +2162,7 @@
      autoscroll_action.setChecked(True)
      taskbar_action = QAction(t("taskbar"), checkable=True)
  
@@ -122,7 +132,7 @@
      ct_action.toggled.connect(lambda v: overlay._handle._ct_check.setChecked(v))
      topmost_action.toggled.connect(
          lambda v: overlay._handle._topmost_check.setChecked(v)
-@@ -2166,7 +2171,7 @@
+@@ -2166,7 +2174,7 @@
          lambda v: overlay._handle._taskbar_check.setChecked(v)
      )
  
@@ -131,7 +141,7 @@
      overlay._handle.click_through_toggled.connect(lambda v: ct_action.setChecked(v))
      overlay._handle.topmost_toggled.connect(lambda v: topmost_action.setChecked(v))
      overlay._handle.auto_scroll_toggled.connect(
-@@ -2265,7 +2270,7 @@
+@@ -2265,7 +2273,7 @@
          panel._current_settings["target_language"] = lang_code
          _save_settings(settings)
  
@@ -140,7 +150,7 @@
      def _on_overlay_lang_changed(lang_code):
          if lang_code in _lang_actions:
              _lang_actions[lang_code].setChecked(True)
-@@ -2345,12 +2350,12 @@
+@@ -2345,12 +2353,12 @@
      overlay.target_language_changed.connect(live_trans._on_target_language_changed)
  
      def _on_overlay_source_lang(code):

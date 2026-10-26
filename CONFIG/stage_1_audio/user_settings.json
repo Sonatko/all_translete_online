@@ -16,10 +16,10 @@
   "target_language": "ru",
   "models": [
     {
-      "name": "[ОТКЛЮЧЕНО] Этап 1.1: Только распознавание речи (ASR)",
-      "api_base": "offline-direct",
+      "name": "Meta NLLB-200 1.3B (In-Process, 100% Offline)",
+      "api_base": "local",
       "api_key": "not-needed",
-      "model": "no-translation",
+      "model": "nllb-200-1.3b",
       "proxy": "none",
       "thinking_style": "off",
       "streaming": true
@@ -94,7 +94,7 @@
         "bg_image": "",
         "color": "#ffd54f",
         "text_color": "#ffd54f",
-        "enabled": false,
+        "enabled": true,
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",

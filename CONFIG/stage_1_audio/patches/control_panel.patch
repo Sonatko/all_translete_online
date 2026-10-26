@@ -10,3 +10,29 @@
  
  
  def _load_saved_settings() -> dict | None:
+@@ -219,6 +220,7 @@
+                 f"[{t('asr_fast')}] FunASR",
+                 "Anime-Whisper (ja, anime/galgame)",
+                 "Remote Whisper (remote GPU server)",
++                "⚡ Sherpa-ONNX (SenseVoice / Parakeet)",
+             ]
+         )
+         engine_map_idx = {
+@@ -226,7 +228,8 @@
+             "funasr": 1,
+             "anime-whisper": 2,
+             "remote-whisper": 3,
++            "sherpa_onnx": 4,
+         }
+-        engine_idx = engine_map_idx.get(s.get("asr_engine"), 0)
++        engine_idx = engine_map_idx.get(s.get("asr_engine"), 4)
+         self._asr_engine.setCurrentIndex(engine_idx)
+         asr_layout.addWidget(QLabel(t("label_engine")), 0, 0)
+@@ -1447,6 +1450,7 @@
+             1: "funasr",
+             2: "anime-whisper",
+             3: "remote-whisper",
++            4: "sherpa_onnx",
+         }
+         self._current_settings["asr_engine"] = engine_map.get(
+             self._asr_engine.currentIndex(), "whisper"

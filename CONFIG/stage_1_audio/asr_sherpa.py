@@ -47,11 +47,18 @@ class SherpaASREngine:
             f"Threads: {self.num_threads} | Provider: {self.provider}"
         )
 
+        app_models_dir = os.path.join(os.path.dirname(__file__), "models", "sherpa-onnx")
+
         if self.profile == Profile.MULTILINGUAL:
             # Alibaba SenseVoice-Small INT8
-            repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
-            model_path = hf_hub_download(repo_id=repo_id, filename="model.int8.onnx")
-            tokens_path = hf_hub_download(repo_id=repo_id, filename="tokens.txt")
+            local_sv_dir = os.path.join(app_models_dir, "sensevoice")
+            model_path = os.path.join(local_sv_dir, "model.int8.onnx")
+            tokens_path = os.path.join(local_sv_dir, "tokens.txt")
+
+            if not (os.path.exists(model_path) and os.path.exists(tokens_path)):
+                repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+                model_path = hf_hub_download(repo_id=repo_id, filename="model.int8.onnx")
+                tokens_path = hf_hub_download(repo_id=repo_id, filename="tokens.txt")
 
             self._recognizer = sherpa_onnx.OfflineRecognizer.from_sense_voice(
                 model=model_path,
@@ -65,7 +72,9 @@ class SherpaASREngine:
 
         elif self.profile == Profile.PURE_ENGLISH:
             # NVIDIA Parakeet-TDT 0.6B INT8
-            base_dir = os.path.join(os.path.dirname(__file__), "..", "..", "scratch", "parakeet_tdt")
+            local_pk_dir = os.path.join(app_models_dir, "parakeet_tdt")
+            scratch_pk_dir = os.path.join(os.path.dirname(__file__), "..", "..", "scratch", "parakeet_tdt")
+            base_dir = local_pk_dir if os.path.exists(os.path.join(local_pk_dir, "encoder.int8.onnx")) else scratch_pk_dir
             enc = os.path.join(base_dir, "encoder.int8.onnx")
             dec = os.path.join(base_dir, "decoder.int8.onnx")
             join = os.path.join(base_dir, "joiner.int8.onnx")

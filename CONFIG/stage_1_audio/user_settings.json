@@ -94,7 +94,7 @@
         "bg_image": "",
         "color": "#ffd54f",
         "text_color": "#ffd54f",
-        "enabled": true,
+        "enabled": false,
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",

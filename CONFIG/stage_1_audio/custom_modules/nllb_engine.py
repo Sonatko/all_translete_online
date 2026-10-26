@@ -113,6 +113,32 @@ class LocalNLLBEngine:
                 cls._instance = LocalNLLBEngine()
             return cls._instance
 
+    @classmethod
+    def unload(cls):
+        """Cleanly unload model from RAM and release GPU/CPU memory."""
+        with cls._init_lock:
+            if cls._instance is not None:
+                log.info(f"Unloading {cls._instance.model_name} from memory...")
+                try:
+                    if hasattr(cls._instance, "translator"):
+                        del cls._instance.translator
+                    if hasattr(cls._instance, "tokenizer"):
+                        del cls._instance.tokenizer
+                    if hasattr(cls._instance, "cache"):
+                        cls._instance.cache.cache.clear()
+                except Exception as e:
+                    log.warning(f"Error while releasing NLLB components: {e}")
+                cls._instance = None
+                import gc
+                gc.collect()
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                except Exception:
+                    pass
+                log.info("LocalNLLBEngine unloaded successfully. RAM released.")
+
     def __init__(self):
         import ctranslate2
         import transformers

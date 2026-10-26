@@ -9,22 +9,20 @@ echo ======================================================================
 echo.
 
 :: ---------------------------------------------------------------------
-:: 1. LiveTranslate Subtitle Overlay (Stage 1 Audio - In-Process NLLB)
+:: 1. LiveTranslate Subtitle Overlay (Stage 1.1 ASR ONNX)
 :: ---------------------------------------------------------------------
-echo [1/2] Launching LiveTranslate Subtitle Overlay (In-Process NLLB)...
+echo [1/1] Launching LiveTranslate Subtitle Overlay (Pure Stage 1.1 ONNX)...
 set "LIVETRANSLATE_SETTINGS_FILE=%~dp0stage_1_audio\LiveTranslate\user_settings.json"
 cd /d "%~dp0stage_1_audio\LiveTranslate"
-start "" start.bat
+start "LiveTranslate" "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" main.py
 cd /d "%~dp0"
 
 :: ---------------------------------------------------------------------
-:: 2. OverTranslate In-Place Screen Translator (Stage 2 Screen)
+:: 2. OverTranslate In-Place Screen Translator (Stage 2 - Temporarily Disabled for Stage 1 Testing)
 :: ---------------------------------------------------------------------
-echo [2/2] Launching OverTranslate (Screen OCR ^& QuickLookup)...
-taskkill /F /IM OverTranslate.exe >nul 2>&1
-cd /d "%~dp0stage_2_screen\OverTranslate\current"
-start "" OverTranslate.exe
-cd /d "%~dp0"
+:: cd /d "%~dp0stage_2_screen\OverTranslate\current"
+:: start "" OverTranslate.exe
+:: cd /d "%~dp0"
 
 :: ---------------------------------------------------------------------
 :: Dashboard & Hotkeys

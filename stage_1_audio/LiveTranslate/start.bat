@@ -19,5 +19,5 @@ if not exist ".venv\.livetranslate-ready" (
 )
 
 echo Starting LiveTranslate...
-start "LiveTranslate" "%~dp0.venv\Scripts\python.exe" "%~dp0main.py"
+start "" "%~dp0.venv\Scripts\pythonw.exe" "%~dp0main.py"
 exit /b 0

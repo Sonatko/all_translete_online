@@ -14,7 +14,12 @@ echo.
 echo [1/1] Launching LiveTranslate Subtitle Overlay (Pure Stage 1.1 ONNX)...
 set "LIVETRANSLATE_SETTINGS_FILE=%~dp0stage_1_audio\LiveTranslate\user_settings.json"
 cd /d "%~dp0stage_1_audio\LiveTranslate"
-start "LiveTranslate" "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\python.exe" main.py
+start "" "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\pythonw.exe" main.py
+if errorlevel 1 (
+    echo [ERROR] Failed to start LiveTranslate.
+    pause
+    exit /b 1
+)
 cd /d "%~dp0"
 
 :: ---------------------------------------------------------------------

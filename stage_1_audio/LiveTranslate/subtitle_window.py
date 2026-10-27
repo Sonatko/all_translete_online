@@ -635,11 +635,13 @@ class SubtitleWindow(QWidget):
         self._auto_hide_timer.setSingleShot(True)
         self._auto_hide_timer.timeout.connect(self._on_auto_hide_timeout)
         self._is_hidden_by_timeout = False
-        # Pending overflow segments for delayed insertion
-        self._pending_segment_timers = []
-        # Minimum display time: queue rapid updates instead of replacing instantly
+        # Atomic Complete Pair Pacing State (Mimi Invariant)
+        self._min_display_ms = 2000  # 2.0s guaranteed calm reading window
         self._last_insert_time = 0.0
-        self._min_display_ms = 1500  # minimum ms before a sentence can be replaced
+        self._pending_pair = None
+        self._pacing_timer = QTimer(self)
+        self._pacing_timer.setSingleShot(True)
+        self._pacing_timer.timeout.connect(self._on_pacing_timer_timeout)
         self._height_anim = None
 
         self._setup_ui()
@@ -1009,6 +1011,13 @@ class SubtitleWindow(QWidget):
 
     @pyqtSlot(str, str)
     def _on_update_streaming_text(self, original: str, partial_translation: str):
+        # The Mimi Display Persistence Invariant:
+        # Never overwrite a completed subtitle pair during its protected reading window!
+        now_ms = time.monotonic() * 1000
+        elapsed = now_ms - self._last_insert_time
+        if self._sentences and self._last_insert_time > 0 and elapsed < self._min_display_ms:
+            return
+
         target_lang = ""
         for line_cfg in self._settings.get("lines", []):
             if line_cfg.get("type") == "translation":
@@ -1017,15 +1026,8 @@ class SubtitleWindow(QWidget):
 
         trans_dict = {target_lang: partial_translation} if target_lang else {"": partial_translation}
 
-        max_sentences = max(1, self._settings.get("sentences", 1))
         # Live typing update: update current in-progress sentence on the fly
-        if not self._sentences:
-            self._sentences.append((original, trans_dict))
-        else:
-            self._sentences[-1] = (original, trans_dict)
-
-        if len(self._sentences) > max_sentences:
-            self._sentences = self._sentences[-max_sentences:]
+        self._sentences = [(original, trans_dict)]
 
         if self._is_hidden_by_timeout:
             self._restore_from_auto_hide()
@@ -1046,35 +1048,33 @@ class SubtitleWindow(QWidget):
     @pyqtSlot(str, str)
     def _on_update_text(self, original: str, translations_json: str):
         translations = json.loads(translations_json)
-        self._cancel_pending_segments()
-
-        # Respect minimum display time: delay if previous sentence was inserted recently
         now_ms = time.monotonic() * 1000
         elapsed = now_ms - self._last_insert_time
-        base_delay = max(0, int(self._min_display_ms - elapsed)) if self._last_insert_time > 0 else 0
 
-        if base_delay == 0:
+        # If nothing is displayed yet or if the current pair has completed its 2.0s reading window:
+        if self._last_insert_time == 0.0 or elapsed >= self._min_display_ms:
+            if self._pacing_timer.isActive():
+                self._pacing_timer.stop()
+            self._pending_pair = None
             self._insert_sentence(original, translations)
         else:
-            timer = QTimer(self)
-            timer.setSingleShot(True)
-            timer.setInterval(base_delay)
-            timer.timeout.connect(lambda o=original, t=translations: self._insert_sentence(o, t))
-            timer.start()
-            self._pending_segment_timers.append(timer)
+            # The Mimi Complete Pair Pacing Gate:
+            # Current pair is still protected. Save the new complete pair as the pending replacement.
+            self._pending_pair = (original, translations)
+            if not self._pacing_timer.isActive():
+                remaining = max(50, int(self._min_display_ms - elapsed))
+                self._pacing_timer.start(remaining)
+
+    def _on_pacing_timer_timeout(self):
+        if self._pending_pair:
+            orig, trans = self._pending_pair
+            self._pending_pair = None
+            self._insert_sentence(orig, trans)
 
     def _insert_sentence(self, original: str, translations: dict):
-        """Insert a single sentence and refresh display."""
-
-        max_sentences = max(1, self._settings.get("sentences", 1))
-        # Replace if this sentence was already being streamed or has the same original prefix
-        if self._sentences and (self._sentences[-1][0] == original or original.startswith(self._sentences[-1][0][:20])):
-            self._sentences[-1] = (original, translations)
-        else:
-            self._sentences.append((original, translations))
-
-        if len(self._sentences) > max_sentences:
-            self._sentences = self._sentences[-max_sentences:]
+        """Insert a single complete pair and refresh display."""
+        # Always maintain strictly 1 current complete pair (atomic slide replacement)
+        self._sentences = [(original, translations)]
 
         if self._is_hidden_by_timeout:
             self._restore_from_auto_hide()
@@ -1082,13 +1082,6 @@ class SubtitleWindow(QWidget):
         self._refresh_display(streaming=False)
         self._restart_auto_hide_timer()
         self._last_insert_time = time.monotonic() * 1000
-
-    def _cancel_pending_segments(self):
-        """Cancel any pending delayed segment insertions."""
-        for timer in self._pending_segment_timers:
-            timer.stop()
-            timer.deleteLater()
-        self._pending_segment_timers.clear()
 
 
     def _refresh_display(self, streaming: bool = False):
@@ -1152,7 +1145,10 @@ class SubtitleWindow(QWidget):
 
     def clear(self):
         self._sentences.clear()
-        self._cancel_pending_segments()
+        self._pending_pair = None
+        if hasattr(self, "_pacing_timer"):
+            self._pacing_timer.stop()
+        self._last_insert_time = 0.0
         self._auto_hide_timer.stop()
         self._is_hidden_by_timeout = False
         for tw in self._text_widgets:

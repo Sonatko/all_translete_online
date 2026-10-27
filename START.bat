@@ -11,7 +11,7 @@ echo.
 :: ---------------------------------------------------------------------
 :: 1. LiveTranslate Subtitle Overlay (Stage 1.1 ASR ONNX)
 :: ---------------------------------------------------------------------
-echo [1/1] Launching LiveTranslate Subtitle Overlay (Pure Stage 1.1 ONNX)...
+echo [1/2] Launching LiveTranslate Subtitle Overlay (Stage 1.1 ASR + Stage 1.2 MT)...
 set "LIVETRANSLATE_SETTINGS_FILE=%~dp0stage_1_audio\LiveTranslate\user_settings.json"
 cd /d "%~dp0stage_1_audio\LiveTranslate"
 start "" "%~dp0stage_1_audio\LiveTranslate\.venv\Scripts\pythonw.exe" main.py
@@ -23,11 +23,12 @@ if errorlevel 1 (
 cd /d "%~dp0"
 
 :: ---------------------------------------------------------------------
-:: 2. OverTranslate In-Place Screen Translator (Stage 2 - Temporarily Disabled for Stage 1 Testing)
+:: 2. OverTranslate In-Place Screen Translator (Stage 2)
 :: ---------------------------------------------------------------------
-:: cd /d "%~dp0stage_2_screen\OverTranslate\current"
-:: start "" OverTranslate.exe
-:: cd /d "%~dp0"
+echo [2/2] Launching OverTranslate In-Place Screen Translator (Stage 2)...
+cd /d "%~dp0stage_2_screen\OverTranslate\current"
+start "" OverTranslate.exe
+cd /d "%~dp0"
 
 :: ---------------------------------------------------------------------
 :: Dashboard & Hotkeys
@@ -36,9 +37,9 @@ echo.
 echo ======================================================================
 echo  TRANSLATION ECOSYSTEM IS ONLINE AND READY!
 echo ======================================================================
-echo  [Stage 1.1: Audio Transcription - LiveTranslate]
-echo  - Engine: Sherpa-ONNX INT8 (SenseVoice-Small / Parakeet-TDT)
-echo  - Status: Pure Transcription (Translation disabled for testing)
+echo  [Stage 1: Real-Time Audio Translation - LiveTranslate]
+echo  - Engine: Sherpa-ONNX INT8 (SenseVoice) + Tencent HY-MT 1.8B GGUF
+echo  - Status: Dual-Language Subtitles (Original EN + Translated RU)
 echo  - F9:           Master Toggle (Subtitles Show/Hide + Audio Run/Pause)
 echo  - 2x MMB:       Double Middle Click to toggle Click-through (Lock/Unlock)
 echo  - MMB Drag:     Drag subtitle banner with Middle Mouse Button (wheel)

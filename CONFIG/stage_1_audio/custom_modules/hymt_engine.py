@@ -255,6 +255,12 @@ class LocalHYMTEngine:
         )
         self.translate_lock = threading.Lock()
 
+        # Enable LlamaRAMCache for instant prefix prompt reuse
+        try:
+            self.llm.set_cache(llama_cpp.LlamaRAMCache(capacity_bytes=64 * 1024 * 1024))
+        except Exception as ce:
+            log.debug(f"LlamaRAMCache notice: {ce}")
+
         # Warmup forward pass once to eliminate first-sentence cold start
         try:
             log.info("Warming up HY-MT forward pass (0ms user cold start)...")
@@ -331,6 +337,55 @@ class LocalHYMTEngine:
         if raw_text.startswith('"') and raw_text.endswith('"') and len(raw_text) > 2:
             raw_text = raw_text[1:-1].strip()
         return raw_text
+
+    def translate_stream(self, text: str, target_language: str = "ru", source_language: Optional[str] = None):
+        """Streaming translation yielding accumulated text token-by-token (TTFT ~130ms)."""
+        clean = (text or "").strip()
+        if not clean:
+            yield ""
+            return
+
+        tgt_clean = str(target_language or "ru").strip().lower()
+        src_clean = str(source_language or "").strip().lower()
+
+        if src_clean and src_clean == tgt_clean:
+            yield clean
+            return
+
+        target_lang_name = to_hymt_lang_name(tgt_clean)
+
+        cache_key = f"{src_clean}:{tgt_clean}:{clean}"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            yield cached
+            return
+
+        with self.translate_lock:
+            prompt = f"Translate to {target_lang_name}:\n{clean}"
+            tokens_limit = max(24, int(len(clean.split()) * 2.5))
+            stream_resp = self.llm.create_completion(
+                prompt=prompt,
+                max_tokens=tokens_limit,
+                temperature=0.0,
+                stop=["\n", "</s>", "<|endoftext|>"],
+                echo=False,
+                stream=True,
+            )
+            accumulated = []
+            for chunk in stream_resp:
+                delta = chunk["choices"][0]["text"]
+                if delta:
+                    accumulated.append(delta)
+                    current_str = "".join(accumulated).strip()
+                    if current_str:
+                        yield current_str
+
+            final_text = "".join(accumulated).strip()
+            if final_text.startswith('"') and final_text.endswith('"') and len(final_text) > 2:
+                final_text = final_text[1:-1].strip()
+
+        self.cache.put(cache_key, final_text)
+        yield final_text
 
     def translate(self, text: str, target_language: str = "ru", source_language: Optional[str] = None) -> str:
         """Translate source text into target language with caching and safety checks."""

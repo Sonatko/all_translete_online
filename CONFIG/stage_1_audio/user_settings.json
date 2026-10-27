@@ -31,10 +31,10 @@
       "model": "hy-mt1.5-1.8b-gguf",
       "proxy": "none",
       "thinking_style": "off",
-      "streaming": false
+      "streaming": true
     }
   ],
-  "active_model": 0,
+  "active_model": 1,
   "sensevoice_pad_seconds": 0.5,
   "whisper_pad_seconds": 0.3,
   "remote_asr_url": "http://127.0.0.1:8765",
@@ -42,7 +42,7 @@
   "whisper_compute_type": "int8_float16",
   "whisper_task": "transcribe",
   "asr_device": "cpu",
-  "audio_device": null,
+  "audio_device": "4 - DDC Display (AMD High Definition Audio Device)",
   "mic_device": null,
   "system_prompt": "You are a real-time subtitle translator for casual conversation. Translate {source_lang} into {target_lang}.\nRules:\n- Output ONLY one single best translation, nothing else.\n- Never include alternatives, parenthetical options, annotations, or explanations.\n- Keep proper nouns, names, and brand names untranslated.\n- Use natural, casual, everyday language. Keep it conversational and concise.\n- Auto-correct likely ASR errors based on context and common sense.",
   "timeout": 10,
@@ -66,7 +66,7 @@
     "window_opacity": 100
   },
   "subtitle_mode": {
-    "enabled": false,
+    "enabled": true,
     "sentences": 1,
     "window_width": 1200,
     "line_spacing": 6,
@@ -116,11 +116,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 692,
-    "window_y": 239
+    "window_x": 326,
+    "window_y": 288
   },
-  "overlay_x": 992,
-  "overlay_y": 451,
+  "overlay_x": 676,
+  "overlay_y": 331,
   "overlay_w": 620,
   "overlay_h": 500
 }

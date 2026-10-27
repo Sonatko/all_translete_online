@@ -47,7 +47,7 @@
   "system_prompt": "You are a real-time subtitle translator for casual conversation. Translate {source_lang} into {target_lang}.\nRules:\n- Output ONLY one single best translation, nothing else.\n- Never include alternatives, parenthetical options, annotations, or explanations.\n- Keep proper nouns, names, and brand names untranslated.\n- Use natural, casual, everyday language. Keep it conversational and concise.\n- Auto-correct likely ASR errors based on context and common sense.",
   "timeout": 10,
   "incremental_asr": true,
-  "interim_interval": 0.35,
+  "interim_interval": 1.0,
   "auto_save_transcript": true,
   "style": {
     "preset": "custom",
@@ -66,7 +66,7 @@
     "window_opacity": 100
   },
   "subtitle_mode": {
-    "enabled": true,
+    "enabled": false,
     "sentences": 1,
     "window_width": 1200,
     "line_spacing": 6,
@@ -80,7 +80,7 @@
     "click_through": false,
     "lines": [
       {
-        "align": "left",
+        "align": "center",
         "animation_duration": 200,
         "bg_image": "",
         "color": "#ffffff",
@@ -90,7 +90,7 @@
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",
-        "font_size": 22,
+        "font_size": 26,
         "lang": "en",
         "opacity": 255,
         "outline_color": "#000000",
@@ -99,7 +99,7 @@
         "type": "original"
       },
       {
-        "align": "left",
+        "align": "center",
         "animation_duration": 200,
         "bg_image": "",
         "color": "#7AA2F7",
@@ -108,17 +108,17 @@
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",
-        "font_size": 15,
+        "font_size": 16,
         "lang": "ru",
-        "opacity": 255,
+        "opacity": 200,
         "outline_color": "#000000",
         "outline_enabled": true,
-        "outline_width": 2,
+        "outline_width": 1,
         "type": "translation"
       }
     ],
-    "window_x": 326,
-    "window_y": 110
+    "window_x": 93,
+    "window_y": 162
   },
   "overlay_x": 592,
   "overlay_y": 257,

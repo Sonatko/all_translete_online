@@ -470,6 +470,11 @@ class _SubtitleTextWidget(QWidget):
                 all_segments.append(cur_p[:break_at].rstrip())
                 cur_p = cur_p[break_at:].lstrip()
 
+        # English hero line: always single visual line.
+        # Long sentences get truncated with ellipsis — banner height never grows beyond 2 rows.
+        if self._line_type == "original" and len(all_segments) > 1:
+            return [all_segments[0].rstrip() + "\u2026"]
+
         return all_segments
 
     def _rewrap(self):
@@ -552,6 +557,16 @@ class _SubtitleTextWidget(QWidget):
                 path_normal.addText(lx, y, self._font, line)
 
             y += fm.lineSpacing()
+
+        # 0. Soft amber glow behind vocab words (cheap: single wide low-alpha stroke pass)
+        if not path_vocab.isEmpty() and self._line_type == "original":
+            glow_color = QColor(self._vocab_color)
+            glow_color.setAlpha(60)
+            glow_pen = QPen(glow_color, self._outline_width * 8,
+                            Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(glow_pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawPath(path_vocab)
 
         # 1. Render high-contrast black outline
         if self._outline_enabled and self._outline_width > 0:
@@ -637,9 +652,10 @@ class SubtitleWindow(QWidget):
         self._is_hidden_by_timeout = False
         # Pending overflow segments for delayed insertion
         self._pending_segment_timers = []
-        # Minimum display time: queue rapid updates instead of replacing instantly
+        # No artificial display delay — live speech replaces subtitles immediately.
+        # The translation latency (~300-600 ms) provides natural pacing without any timer.
         self._last_insert_time = 0.0
-        self._min_display_ms = 1500  # minimum ms before a sentence can be replaced
+        self._min_display_ms = 0
         self._height_anim = None
 
         self._setup_ui()

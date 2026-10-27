@@ -1486,6 +1486,12 @@ class LiveTranslateApp:
         if not full_text:
             return False
 
+        # Stream live ASR buffer to subtitle window NOW — before sentence split.
+        # This eliminates the blank silence gap when the speaker utters a single long
+        # sentence with no punctuation break yet. User sees words accumulate in real time.
+        if self._subwin and self._subwin.isVisible():
+            self._subwin.update_streaming_text(full_text, "")
+
         split_start = time.perf_counter()
         sentences = self._split_sentences(full_text, result["language"])
         split_ms = (time.perf_counter() - split_start) * 1000

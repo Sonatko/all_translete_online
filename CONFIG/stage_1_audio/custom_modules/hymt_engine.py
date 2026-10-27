@@ -393,7 +393,7 @@ class LocalHYMTEngine:
 
     def _infer(self, text: str, target_lang_name: str) -> str:
         """Internal LLM inference with concise prompt, greedy decoding, and adaptive token limits."""
-        prompt = f"Translate to {target_lang_name}:\n{text}"
+        prompt = f"Translate into clean {target_lang_name} subtitles:\n{text}"
         tokens_limit = max(24, int(len(text.split()) * 2.5))
         response = self.llm.create_completion(
             prompt=prompt,
@@ -431,7 +431,7 @@ class LocalHYMTEngine:
             return
 
         with self.translate_lock:
-            prompt = f"Translate to {target_lang_name}:\n{clean}"
+            prompt = f"Translate into clean {target_lang_name} subtitles:\n{clean}"
             tokens_limit = max(24, int(len(clean.split()) * 2.5))
             stream_resp = self.llm.create_completion(
                 prompt=prompt,

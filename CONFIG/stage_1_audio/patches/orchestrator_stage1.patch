@@ -453,13 +453,15 @@ diff --git a/main.py b/main.py
          # Strip echo from previous commit's overlap
          full_text = self._strip_committed_overlap(full_text)
          if not full_text:
-@@ -1452,6 +1488,21 @@
+@@ -1452,6 +1488,23 @@
          sentences = self._split_sentences(full_text, result["language"])
          split_ms = (time.perf_counter() - split_start) * 1000
          if len(sentences) <= 1:
 +            # Speculative live preview for long single-sentence utterances (>= 4 words)
++            # Only enabled for LLM engines that support dynamic streaming (HY-MT); non-LLM (NLLB) waits for full sentences
++            is_llm = getattr(self._translator, "_is_local_hymt", False) or getattr(self._translator, "_streaming", False)
 +            words = full_text.split()
-+            if len(words) >= 4 and self._subwin and self._subwin.isVisible():
++            if is_llm and len(words) >= 4 and self._subwin and self._subwin.isVisible():
 +                def _bg_preview():
 +                    try:
 +                        if getattr(self, "_translator", None):
@@ -475,7 +477,7 @@ diff --git a/main.py b/main.py
              return False
          log.debug(f"Interim split [{result['language']}] ({split_ms:.1f}ms): {len(sentences)} parts -> {sentences}")
  
-@@ -1618,7 +1669,16 @@
+@@ -1618,7 +1671,16 @@
              log.debug(f"Noise filter: {seg_len:.1f}s segment produced only '{original_text}', skipping")
              return
  
@@ -493,7 +495,7 @@ diff --git a/main.py b/main.py
  
      def _capture_loop(self):
          silence_chunk = np.zeros(
-@@ -2022,10 +2082,14 @@
+@@ -2022,10 +2084,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -510,7 +512,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2099,28 @@
+@@ -2035,14 +2101,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)

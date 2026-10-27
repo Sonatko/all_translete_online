@@ -66,10 +66,10 @@
     "window_opacity": 95
   },
   "subtitle_mode": {
-    "enabled": false,
+    "enabled": true,
     "sentences": 1,
-    "window_width": 1000,
-    "line_spacing": 6,
+    "window_width": 1500,
+    "line_spacing": 7,
     "bg_color": "#000000",
     "bg_opacity": 128,
     "bg_image": "",
@@ -77,7 +77,7 @@
     "auto_hide_timeout": 5,
     "auto_hide_animation": "none",
     "auto_hide_duration": 400,
-    "click_through": false,
+    "click_through": true,
     "lines": [
       {
         "align": "left",
@@ -117,11 +117,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 308,
-    "window_y": 36
+    "window_x": 173,
+    "window_y": 94
   },
-  "overlay_x": 554,
-  "overlay_y": 279,
+  "overlay_x": 160,
+  "overlay_y": 389,
   "overlay_w": 620,
   "overlay_h": 500
 }

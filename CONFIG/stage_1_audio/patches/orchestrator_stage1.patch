@@ -666,7 +666,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 diff --git a/translator.py b/translator.py
 --- a/translator.py
 +++ b/translator.py
-@@ -222,6 +222,70 @@
+@@ -222,6 +222,75 @@
          self._temperature = temperature
          self._streaming = streaming
          self._timeout = timeout
@@ -711,7 +711,12 @@ diff --git a/translator.py b/translator.py
 +                    LocalNLLBEngine.unload()
 +                except Exception:
 +                    pass
-+                log.info(f"Translator: configured LocalHYMTEngine for {model} (lazy loading, 0ms GUI block)")
++                log.info(f"Translator: configured LocalHYMTEngine for {model} (asynchronous warmup enabled, 0ms GUI block)")
++                try:
++                    from hymt_engine import LocalHYMTEngine
++                    LocalHYMTEngine.warmup_in_background()
++                except Exception as we:
++                    log.debug(f"HY-MT background warmup notice: {we}")
 +            elif is_nllb:
 +                self._is_local_hymt = False
 +                self._is_local_nllb = True
@@ -737,7 +742,7 @@ diff --git a/translator.py b/translator.py
          self._overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
          self._extra_body = dict(extra_body) if extra_body else {}
          if self._overrides:
-@@ -268,6 +332,8 @@
+@@ -268,6 +337,8 @@
          """Create a new Translator with a different target language, sharing the same client."""
          t = Translator.__new__(Translator)
          t._client = self._client
@@ -746,7 +751,7 @@ diff --git a/translator.py b/translator.py
          t._no_system_role = self._no_system_role
          t._thinking_style = self._thinking_style
          t._json_response = self._json_response
-@@ -360,6 +426,24 @@
+@@ -360,6 +431,24 @@
          return kwargs
  
      def translate(self, text: str, source_language: str = "en"):
@@ -771,7 +776,7 @@ diff --git a/translator.py b/translator.py
          system_prompt = self._build_system_prompt(source_language)
          if self._streaming:
              result = self._translate_streaming(system_prompt, text)
-@@ -378,6 +462,28 @@
+@@ -378,6 +467,28 @@
          The final yielded value is always the complete translation.
          Caller should use the last yielded value as the final result.
          """

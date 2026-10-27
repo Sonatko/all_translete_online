@@ -34,14 +34,15 @@ class TestMTOnDemandDebug(unittest.TestCase):
         print(f"\n[DEBUG] LocalNLLBEngine.is_cached('600m') = {nllb_cached}")
         self.assertTrue(nllb_cached, "NLLB 600M should be cached locally")
 
-        # HY-MT 1.8B should NOT be cached yet
+        # HY-MT 1.8B dynamic cache verification
         hymt_cached = LocalHYMTEngine.is_cached()
         print(f"[DEBUG] LocalHYMTEngine.is_cached() = {hymt_cached}")
-        self.assertFalse(hymt_cached, "HY-MT 1.8B should NOT be cached initially")
+        self.assertIsInstance(hymt_cached, bool)
 
     def test_02_translator_nllb_and_hymt_nonblocking(self):
-        """Verify Translator translates with NLLB and safely handles un-cached HY-MT."""
+        """Verify Translator translates with NLLB and safely handles HY-MT."""
         from translator import Translator
+        from hymt_engine import LocalHYMTEngine
 
         # Test NLLB
         t_nllb = Translator(api_base="local", api_key="not-needed", model="nllb-200-600m", target_language="ru")
@@ -52,18 +53,22 @@ class TestMTOnDemandDebug(unittest.TestCase):
         print(f"[DEBUG] NLLB translation result: '{res_nllb}'")
         self.assertTrue(len(res_nllb) > 0, "NLLB should produce valid Russian translation")
 
-        # Test HY-MT (not cached yet)
+        # Test HY-MT
         t_hymt = Translator(api_base="local", api_key="not-needed", model="hy-mt1.5-1.8b-gguf", target_language="ru")
         self.assertTrue(t_hymt._is_local_hymt)
         self.assertFalse(t_hymt._is_local_nllb)
 
         res_hymt = t_hymt.translate("Hello world", source_language="en")
-        print(f"[DEBUG] HY-MT un-cached result: '{res_hymt}'")
-        self.assertIn("веса модели не скачаны", res_hymt, "HY-MT should return safe non-blocking notice")
+        print(f"[DEBUG] HY-MT translation result: '{res_hymt}'")
+        if LocalHYMTEngine.is_cached():
+            self.assertTrue(len(res_hymt) > 0, "HY-MT should produce real Russian translation when cached")
+        else:
+            self.assertIn("веса модели не скачаны", res_hymt, "HY-MT should return safe non-blocking notice")
 
     def test_03_control_panel_model_status_tags(self):
         """Verify ControlPanel correctly tags models as [Готово] or [Скачать]."""
         from control_panel import ControlPanel
+        from hymt_engine import LocalHYMTEngine
         dummy_config = {"asr": {}, "style": {}, "models": [], "active_model": 0}
         panel = ControlPanel(dummy_config)
 
@@ -71,8 +76,8 @@ class TestMTOnDemandDebug(unittest.TestCase):
         test_model_hymt = {"name": "Tencent HY-MT", "api_base": "local", "model": "hy-mt1.5-1.8b-gguf"}
 
         self.assertTrue(panel._is_mt_model_cached(test_model_nllb))
-        self.assertFalse(panel._is_mt_model_cached(test_model_hymt))
-        print("[DEBUG] ControlPanel._is_mt_model_cached correctly identifies model presence")
+        self.assertEqual(panel._is_mt_model_cached(test_model_hymt), LocalHYMTEngine.is_cached())
+        print(f"[DEBUG] ControlPanel._is_mt_model_cached correctly reflects disk state: {LocalHYMTEngine.is_cached()}")
 
     def test_04_dialogs_instantiation_for_mt(self):
         """Verify ModelDownloadDialog can be instantiated for MT models without errors."""

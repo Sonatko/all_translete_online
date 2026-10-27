@@ -374,7 +374,7 @@ diff --git a/main.py b/main.py
          }
          target_state = {
              "type": engine_type,
-@@ -1082,10 +1092,16 @@
+@@ -1082,10 +1092,18 @@
          try:
              tl_start = time.perf_counter()
              translated = None
@@ -388,10 +388,12 @@ diff --git a/main.py b/main.py
 +                    if now - last_subwin_update >= 0.06:  # 60ms throttle for smooth live text animation
 +                        last_subwin_update = now
 +                        self._subwin.update_streaming_text(text, partial)
++            if self._subwin and self._subwin.isVisible() and translated:
++                self._subwin.update_streaming_text(text, translated)
              tl_ms = (time.perf_counter() - tl_start) * 1000
              self._translate_count += 1
              pt, ct = self._translator.last_usage
-@@ -1129,6 +1145,8 @@
+@@ -1129,6 +1147,8 @@
              self._transcript.finalize_no_translation(msg_id)
              if self._overlay:
                  self._overlay.update_translation(msg_id, f"[error: {e}]", 0)
@@ -400,7 +402,7 @@ diff --git a/main.py b/main.py
  
      def _translate_extra_langs(self, text, source_lang, extra_langs, tl_dict):
          """Translate into additional languages for subtitle window (parallel)."""
-@@ -1357,18 +1375,28 @@
+@@ -1357,18 +1377,28 @@
  
      @staticmethod
      def _get_segmenter(lang: str):
@@ -438,46 +440,22 @@ diff --git a/main.py b/main.py
          if len(parts) > 1:
              return parts
  
-@@ -1443,6 +1471,14 @@
-         if not full_text or not any(c.isalnum() for c in full_text):
-             return False
+@@ -1441,6 +1471,14 @@
  
+         full_text = result["text"].strip()
+         if not full_text or not any(c.isalnum() for c in full_text):
++            return False
++
 +        asr_lang_setting = self._panel.get_settings().get("asr_language", "auto") if self._panel else "auto"
 +        if asr_lang_setting != "auto" and result["language"] != asr_lang_setting:
 +            log.info(
 +                f"Interim language filter: expected '{asr_lang_setting}' but got '{result['language']}', "
 +                f"discarding: {full_text[:60]}"
 +            )
-+            return False
-+
-         # Strip echo from previous commit's overlap
-         full_text = self._strip_committed_overlap(full_text)
-         if not full_text:
-@@ -1452,6 +1488,23 @@
-         sentences = self._split_sentences(full_text, result["language"])
-         split_ms = (time.perf_counter() - split_start) * 1000
-         if len(sentences) <= 1:
-+            # Speculative live preview for long single-sentence utterances (>= 4 words)
-+            # Only enabled for LLM engines that support dynamic streaming (HY-MT); non-LLM (NLLB) waits for full sentences
-+            is_llm = getattr(self._translator, "_is_local_hymt", False) or getattr(self._translator, "_streaming", False)
-+            words = full_text.split()
-+            if is_llm and len(words) >= 4 and self._subwin and self._subwin.isVisible():
-+                def _bg_preview():
-+                    try:
-+                        if getattr(self, "_translator", None):
-+                            for partial in self._translator.translate_iter(full_text, result["language"]):
-+                                if partial and self._subwin and self._subwin.isVisible():
-+                                    self._subwin.update_streaming_text(full_text, partial)
-+                    except Exception:
-+                        pass
-+                try:
-+                    self._tl_executor.submit(_bg_preview)
-+                except Exception:
-+                    pass
              return False
-         log.debug(f"Interim split [{result['language']}] ({split_ms:.1f}ms): {len(sentences)} parts -> {sentences}")
  
-@@ -1618,7 +1671,16 @@
+         # Strip echo from previous commit's overlap
+@@ -1618,7 +1656,16 @@
              log.debug(f"Noise filter: {seg_len:.1f}s segment produced only '{original_text}', skipping")
              return
  
@@ -495,7 +473,7 @@ diff --git a/main.py b/main.py
  
      def _capture_loop(self):
          silence_chunk = np.zeros(
-@@ -2022,10 +2084,14 @@
+@@ -2022,10 +2069,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -512,7 +490,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2101,28 @@
+@@ -2035,14 +2086,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)
@@ -640,7 +618,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  except Exception:
      _HOOKPROC = None
      _MSLLHOOKSTRUCT = None
-@@ -225,6 +227,32 @@
+@@ -225,7 +227,36 @@
          self._update_height()
          self.update()
  
@@ -671,9 +649,28 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 +        return height_changed
 +
      def set_text(self, text: str):
++        if text == self._text:
++            return
++
          if self._text and text != self._text and self._exit_animation != "none":
              self._pending_text = text
-@@ -536,6 +564,7 @@
+             self._stop_all_animations()
+@@ -247,11 +278,13 @@
+         self._slide_offset_y_val = 0.0
+         self._pending_text = None
+ 
++        old_h = self.height()
+         self._text = text
+         self._text_cache = None
+         self._update_height()
+         self.update()
+-        self.height_changed.emit()
++        if self.desired_height() != old_h:
++            self.height_changed.emit()
+ 
+         if text:
+             self.animate_in()
+@@ -536,6 +569,7 @@
      """
  
      update_text_signal = pyqtSignal(str, str)  # original, translations_json
@@ -681,7 +678,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
      position_changed = pyqtSignal()
      window_closed = pyqtSignal()
      click_through_toggled = pyqtSignal(bool)
-@@ -570,6 +599,7 @@
+@@ -570,6 +604,7 @@
  
          self._setup_ui()
          self.update_text_signal.connect(self._on_update_text)
@@ -689,7 +686,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      @staticmethod
      def _is_pos_visible(x, y, margin=50):
-@@ -675,19 +705,20 @@
+@@ -675,19 +710,20 @@
                  total += spacing
          return max(total, 20)
  
@@ -713,7 +710,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          new_h = self._calc_target_height()
          old_h = self.height()
          if new_h == old_h:
-@@ -695,12 +726,12 @@
+@@ -695,12 +731,12 @@
          if self._height_anim and self._height_anim.state() != QPropertyAnimation.State.Stopped:
              self._height_anim.stop()
  
@@ -728,7 +725,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          anim.setStartValue(QRect(self.x(), self.y(), self.width(), old_h))
          anim.setEndValue(QRect(self.x(), target_y, self.width(), new_h))
          anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-@@ -818,14 +849,13 @@
+@@ -818,14 +854,13 @@
                      ctypes.windll.user32.SetWindowLongW(
                          hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
                      )
@@ -745,7 +742,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          except Exception:
              pass
  
-@@ -836,17 +866,21 @@
+@@ -836,17 +871,21 @@
          def _hook_callback(nCode, wParam, lParam):
              if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
                  try:
@@ -778,7 +775,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
                  except Exception:
                      pass
              return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
-@@ -865,9 +899,10 @@
+@@ -865,9 +904,10 @@
              self._mouse_hook = None
              self._hook_proc = None
  
@@ -792,7 +789,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      def showEvent(self, event):
          super().showEvent(event)
-@@ -923,6 +958,30 @@
+@@ -923,6 +963,32 @@
          super().paintEvent(event)
  
      # --- Text updates ---
@@ -812,8 +809,10 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 +
 +        if not self._sentences:
 +            self._sentences.append((original, trans_dict))
-+        else:
++        elif self._sentences[-1][0] == original:
 +            self._sentences[-1] = (original, trans_dict)
++        else:
++            self._sentences.append((original, trans_dict))
 +
 +        if self._is_hidden_by_timeout:
 +            self._restore_from_auto_hide()
@@ -823,7 +822,20 @@ diff --git a/subtitle_window.py b/subtitle_window.py
      def update_text(self, original: str, translations: dict | str):
          """Thread-safe text update.
  
-@@ -965,7 +1024,7 @@
+@@ -958,14 +1024,17 @@
+         """Insert a single sentence and refresh display."""
+ 
+         max_sentences = self._settings.get("sentences", 1)
+-        self._sentences.append((original, translations))
+-        if len(self._sentences) > max_sentences:
+-            self._sentences = self._sentences[-max_sentences:]
++        if self._sentences and self._sentences[-1][0] == original:
++            self._sentences[-1] = (original, translations)
++        else:
++            self._sentences.append((original, translations))
++            if len(self._sentences) > max_sentences:
++                self._sentences = self._sentences[-max_sentences:]
+ 
          if self._is_hidden_by_timeout:
              self._restore_from_auto_hide()
  
@@ -832,7 +844,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          self._restart_auto_hide_timer()
          self._last_insert_time = time.monotonic() * 1000
  
-@@ -977,15 +1036,16 @@
+@@ -977,15 +1046,16 @@
          self._pending_segment_timers.clear()
  
  
@@ -851,7 +863,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
          for cfg in lines_cfg:
              if wi >= len(self._text_widgets):
-@@ -1011,8 +1071,19 @@
+@@ -1011,8 +1081,19 @@
                              if v:
                                  texts.append(v)
                                  break

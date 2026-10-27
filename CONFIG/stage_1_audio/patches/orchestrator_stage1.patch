@@ -171,14 +171,139 @@ diff --git a/control_panel.py b/control_panel.py
 diff --git a/dialogs.py b/dialogs.py
 --- a/dialogs.py
 +++ b/dialogs.py
-@@ -451,6 +451,22 @@
+@@ -24,6 +24,7 @@
+     QLabel,
+     QLineEdit,
+     QPushButton,
++    QProgressBar,
+     QTextEdit,
+     QVBoxLayout,
+     QWidget,
+@@ -359,15 +360,16 @@
+ 
+ 
+ class ModelDownloadDialog(QDialog):
+-    """Download missing models (non-first-launch) with live log."""
++    """Download missing models with visual progress bar, speed stats, and clean logging."""
+ 
+     _log_signal = pyqtSignal(str)
++    _progress_signal = pyqtSignal(int, float, float, float)
+ 
+     def __init__(self, missing_models, hub="ms", proxy="system", parent=None):
+         super().__init__(parent)
+         self.setWindowTitle(t("window_download"))
+-        self.setMinimumWidth(520)
+-        self.setMinimumHeight(300)
++        self.setMinimumWidth(540)
++        self.setMinimumHeight(340)
+         self.setWindowFlags(
+             Qt.WindowType.Dialog
+             | Qt.WindowType.WindowTitleHint
+@@ -378,9 +380,36 @@
+         layout = QVBoxLayout(self)
+ 
+         names = ", ".join(m["name"] for m in missing_models)
+-        info = QLabel(t("downloading_models").format(names=names))
++        info = QLabel(f"<b>Загрузка модели:</b> {names}")
+         info.setWordWrap(True)
++        info.setStyleSheet("font-size: 13px; color: #cdd6f4;")
+         layout.addWidget(info)
++
++        # Visual Progress Bar
++        self._progress_bar = QProgressBar()
++        self._progress_bar.setRange(0, 100)
++        self._progress_bar.setValue(0)
++        self._progress_bar.setStyleSheet("""
++            QProgressBar {
++                border: 1px solid #45475a;
++                border-radius: 5px;
++                text-align: center;
++                background: #181825;
++                color: #ffffff;
++                font-size: 11px;
++                font-weight: bold;
++                height: 22px;
++            }
++            QProgressBar::chunk {
++                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #89b4fa, stop:1 #b4befe);
++                border-radius: 4px;
++            }
++        """)
++        layout.addWidget(self._progress_bar)
++
++        self._stats_label = QLabel("Подключение к серверу загрузки...")
++        self._stats_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
++        layout.addWidget(self._stats_label)
+ 
+         self._log_view = QTextEdit()
+         self._log_view.setReadOnly(True)
+@@ -390,22 +419,55 @@
+         )
+         layout.addWidget(self._log_view)
+ 
++        btn_box = QHBoxLayout()
++        btn_box.addStretch()
++
++        self._cancel_btn = QPushButton("Отмена")
++        self._cancel_btn.setStyleSheet("""
++            QPushButton {
++                background: #313244; color: #cdd6f4; border: 1px solid #585b70;
++                border-radius: 4px; padding: 6px 16px;
++            }
++            QPushButton:hover { background: #45475a; }
++        """)
++        self._cancel_btn.clicked.connect(self._on_cancel)
++        btn_box.addWidget(self._cancel_btn)
++
+         self._close_btn = QPushButton(t("btn_close"))
+         self._close_btn.clicked.connect(self.reject)
+         self._close_btn.hide()
+-        layout.addWidget(self._close_btn)
++        btn_box.addWidget(self._close_btn)
++        layout.addLayout(btn_box)
+ 
+         self._missing = missing_models
+         self._hub = hub
+         self._proxy = proxy
+         self._error = None
++        self._cancelled = False
+ 
+         self._log_signal.connect(self._append_log)
++        self._progress_signal.connect(self._on_progress_update)
+         self._log_handler = _LogCapture(self._log_signal.emit)
+ 
+         QTimer.singleShot(100, self._start_download)
+ 
++    def _on_cancel(self):
++        self._cancelled = True
++        self.reject()
++
++    def _on_progress_update(self, percent, downloaded_mb, total_mb, speed_mb_s):
++        self._progress_bar.setValue(percent)
++        remaining_mb = max(total_mb - downloaded_mb, 0)
++        eta_sec = int(remaining_mb / max(speed_mb_s, 0.01))
++        eta_str = f" (~{eta_sec // 60} мин)" if eta_sec > 60 else f" (~{eta_sec} сек)"
++        self._stats_label.setText(
++            f"Скачано: {downloaded_mb:.1f} МБ / {total_mb:.1f} МБ ({percent}%) — {speed_mb_s:.2f} МБ/с{eta_str}"
++        )
++
+     def _append_log(self, text):
++        # Filter out noisy live microphone speech recognition & translation logs
++        if any(k in text for k in ("Speech segment", "ASR [", "Translate (", "MEM[", "vad_buf", "worker_rss")):
++            return
+         self._log_view.append(text)
+         self._log_view.verticalScrollBar().setValue(
+             self._log_view.verticalScrollBar().maximum()
+@@ -451,6 +513,24 @@
                      download_asr(
                          "whisper", model_size=size, hub=self._hub, proxy=self._proxy
                      )
 +                elif any(k in m["type"].lower() for k in ("hymt", "hy-mt", "hunyuan")):
 +                    log.info("Downloading Tencent HY-MT1.5 1.8B GGUF weights...")
 +                    from hymt_engine import LocalHYMTEngine
-+                    LocalHYMTEngine.download_model()
++                    def _prog_cb(pct, dl_mb, tot_mb, spd):
++                        self._progress_signal.emit(pct, dl_mb, tot_mb, spd)
++                    LocalHYMTEngine.download_model(progress_callback=_prog_cb)
 +                elif "600m" in m["type"].lower() and "nllb" in m["type"].lower():
 +                    log.info("Downloading Meta NLLB-200 600M INT8 weights...")
 +                    from nllb_engine import LocalNLLBEngine

@@ -114,38 +114,68 @@ class LocalHYMTEngine:
         return False
 
     @classmethod
-    def download_model(cls) -> str:
-        """Download HY-MT 1.8B GGUF weights explicitly in background thread."""
+    def download_model(cls, progress_callback=None) -> str:
+        """Download HY-MT 1.8B GGUF weights with live progress reporting and mirror fallback."""
         target_dir = os.path.abspath(os.path.join(_cur_dir, "..", "nllb_server", "models", "hy-mt1.5-1.8b-gguf"))
         os.makedirs(target_dir, exist_ok=True)
         target_filename = "HY-MT1.5-1.8B-Q4_K_M.gguf"
-        repo_id = "tencent/HY-MT1.5-1.8B-GGUF"
-        log.info(f"Downloading {target_filename} from {repo_id} to {target_dir}...")
-        from huggingface_hub import hf_hub_download
+        target_file = os.path.join(target_dir, target_filename)
+        temp_file = target_file + ".downloading"
 
-        try:
-            return hf_hub_download(
-                repo_id=repo_id,
-                filename=target_filename,
-                local_dir=target_dir,
-                local_dir_use_symlinks=False,
-            )
-        except Exception as e:
-            log.warning(f"Direct HuggingFace download failed ({e}). Retrying via hf-mirror.com...")
-            old_ep = os.environ.get("HF_ENDPOINT")
-            os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+        if os.path.exists(target_file) and os.path.getsize(target_file) > 500 * 1024 * 1024:
+            return target_file
+
+        urls = [
+            "https://hf-mirror.com/tencent/HY-MT1.5-1.8B-GGUF/resolve/main/HY-MT1.5-1.8B-Q4_K_M.gguf",
+            "https://huggingface.co/tencent/HY-MT1.5-1.8B-GGUF/resolve/main/HY-MT1.5-1.8B-Q4_K_M.gguf",
+        ]
+
+        import urllib.request
+        import time
+
+        for url in urls:
             try:
-                return hf_hub_download(
-                    repo_id=repo_id,
-                    filename=target_filename,
-                    local_dir=target_dir,
-                    local_dir_use_symlinks=False,
-                )
-            finally:
-                if old_ep:
-                    os.environ["HF_ENDPOINT"] = old_ep
-                else:
-                    os.environ.pop("HF_ENDPOINT", None)
+                log.info(f"Connecting to {url}...")
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    total_bytes = int(resp.headers.get("Content-Length", 1133080512))
+                    downloaded = 0
+                    t_start = time.perf_counter()
+                    last_update = t_start
+
+                    with open(temp_file, "wb") as f:
+                        while True:
+                            chunk = resp.read(512 * 1024)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            now = time.perf_counter()
+                            if now - last_update >= 0.2:
+                                speed_mb_s = (downloaded / (1024 * 1024)) / max(now - t_start, 0.001)
+                                percent = int((downloaded / total_bytes) * 100) if total_bytes > 0 else 0
+                                if progress_callback:
+                                    progress_callback(percent, downloaded / (1024 * 1024), total_bytes / (1024 * 1024), speed_mb_s)
+                                last_update = now
+
+                if os.path.exists(target_file):
+                    try:
+                        os.remove(target_file)
+                    except Exception:
+                        pass
+                os.rename(temp_file, target_file)
+                log.info(f"Download complete: {target_file}")
+                if progress_callback:
+                    progress_callback(100, total_bytes / (1024 * 1024), total_bytes / (1024 * 1024), 0.0)
+                return target_file
+            except Exception as e:
+                log.warning(f"Download from {url} failed: {e}. Retrying fallback...")
+                if os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except Exception:
+                        pass
+        raise RuntimeError("Failed to download HY-MT1.5-1.8B GGUF from all sources.")
 
     @classmethod
     def is_loaded(cls) -> bool:

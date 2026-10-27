@@ -96,6 +96,24 @@ class LocalHYMTEngine:
             return cls._instance
 
     @classmethod
+    def get_candidate_paths(cls) -> list:
+        target_filename = "HY-MT1.5-1.8B-Q4_K_M.gguf"
+        return [
+            os.path.join(_cur_dir, "..", "nllb_server", "models", "hy-mt1.5-1.8b-gguf", target_filename),
+            os.path.join(_cur_dir, "models", "hy-mt1.5-1.8b-gguf", target_filename),
+            os.path.join(_cur_dir, "..", "models", target_filename),
+        ]
+
+    @classmethod
+    def is_cached(cls) -> bool:
+        """Check if local GGUF weights exist on disk and are non-empty."""
+        for p in cls.get_candidate_paths():
+            resolved = os.path.abspath(p)
+            if os.path.exists(resolved) and os.path.getsize(resolved) > 500 * 1024 * 1024:
+                return True
+        return False
+
+    @classmethod
     def is_loaded(cls) -> bool:
         with cls._init_lock:
             return cls._instance is not None

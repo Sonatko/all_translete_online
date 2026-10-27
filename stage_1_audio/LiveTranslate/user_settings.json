@@ -66,7 +66,7 @@
     "window_opacity": 100
   },
   "subtitle_mode": {
-    "enabled": false,
+    "enabled": true,
     "sentences": 1,
     "window_width": 1200,
     "line_spacing": 6,
@@ -80,7 +80,7 @@
     "click_through": false,
     "lines": [
       {
-        "align": "center",
+        "align": "left",
         "animation_duration": 200,
         "bg_image": "",
         "color": "#ffffff",
@@ -90,7 +90,7 @@
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",
-        "font_size": 26,
+        "font_size": 22,
         "lang": "en",
         "opacity": 255,
         "outline_color": "#000000",
@@ -99,7 +99,7 @@
         "type": "original"
       },
       {
-        "align": "center",
+        "align": "left",
         "animation_duration": 200,
         "bg_image": "",
         "color": "#7AA2F7",
@@ -108,17 +108,17 @@
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",
-        "font_size": 16,
+        "font_size": 15,
         "lang": "ru",
-        "opacity": 200,
+        "opacity": 255,
         "outline_color": "#000000",
         "outline_enabled": true,
-        "outline_width": 1,
+        "outline_width": 2,
         "type": "translation"
       }
     ],
-    "window_x": 93,
-    "window_y": 162
+    "window_x": 326,
+    "window_y": 110
   },
   "overlay_x": 592,
   "overlay_y": 257,

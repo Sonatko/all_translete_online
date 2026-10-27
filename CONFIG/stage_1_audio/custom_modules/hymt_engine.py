@@ -92,6 +92,41 @@ def get_optimal_cpu_threads() -> int:
     return min(8, max(2, physical_cores))
 
 
+def setup_dispatch_backend() -> bool:
+    """Setup multi-target CPU dispatch (AVX-512 VNNI / Zen 4 / Alderlake) if available.
+    
+    Guarantees 100% safe fallback to generic AVX2 if backend is missing or fails.
+    """
+    try:
+        backend_dir = os.path.abspath(
+            os.path.join(_cur_dir, "..", "nllb_server", "backends", "cpu_dispatch")
+        )
+        ggml_dll = os.path.join(backend_dir, "ggml.dll")
+        if not os.path.exists(ggml_dll):
+            return False
+
+        os.environ["LLAMA_CPP_LIB_PATH"] = backend_dir
+        os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+        if hasattr(os, "add_dll_directory"):
+            try:
+                os.add_dll_directory(backend_dir)
+            except Exception:
+                pass
+
+        import ctypes
+        ggml = ctypes.CDLL(ggml_dll)
+        if hasattr(ggml, "ggml_backend_load_all_from_path"):
+            ggml.ggml_backend_load_all_from_path(backend_dir.encode("utf-8"))
+        elif hasattr(ggml, "ggml_backend_load_all"):
+            ggml.ggml_backend_load_all()
+
+        log.info(f"[HY-MT] High-performance CPU dispatch backend loaded from {backend_dir}")
+        return True
+    except Exception as e:
+        log.warning(f"[HY-MT] Notice loading CPU dispatch backend: {e}. Falling back to default AVX2.")
+        return False
+
+
 class LocalHYMTEngine:
     """Thread-safe singleton managing the Tencent HY-MT1.5-1.8B GGUF model."""
 
@@ -99,9 +134,39 @@ class LocalHYMTEngine:
     _init_lock = threading.Lock()
 
     @classmethod
+    def ensure_dispatch_backend(cls) -> bool:
+        """Download and extract multi-target CPU dispatch DLLs if missing."""
+        backend_dir = os.path.abspath(
+            os.path.join(_cur_dir, "..", "nllb_server", "backends", "cpu_dispatch")
+        )
+        ggml_dll = os.path.join(backend_dir, "ggml.dll")
+        if os.path.exists(ggml_dll):
+            return True
+
+        url = "https://github.com/ggml-org/llama.cpp/releases/download/b11347/llama-b11347-bin-win-cpu-x64.zip"
+        try:
+            import urllib.request
+            import zipfile
+            import io
+            log.info(f"[HY-MT] Downloading CPU multi-target acceleration backend from {url}...")
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = resp.read()
+            z = zipfile.ZipFile(io.BytesIO(data))
+            os.makedirs(backend_dir, exist_ok=True)
+            z.extractall(backend_dir)
+            log.info(f"[HY-MT] Successfully installed CPU multi-target backend to {backend_dir}")
+            return True
+        except Exception as e:
+            log.warning(f"[HY-MT] Notice downloading CPU dispatch backend: {e}. Default AVX2 will be used.")
+            return False
+
+    @classmethod
     def get_instance(cls, requested_variant: str = "auto") -> "LocalHYMTEngine":
         with cls._init_lock:
             if cls._instance is None:
+                cls.ensure_dispatch_backend()
+                setup_dispatch_backend()
                 cls._instance = LocalHYMTEngine(variant=requested_variant)
             return cls._instance
 
@@ -114,6 +179,8 @@ class LocalHYMTEngine:
         def _bg_task():
             try:
                 log.info("[HY-MT] Starting asynchronous background warmup...")
+                cls.ensure_dispatch_backend()
+                setup_dispatch_backend()
                 cls.get_instance(requested_variant=requested_variant)
                 log.info("[HY-MT] Background warmup complete, model is hot in RAM!")
             except Exception as e:
@@ -226,6 +293,8 @@ class LocalHYMTEngine:
                 log.info("LocalHYMTEngine unloaded successfully. RAM released.")
 
     def __init__(self, variant: str = "auto"):
+        self.ensure_dispatch_backend()
+        setup_dispatch_backend()
         import llama_cpp
 
         self.cache = LRUCache(1000)

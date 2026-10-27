@@ -42,10 +42,11 @@ def apply_stage1_orchestration():
     # 2. Apply unified surgical patch
     print("\n[2/3] Applying surgical orchestrator patch...")
     if os.path.exists(patch_file):
+        rel_dir = os.path.relpath(target_dir, workspace_root).replace("\\", "/")
         # Check if already applied (reverse check)
         chk_rev = subprocess.run(
-            ["git", "apply", "--check", "--reverse", "--ignore-whitespace", patch_file],
-            cwd=target_dir,
+            ["git", "apply", "--check", "--reverse", "--ignore-whitespace", f"--directory={rel_dir}", patch_file],
+            cwd=workspace_root,
             capture_output=True,
             text=True,
         )
@@ -53,8 +54,8 @@ def apply_stage1_orchestration():
             print("  [OK] orchestrator_stage1.patch is already applied.")
         else:
             res = subprocess.run(
-                ["git", "apply", "--ignore-whitespace", patch_file],
-                cwd=target_dir,
+                ["git", "apply", "--ignore-whitespace", f"--directory={rel_dir}", patch_file],
+                cwd=workspace_root,
                 capture_output=True,
                 text=True,
             )

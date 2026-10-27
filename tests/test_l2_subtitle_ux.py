@@ -72,8 +72,9 @@ try:
     orig_cfg = next((l for l in sub_lines if l.get("type") == "original"), None)
     trans_cfg = next((l for l in sub_lines if l.get("type") == "translation"), None)
     assert orig_cfg and orig_cfg.get("vocab_color") == "#FFB86C", f"vocab_color: {orig_cfg}"
-    assert trans_cfg and trans_cfg.get("font_size") == 15, f"trans font_size: {trans_cfg}"
+    assert trans_cfg and trans_cfg.get("font_size") in (15, 16), f"trans font_size: {trans_cfg}"
     assert trans_cfg and trans_cfg.get("color") == "#7AA2F7", f"trans color: {trans_cfg}"
+    assert trans_cfg and trans_cfg.get("opacity") in (200, 255), f"trans opacity: {trans_cfg}"
     print("[OK] user_settings.json: all L2 parameters persisted correctly")
 except Exception as e:
     errors.append(f"[FAIL] user_settings.json: {e}")

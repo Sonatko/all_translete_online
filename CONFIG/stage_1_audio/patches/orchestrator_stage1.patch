@@ -374,7 +374,24 @@ diff --git a/main.py b/main.py
          }
          target_state = {
              "type": engine_type,
-@@ -1129,6 +1139,8 @@
+@@ -1082,10 +1092,16 @@
+         try:
+             tl_start = time.perf_counter()
+             translated = None
++            last_subwin_update = 0.0
+             for partial in self._translator.translate_iter(text, source_lang):
+                 translated = partial
+                 if self._overlay:
+                     self._overlay.update_streaming(msg_id, partial)
++                if self._subwin and self._subwin.isVisible() and partial:
++                    now = time.perf_counter()
++                    if now - last_subwin_update >= 0.06:  # 60ms throttle for smooth live text animation
++                        last_subwin_update = now
++                        self._subwin.update_streaming_text(text, partial)
+             tl_ms = (time.perf_counter() - tl_start) * 1000
+             self._translate_count += 1
+             pt, ct = self._translator.last_usage
+@@ -1129,6 +1145,8 @@
              self._transcript.finalize_no_translation(msg_id)
              if self._overlay:
                  self._overlay.update_translation(msg_id, f"[error: {e}]", 0)
@@ -383,7 +400,7 @@ diff --git a/main.py b/main.py
  
      def _translate_extra_langs(self, text, source_lang, extra_langs, tl_dict):
          """Translate into additional languages for subtitle window (parallel)."""
-@@ -1357,18 +1369,28 @@
+@@ -1357,18 +1375,28 @@
  
      @staticmethod
      def _get_segmenter(lang: str):
@@ -421,22 +438,44 @@ diff --git a/main.py b/main.py
          if len(parts) > 1:
              return parts
  
-@@ -1441,6 +1463,14 @@
- 
-         full_text = result["text"].strip()
+@@ -1443,6 +1471,14 @@
          if not full_text or not any(c.isalnum() for c in full_text):
-+            return False
-+
+             return False
+ 
 +        asr_lang_setting = self._panel.get_settings().get("asr_language", "auto") if self._panel else "auto"
 +        if asr_lang_setting != "auto" and result["language"] != asr_lang_setting:
 +            log.info(
 +                f"Interim language filter: expected '{asr_lang_setting}' but got '{result['language']}', "
 +                f"discarding: {full_text[:60]}"
 +            )
-             return False
- 
++            return False
++
          # Strip echo from previous commit's overlap
-@@ -1618,7 +1648,16 @@
+         full_text = self._strip_committed_overlap(full_text)
+         if not full_text:
+@@ -1452,6 +1488,21 @@
+         sentences = self._split_sentences(full_text, result["language"])
+         split_ms = (time.perf_counter() - split_start) * 1000
+         if len(sentences) <= 1:
++            # Speculative live preview for long single-sentence utterances (>= 4 words)
++            words = full_text.split()
++            if len(words) >= 4 and self._subwin and self._subwin.isVisible():
++                def _bg_preview():
++                    try:
++                        if getattr(self, "_translator", None):
++                            for partial in self._translator.translate_iter(full_text, result["language"]):
++                                if partial and self._subwin and self._subwin.isVisible():
++                                    self._subwin.update_streaming_text(full_text, partial)
++                    except Exception:
++                        pass
++                try:
++                    self._tl_executor.submit(_bg_preview)
++                except Exception:
++                    pass
+             return False
+         log.debug(f"Interim split [{result['language']}] ({split_ms:.1f}ms): {len(sentences)} parts -> {sentences}")
+ 
+@@ -1618,7 +1669,16 @@
              log.debug(f"Noise filter: {seg_len:.1f}s segment produced only '{original_text}', skipping")
              return
  
@@ -454,7 +493,7 @@ diff --git a/main.py b/main.py
  
      def _capture_loop(self):
          silence_chunk = np.zeros(
-@@ -2022,10 +2061,14 @@
+@@ -2022,10 +2082,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -471,7 +510,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2078,28 @@
+@@ -2035,14 +2099,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)
@@ -599,7 +638,23 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  except Exception:
      _HOOKPROC = None
      _MSLLHOOKSTRUCT = None
-@@ -818,14 +820,13 @@
+@@ -536,6 +538,7 @@
+     """
+ 
+     update_text_signal = pyqtSignal(str, str)  # original, translations_json
++    update_streaming_signal = pyqtSignal(str, str)  # original, partial_translation
+     position_changed = pyqtSignal()
+     window_closed = pyqtSignal()
+     click_through_toggled = pyqtSignal(bool)
+@@ -570,6 +573,7 @@
+ 
+         self._setup_ui()
+         self.update_text_signal.connect(self._on_update_text)
++        self.update_streaming_signal.connect(self._on_update_streaming_text)
+ 
+     @staticmethod
+     def _is_pos_visible(x, y, margin=50):
+@@ -818,14 +822,13 @@
                      ctypes.windll.user32.SetWindowLongW(
                          hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
                      )
@@ -616,7 +671,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          except Exception:
              pass
  
-@@ -836,17 +837,21 @@
+@@ -836,17 +839,21 @@
          def _hook_callback(nCode, wParam, lParam):
              if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
                  try:
@@ -649,7 +704,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
                  except Exception:
                      pass
              return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
-@@ -865,9 +870,10 @@
+@@ -865,9 +872,10 @@
              self._mouse_hook = None
              self._hook_proc = None
  
@@ -663,6 +718,37 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      def showEvent(self, event):
          super().showEvent(event)
+@@ -923,6 +931,30 @@
+         super().paintEvent(event)
+ 
+     # --- Text updates ---
++    def update_streaming_text(self, original: str, partial_translation: str):
++        """Thread-safe streaming text update for live word-by-word subtitle display."""
++        self.update_streaming_signal.emit(original, partial_translation)
++
++    @pyqtSlot(str, str)
++    def _on_update_streaming_text(self, original: str, partial_translation: str):
++        target_lang = ""
++        for line_cfg in self._settings.get("lines", []):
++            if line_cfg.get("type") == "translation":
++                target_lang = line_cfg.get("lang", "")
++                break
++
++        trans_dict = {target_lang: partial_translation} if target_lang else {"": partial_translation}
++
++        if not self._sentences:
++            self._sentences.append((original, trans_dict))
++        else:
++            self._sentences[-1] = (original, trans_dict)
++
++        if self._is_hidden_by_timeout:
++            self._restore_from_auto_hide()
++
++        self._refresh_display()
++
+     def update_text(self, original: str, translations: dict | str):
+         """Thread-safe text update.
+ 
 diff --git a/translator.py b/translator.py
 --- a/translator.py
 +++ b/translator.py

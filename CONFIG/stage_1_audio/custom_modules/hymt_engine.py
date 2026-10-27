@@ -83,14 +83,10 @@ class LRUCache:
 
 
 def get_optimal_cpu_threads() -> int:
-    """Universal physical core detection that leaves headroom for OS, games, and audio.
-    
-    Caps thread allocation to 4 cores maximum on 8+ core CPUs (e.g. Ryzen 7800X3D)
-    to completely prevent game stuttering, desktop lag, and thread pool starvation.
+    """Cap thread allocation strictly to 2 cores to leave maximum headroom
+    for OS, audio processing, browser, and competitive 3D gaming threads.
     """
-    total_logical = os.cpu_count() or 4
-    physical_cores = max(1, total_logical // 2)
-    return min(4, max(2, physical_cores // 2))
+    return 2
 
 
 def setup_dispatch_backend() -> bool:

@@ -50,33 +50,33 @@
   "interim_interval": 0.35,
   "auto_save_transcript": true,
   "style": {
-    "preset": "custom",
-    "bg_color": "#070926",
-    "bg_opacity": 230,
+    "preset": "tokyo_night",
+    "bg_color": "#1a1b26",
+    "bg_opacity": 235,
     "header_color": "#24283b",
     "header_opacity": 230,
     "border_radius": 8,
-    "original_font_family": "Segoe UI",
-    "translation_font_family": "Segoe UI",
-    "original_font_size": 13,
-    "translation_font_size": 12,
+    "original_font_family": "Microsoft YaHei",
+    "translation_font_family": "Microsoft YaHei",
+    "original_font_size": 11,
+    "translation_font_size": 14,
     "original_color": "#a9b1d6",
     "translation_color": "#c0caf5",
     "timestamp_color": "#565f89",
-    "window_opacity": 100
+    "window_opacity": 95
   },
   "subtitle_mode": {
-    "enabled": true,
+    "enabled": false,
     "sentences": 1,
-    "window_width": 1200,
+    "window_width": 1000,
     "line_spacing": 6,
     "bg_color": "#000000",
-    "bg_opacity": 153,
+    "bg_opacity": 128,
     "bg_image": "",
-    "border_radius": 10,
+    "border_radius": 20,
     "auto_hide_timeout": 5,
-    "auto_hide_animation": "fade",
-    "auto_hide_duration": 300,
+    "auto_hide_animation": "none",
+    "auto_hide_duration": 400,
     "click_through": false,
     "lines": [
       {
@@ -117,11 +117,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 326,
-    "window_y": 110
+    "window_x": 308,
+    "window_y": 36
   },
-  "overlay_x": 592,
-  "overlay_y": 257,
+  "overlay_x": 554,
+  "overlay_y": 279,
   "overlay_w": 620,
   "overlay_h": 500
 }

@@ -47,7 +47,7 @@
   "system_prompt": "You are a real-time subtitle translator for casual conversation. Translate {source_lang} into {target_lang}.\nRules:\n- Output ONLY one single best translation, nothing else.\n- Never include alternatives, parenthetical options, annotations, or explanations.\n- Keep proper nouns, names, and brand names untranslated.\n- Use natural, casual, everyday language. Keep it conversational and concise.\n- Auto-correct likely ASR errors based on context and common sense.",
   "timeout": 10,
   "incremental_asr": true,
-  "interim_interval": 1.0,
+  "interim_interval": 0.35,
   "auto_save_transcript": true,
   "style": {
     "preset": "custom",
@@ -77,13 +77,14 @@
     "auto_hide_timeout": 5,
     "auto_hide_animation": "fade",
     "auto_hide_duration": 300,
-    "click_through": true,
+    "click_through": false,
     "lines": [
       {
         "align": "left",
         "animation_duration": 200,
         "bg_image": "",
         "color": "#ffffff",
+        "vocab_color": "#FFB86C",
         "text_color": "#ffffff",
         "enabled": true,
         "entry_animation": "none",
@@ -101,13 +102,13 @@
         "align": "left",
         "animation_duration": 200,
         "bg_image": "",
-        "color": "#ffd54f",
-        "text_color": "#ffd54f",
+        "color": "#7AA2F7",
+        "text_color": "#7AA2F7",
         "enabled": true,
         "entry_animation": "none",
         "exit_animation": "none",
         "font_family": "Segoe UI",
-        "font_size": 22,
+        "font_size": 15,
         "lang": "ru",
         "opacity": 255,
         "outline_color": "#000000",
@@ -117,10 +118,10 @@
       }
     ],
     "window_x": 326,
-    "window_y": 288
+    "window_y": 110
   },
-  "overlay_x": 676,
-  "overlay_y": 331,
+  "overlay_x": 592,
+  "overlay_y": 257,
   "overlay_w": 620,
   "overlay_h": 500
 }

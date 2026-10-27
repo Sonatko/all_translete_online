@@ -146,6 +146,60 @@ class LocalNLLBEngine:
                     pass
                 log.info("LocalNLLBEngine unloaded successfully. RAM released.")
 
+    @classmethod
+    def get_candidate_dirs(cls, variant: str = "auto") -> list:
+        is_600m = "600m" in str(variant).lower()
+        if is_600m:
+            return [
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-600m-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-600m-int8"),
+                os.path.join(_cur_dir, "..", "models", "nllb-200-600m-int8"),
+            ]
+        else:
+            return [
+                os.path.join(_cur_dir, "..", "nllb_server", "models", "nllb-200-1.3b-int8"),
+                os.path.join(_cur_dir, "models", "nllb-200-1.3b-int8"),
+                os.path.join(_cur_dir, "..", "models", "nllb-200-1.3b-int8"),
+            ]
+
+    @classmethod
+    def is_cached(cls, variant: str = "auto") -> bool:
+        """Check if local NLLB weights exist without loading or network access."""
+        for p in cls.get_candidate_dirs(variant):
+            resolved = os.path.abspath(p)
+            if os.path.exists(resolved) and os.path.exists(os.path.join(resolved, "model.bin")):
+                return True
+        return False
+
+    @classmethod
+    def download_model(cls, variant: str = "600m") -> str:
+        """Download requested NLLB model variant explicitly in background thread."""
+        is_600m = "600m" in str(variant).lower()
+        sub = "nllb-200-600m-int8" if is_600m else "nllb-200-1.3b-int8"
+        repo_id = (
+            "haoranxu/nllb-200-600M-ctranslate2-int8"
+            if is_600m
+            else "haoranxu/nllb-200-1.3B-ctranslate2-int8"
+        )
+        target_dir = os.path.abspath(os.path.join(_cur_dir, "..", "nllb_server", "models", sub))
+        os.makedirs(target_dir, exist_ok=True)
+        log.info(f"Downloading NLLB {variant} ({repo_id}) to {target_dir}...")
+        from huggingface_hub import snapshot_download
+
+        try:
+            return snapshot_download(repo_id=repo_id, local_dir=target_dir, local_dir_use_symlinks=False)
+        except Exception as e:
+            log.warning(f"Direct HF download failed ({e}), trying mirror...")
+            old_ep = os.environ.get("HF_ENDPOINT")
+            os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+            try:
+                return snapshot_download(repo_id=repo_id, local_dir=target_dir, local_dir_use_symlinks=False)
+            finally:
+                if old_ep:
+                    os.environ["HF_ENDPOINT"] = old_ep
+                else:
+                    os.environ.pop("HF_ENDPOINT", None)
+
     def __init__(self, variant: str = "auto"):
         import ctranslate2
         import transformers

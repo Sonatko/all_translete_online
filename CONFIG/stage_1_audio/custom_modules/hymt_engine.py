@@ -114,6 +114,40 @@ class LocalHYMTEngine:
         return False
 
     @classmethod
+    def download_model(cls) -> str:
+        """Download HY-MT 1.8B GGUF weights explicitly in background thread."""
+        target_dir = os.path.abspath(os.path.join(_cur_dir, "..", "nllb_server", "models", "hy-mt1.5-1.8b-gguf"))
+        os.makedirs(target_dir, exist_ok=True)
+        target_filename = "HY-MT1.5-1.8B-Q4_K_M.gguf"
+        repo_id = "tencent/HY-MT1.5-1.8B-GGUF"
+        log.info(f"Downloading {target_filename} from {repo_id} to {target_dir}...")
+        from huggingface_hub import hf_hub_download
+
+        try:
+            return hf_hub_download(
+                repo_id=repo_id,
+                filename=target_filename,
+                local_dir=target_dir,
+                local_dir_use_symlinks=False,
+            )
+        except Exception as e:
+            log.warning(f"Direct HuggingFace download failed ({e}). Retrying via hf-mirror.com...")
+            old_ep = os.environ.get("HF_ENDPOINT")
+            os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+            try:
+                return hf_hub_download(
+                    repo_id=repo_id,
+                    filename=target_filename,
+                    local_dir=target_dir,
+                    local_dir_use_symlinks=False,
+                )
+            finally:
+                if old_ep:
+                    os.environ["HF_ENDPOINT"] = old_ep
+                else:
+                    os.environ.pop("HF_ENDPOINT", None)
+
+    @classmethod
     def is_loaded(cls) -> bool:
         with cls._init_lock:
             return cls._instance is not None

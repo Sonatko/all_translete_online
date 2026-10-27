@@ -68,27 +68,76 @@ diff --git a/control_panel.py b/control_panel.py
          self._model_list.itemDoubleClicked.connect(self._on_model_double_clicked)
          self._refresh_model_list()
          models_layout.addWidget(self._model_list)
-@@ -1314,6 +1323,19 @@
+@@ -1238,6 +1247,23 @@
+ 
+     # ── Model Management ──
+ 
++    def _is_mt_model_cached(self, model_data: dict) -> bool:
++        model_str = str(model_data.get("model", "")).lower()
++        api_base_str = str(model_data.get("api_base", "")).lower()
++        if any(k in model_str for k in ("hymt", "hy-mt", "hunyuan")):
++            try:
++                from hymt_engine import LocalHYMTEngine
++                return LocalHYMTEngine.is_cached()
++            except Exception:
++                return False
++        if "nllb" in model_str or api_base_str in ("local", "nllb", "offline"):
++            try:
++                from nllb_engine import LocalNLLBEngine
++                return LocalNLLBEngine.is_cached(model_str)
++            except Exception:
++                return False
++        return True
++
+     def _refresh_model_list(self):
+         self._model_list.clear()
+         active = self._current_settings.get("active_model", 0)
+@@ -1245,8 +1271,10 @@
+             prefix = ">>> " if i == active else "    "
+             proxy = m.get("proxy", "none")
+             proxy_tag = f"  [proxy: {proxy}]" if proxy != "none" else ""
++            cached = self._is_mt_model_cached(m)
++            status_tag = "  [✓ Готово]" if cached else "  [📥 Скачать]"
+             text = (
+-                f"{prefix}{m['name']}{proxy_tag}\n     {m['api_base']}  |  {m['model']}"
++                f"{prefix}{m['name']}{proxy_tag}{status_tag}\n     {m['api_base']}  |  {m['model']}"
+             )
+             item = QListWidgetItem(text)
+             if i == active:
+@@ -1313,6 +1341,32 @@
+         self._model_list.setCurrentRow(min(row, len(models) - 1))
          _save_settings(self._current_settings)
          self._emit_models_list_changed()
- 
++
 +    def _on_model_clicked(self, item):
 +        row = self._model_list.row(item)
 +        models = self._current_settings.get("models", [])
 +        if 0 <= row < len(models):
++            target_model = models[row]
++            if not self._is_mt_model_cached(target_model):
++                from dialogs import ModelDownloadDialog
++                missing_info = [{
++                    "name": target_model.get("name", "Модель перевода"),
++                    "type": target_model.get("model", "nllb-600m")
++                }]
++                dlg = ModelDownloadDialog(missing_info, parent=self)
++                if dlg.exec() != QDialog.DialogCode.Accepted:
++                    log.info(f"Model download cancelled or failed: {target_model.get('name')}")
++                    self._refresh_model_list()
++                    return
++
 +            current_active = self._current_settings.get("active_model", 0)
-+            if row != current_active:
++            if row != current_active or not self._is_mt_model_cached(target_model):
 +                self._current_settings["active_model"] = row
 +                self._refresh_model_list()
 +                _save_settings(self._current_settings)
 +                self._emit_models_list_changed()
-+                self.model_changed.emit(models[row])
-+                log.info(f"Model switched via list click: [{row}] {models[row].get('name')}")
-+
++                self.model_changed.emit(target_model)
++                log.info(f"Model switched via list click: [{row}] {target_model.get('name')}")
+ 
      def _on_model_double_clicked(self, item):
          row = self._model_list.row(item)
-         models = self._current_settings.get("models", [])
-@@ -1442,15 +1464,21 @@
+@@ -1442,15 +1496,21 @@
  
      def _apply_settings(self):
          self._current_settings["asr_language"] = self._get_asr_lang_code()
@@ -119,6 +168,32 @@ diff --git a/control_panel.py b/control_panel.py
          self._current_settings["funasr_model"] = self._selected_funasr_model()
          if hasattr(self, "_remote_url_edit"):
              url = self._remote_url_edit.text().strip()
+diff --git a/dialogs.py b/dialogs.py
+--- a/dialogs.py
++++ b/dialogs.py
+@@ -451,6 +451,22 @@
+                     download_asr(
+                         "whisper", model_size=size, hub=self._hub, proxy=self._proxy
+                     )
++                elif any(k in m["type"].lower() for k in ("hymt", "hy-mt", "hunyuan")):
++                    log.info("Downloading Tencent HY-MT1.5 1.8B GGUF weights...")
++                    from hymt_engine import LocalHYMTEngine
++                    LocalHYMTEngine.download_model()
++                elif "600m" in m["type"].lower() and "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 600M INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("600m")
++                elif "1.3b" in m["type"].lower() and "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 1.3B INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("1.3b")
++                elif "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("600m")
+         except Exception as e:
+             self._error = str(e)
+             log.error(f"Download failed: {e}", exc_info=True)
 diff --git a/main.py b/main.py
 --- a/main.py
 +++ b/main.py

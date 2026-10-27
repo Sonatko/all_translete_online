@@ -638,7 +638,40 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  except Exception:
      _HOOKPROC = None
      _MSLLHOOKSTRUCT = None
-@@ -536,6 +538,7 @@
+@@ -225,6 +227,32 @@
+         self._update_height()
+         self.update()
+ 
++    def set_streaming_text(self, text: str) -> bool:
++        """Lightweight in-place text update for token-by-token streaming.
++        
++        Bypasses entry/exit animations and geometry re-triggering.
++        Returns True if line count / desired height changed.
++        """
++        if text == self._text:
++            return False
++
++        old_h = self.height()
++        self._text = text
++        self._content_opacity_val = 1.0
++        self._slide_offset_x_val = 0.0
++        self._slide_offset_y_val = 0.0
++        self._pending_text = None
++        self._text_cache = None
++
++        self._rewrap()
++        new_h = self.desired_height()
++        height_changed = (new_h != old_h)
++        if height_changed:
++            self.setFixedHeight(new_h)
++
++        self.update()
++        return height_changed
++
+     def set_text(self, text: str):
+         if self._text and text != self._text and self._exit_animation != "none":
+             self._pending_text = text
+@@ -536,6 +564,7 @@
      """
  
      update_text_signal = pyqtSignal(str, str)  # original, translations_json
@@ -646,7 +679,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
      position_changed = pyqtSignal()
      window_closed = pyqtSignal()
      click_through_toggled = pyqtSignal(bool)
-@@ -570,6 +573,7 @@
+@@ -570,6 +599,7 @@
  
          self._setup_ui()
          self.update_text_signal.connect(self._on_update_text)
@@ -654,7 +687,46 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      @staticmethod
      def _is_pos_visible(x, y, margin=50):
-@@ -818,14 +822,13 @@
+@@ -675,19 +705,20 @@
+                 total += spacing
+         return max(total, 20)
+ 
+-    def _fit_height_snap(self):
++    def _fit_height_snap(self, anchor_bottom: bool = True):
+         new_h = self._calc_target_height()
+         old_h = self.height()
+         if new_h == old_h:
+             return
+         if self._height_anim and self._height_anim.state() != QPropertyAnimation.State.Stopped:
+             self._height_anim.stop()
+-        self.move(self.x(), self.y() - (new_h - old_h) // 2)
++        target_y = (self.y() - (new_h - old_h)) if anchor_bottom else (self.y() - (new_h - old_h) // 2)
++        self.move(self.x(), target_y)
+         self.setFixedHeight(new_h)
+         self._clamp_to_screen()
+         self.position_changed.emit()
+ 
+-    def _fit_height_animated(self):
++    def _fit_height_animated(self, anchor_bottom: bool = True):
+         new_h = self._calc_target_height()
+         old_h = self.height()
+         if new_h == old_h:
+@@ -695,12 +726,12 @@
+         if self._height_anim and self._height_anim.state() != QPropertyAnimation.State.Stopped:
+             self._height_anim.stop()
+ 
+-        target_y = self.y() - (new_h - old_h) // 2
++        target_y = (self.y() - (new_h - old_h)) if anchor_bottom else (self.y() - (new_h - old_h) // 2)
+         self.setMinimumHeight(min(old_h, new_h))
+         self.setMaximumHeight(max(old_h, new_h))
+ 
+         anim = QPropertyAnimation(self, b"geometry")
+-        anim.setDuration(150)
++        anim.setDuration(120)
+         anim.setStartValue(QRect(self.x(), self.y(), self.width(), old_h))
+         anim.setEndValue(QRect(self.x(), target_y, self.width(), new_h))
+         anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+@@ -818,14 +849,13 @@
                      ctypes.windll.user32.SetWindowLongW(
                          hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
                      )
@@ -671,7 +743,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          except Exception:
              pass
  
-@@ -836,17 +839,21 @@
+@@ -836,17 +866,21 @@
          def _hook_callback(nCode, wParam, lParam):
              if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
                  try:
@@ -704,7 +776,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
                  except Exception:
                      pass
              return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
-@@ -865,9 +872,10 @@
+@@ -865,9 +899,10 @@
              self._mouse_hook = None
              self._hook_proc = None
  
@@ -718,7 +790,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      def showEvent(self, event):
          super().showEvent(event)
-@@ -923,6 +931,30 @@
+@@ -923,6 +958,30 @@
          super().paintEvent(event)
  
      # --- Text updates ---
@@ -744,11 +816,60 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 +        if self._is_hidden_by_timeout:
 +            self._restore_from_auto_hide()
 +
-+        self._refresh_display()
++        self._refresh_display(streaming=True)
 +
      def update_text(self, original: str, translations: dict | str):
          """Thread-safe text update.
  
+@@ -965,7 +1024,7 @@
+         if self._is_hidden_by_timeout:
+             self._restore_from_auto_hide()
+ 
+-        self._refresh_display()
++        self._refresh_display(streaming=False)
+         self._restart_auto_hide_timer()
+         self._last_insert_time = time.monotonic() * 1000
+ 
+@@ -977,15 +1036,16 @@
+         self._pending_segment_timers.clear()
+ 
+ 
+-    def _refresh_display(self):
++    def _refresh_display(self, streaming: bool = False):
+         if not self._sentences:
+             for tw in self._text_widgets:
+                 tw.set_text("")
+-            self._fit_height_snap()
++            self._fit_height_snap(anchor_bottom=True)
+             return
+ 
+         lines_cfg = [ln for ln in self._settings.get("lines", []) if ln.get("enabled", True)]
+         wi = 0
++        any_height_changed = False
+ 
+         for cfg in lines_cfg:
+             if wi >= len(self._text_widgets):
+@@ -1011,8 +1071,19 @@
+                             if v:
+                                 texts.append(v)
+                                 break
+-            tw.set_text(" | ".join(texts) if len(texts) > 1 else (texts[0] if texts else ""))
++            content = " | ".join(texts) if len(texts) > 1 else (texts[0] if texts else "")
++            if streaming:
++                if tw.set_streaming_text(content):
++                    any_height_changed = True
++            else:
++                tw.set_text(content)
+             wi += 1
++
++        if streaming:
++            if any_height_changed:
++                self._fit_height_snap(anchor_bottom=True)
++        else:
++            self._fit_height_animated(anchor_bottom=True)
+ 
+     def get_target_languages(self) -> set:
+         """Return set of unique target language codes from enabled translation lines."""
 diff --git a/translator.py b/translator.py
 --- a/translator.py
 +++ b/translator.py

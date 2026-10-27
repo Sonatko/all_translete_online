@@ -789,7 +789,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      def showEvent(self, event):
          super().showEvent(event)
-@@ -923,6 +963,32 @@
+@@ -923,6 +963,36 @@
          super().paintEvent(event)
  
      # --- Text updates ---
@@ -807,12 +807,16 @@ diff --git a/subtitle_window.py b/subtitle_window.py
 +
 +        trans_dict = {target_lang: partial_translation} if target_lang else {"": partial_translation}
 +
++        max_sentences = max(1, self._settings.get("sentences", 1))
 +        if not self._sentences:
 +            self._sentences.append((original, trans_dict))
 +        elif self._sentences[-1][0] == original:
 +            self._sentences[-1] = (original, trans_dict)
 +        else:
 +            self._sentences.append((original, trans_dict))
++
++        if len(self._sentences) > max_sentences:
++            self._sentences = self._sentences[-max_sentences:]
 +
 +        if self._is_hidden_by_timeout:
 +            self._restore_from_auto_hide()
@@ -822,19 +826,20 @@ diff --git a/subtitle_window.py b/subtitle_window.py
      def update_text(self, original: str, translations: dict | str):
          """Thread-safe text update.
  
-@@ -958,14 +1024,17 @@
+@@ -957,15 +1027,19 @@
+     def _insert_sentence(self, original: str, translations: dict):
          """Insert a single sentence and refresh display."""
  
-         max_sentences = self._settings.get("sentences", 1)
+-        max_sentences = self._settings.get("sentences", 1)
 -        self._sentences.append((original, translations))
--        if len(self._sentences) > max_sentences:
--            self._sentences = self._sentences[-max_sentences:]
++        max_sentences = max(1, self._settings.get("sentences", 1))
 +        if self._sentences and self._sentences[-1][0] == original:
 +            self._sentences[-1] = (original, translations)
 +        else:
 +            self._sentences.append((original, translations))
-+            if len(self._sentences) > max_sentences:
-+                self._sentences = self._sentences[-max_sentences:]
++
+         if len(self._sentences) > max_sentences:
+             self._sentences = self._sentences[-max_sentences:]
  
          if self._is_hidden_by_timeout:
              self._restore_from_auto_hide()
@@ -844,7 +849,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          self._restart_auto_hide_timer()
          self._last_insert_time = time.monotonic() * 1000
  
-@@ -977,15 +1046,16 @@
+@@ -977,15 +1051,16 @@
          self._pending_segment_timers.clear()
  
  
@@ -863,7 +868,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
          for cfg in lines_cfg:
              if wi >= len(self._text_widgets):
-@@ -1011,8 +1081,19 @@
+@@ -1011,8 +1086,19 @@
                              if v:
                                  texts.append(v)
                                  break

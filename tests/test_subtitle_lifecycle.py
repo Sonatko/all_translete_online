@@ -58,7 +58,41 @@ def test_subtitle_window_streaming_commit_in_place():
     
     print("[PASS] SubtitleWindow: In-place streaming commit verified without sentence duplication.")
 
+def test_subtitle_window_multi_sentence_pruning():
+    settings = dict(DEFAULT_SUBTITLE_WIN_SETTINGS)
+    settings["sentences"] = 1
+    win = SubtitleWindow(settings)
+    
+    # Simulate 5 sequential utterances arriving
+    utterances = [
+        ("Sentence one.", "Предложение один."),
+        ("Sentence two.", "Предложение два."),
+        ("Sentence three.", "Предложение три."),
+        ("Sentence four.", "Предложение четыре."),
+        ("Sentence five.", "Предложение пять."),
+    ]
+    
+    for orig, trans in utterances:
+        # Stream first token
+        win._on_update_streaming_text(orig, trans[:4])
+        # Stream full
+        win._on_update_streaming_text(orig, trans)
+        # Commit
+        win._insert_sentence(orig, {"ru": trans})
+        
+        # When sentences == 1, queue MUST strictly contain at most 1 sentence
+        assert len(win._sentences) == 1, f"Queue grew beyond 1 sentence: {len(win._sentences)}"
+        assert win._sentences[0][0] == orig
+    
+    # Check text widget contents
+    for tw in win._text_widgets:
+        text = tw._text
+        assert " | " not in text, f"Found pipe concatenation in widget: {text}"
+    
+    print("[PASS] SubtitleWindow: Multi-sentence accumulation prevented, zero pipe '|' concatenation.")
+
 if __name__ == "__main__":
     test_subtitle_text_widget_no_flicker()
     test_subtitle_window_streaming_commit_in_place()
+    test_subtitle_window_multi_sentence_pruning()
     print("ALL TESTS PASSED SUCCESSFULLY!")

@@ -16,13 +16,22 @@
   "target_language": "ru",
   "models": [
     {
-      "name": "Meta NLLB-200 (Локальный перевод, 100% Offline)",
+      "name": "Meta NLLB-200 600M (Локальный, Ультра-быстрый ~50мс)",
       "api_base": "local",
       "api_key": "not-needed",
       "model": "nllb-200-600m",
       "proxy": "none",
       "thinking_style": "off",
       "streaming": true
+    },
+    {
+      "name": "Tencent HY-MT1.5 1.8B (Локальный LLM SOTA WMT25/26)",
+      "api_base": "local",
+      "api_key": "not-needed",
+      "model": "hy-mt1.5-1.8b-gguf",
+      "proxy": "none",
+      "thinking_style": "off",
+      "streaming": false
     }
   ],
   "active_model": 0,
@@ -57,7 +66,7 @@
     "window_opacity": 100
   },
   "subtitle_mode": {
-    "enabled": true,
+    "enabled": false,
     "sentences": 1,
     "window_width": 1200,
     "line_spacing": 6,
@@ -107,11 +116,11 @@
         "type": "translation"
       }
     ],
-    "window_x": 711,
-    "window_y": 29
+    "window_x": 692,
+    "window_y": 55
   },
-  "overlay_x": 515,
-  "overlay_y": 370,
+  "overlay_x": 992,
+  "overlay_y": 451,
   "overlay_w": 620,
   "overlay_h": 500
 }

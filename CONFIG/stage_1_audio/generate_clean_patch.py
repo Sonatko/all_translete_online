@@ -12,6 +12,7 @@ def generate_patch():
     files_to_patch = [
         "asr_worker.py",
         "control_panel.py",
+        "dialogs.py",
         "main.py",
         "model_manager.py",
         "requirements.txt",

@@ -68,27 +68,76 @@ diff --git a/control_panel.py b/control_panel.py
          self._model_list.itemDoubleClicked.connect(self._on_model_double_clicked)
          self._refresh_model_list()
          models_layout.addWidget(self._model_list)
-@@ -1314,6 +1323,19 @@
+@@ -1238,6 +1247,23 @@
+ 
+     # ── Model Management ──
+ 
++    def _is_mt_model_cached(self, model_data: dict) -> bool:
++        model_str = str(model_data.get("model", "")).lower()
++        api_base_str = str(model_data.get("api_base", "")).lower()
++        if any(k in model_str for k in ("hymt", "hy-mt", "hunyuan")):
++            try:
++                from hymt_engine import LocalHYMTEngine
++                return LocalHYMTEngine.is_cached()
++            except Exception:
++                return False
++        if "nllb" in model_str or api_base_str in ("local", "nllb", "offline"):
++            try:
++                from nllb_engine import LocalNLLBEngine
++                return LocalNLLBEngine.is_cached(model_str)
++            except Exception:
++                return False
++        return True
++
+     def _refresh_model_list(self):
+         self._model_list.clear()
+         active = self._current_settings.get("active_model", 0)
+@@ -1245,8 +1271,10 @@
+             prefix = ">>> " if i == active else "    "
+             proxy = m.get("proxy", "none")
+             proxy_tag = f"  [proxy: {proxy}]" if proxy != "none" else ""
++            cached = self._is_mt_model_cached(m)
++            status_tag = "  [✓ Готово]" if cached else "  [📥 Скачать]"
+             text = (
+-                f"{prefix}{m['name']}{proxy_tag}\n     {m['api_base']}  |  {m['model']}"
++                f"{prefix}{m['name']}{proxy_tag}{status_tag}\n     {m['api_base']}  |  {m['model']}"
+             )
+             item = QListWidgetItem(text)
+             if i == active:
+@@ -1313,6 +1341,32 @@
+         self._model_list.setCurrentRow(min(row, len(models) - 1))
          _save_settings(self._current_settings)
          self._emit_models_list_changed()
- 
++
 +    def _on_model_clicked(self, item):
 +        row = self._model_list.row(item)
 +        models = self._current_settings.get("models", [])
 +        if 0 <= row < len(models):
++            target_model = models[row]
++            if not self._is_mt_model_cached(target_model):
++                from dialogs import ModelDownloadDialog
++                missing_info = [{
++                    "name": target_model.get("name", "Модель перевода"),
++                    "type": target_model.get("model", "nllb-600m")
++                }]
++                dlg = ModelDownloadDialog(missing_info, parent=self)
++                if dlg.exec() != QDialog.DialogCode.Accepted:
++                    log.info(f"Model download cancelled or failed: {target_model.get('name')}")
++                    self._refresh_model_list()
++                    return
++
 +            current_active = self._current_settings.get("active_model", 0)
-+            if row != current_active:
++            if row != current_active or not self._is_mt_model_cached(target_model):
 +                self._current_settings["active_model"] = row
 +                self._refresh_model_list()
 +                _save_settings(self._current_settings)
 +                self._emit_models_list_changed()
-+                self.model_changed.emit(models[row])
-+                log.info(f"Model switched via list click: [{row}] {models[row].get('name')}")
-+
++                self.model_changed.emit(target_model)
++                log.info(f"Model switched via list click: [{row}] {target_model.get('name')}")
+ 
      def _on_model_double_clicked(self, item):
          row = self._model_list.row(item)
-         models = self._current_settings.get("models", [])
-@@ -1442,15 +1464,21 @@
+@@ -1442,15 +1496,21 @@
  
      def _apply_settings(self):
          self._current_settings["asr_language"] = self._get_asr_lang_code()
@@ -119,6 +168,157 @@ diff --git a/control_panel.py b/control_panel.py
          self._current_settings["funasr_model"] = self._selected_funasr_model()
          if hasattr(self, "_remote_url_edit"):
              url = self._remote_url_edit.text().strip()
+diff --git a/dialogs.py b/dialogs.py
+--- a/dialogs.py
++++ b/dialogs.py
+@@ -24,6 +24,7 @@
+     QLabel,
+     QLineEdit,
+     QPushButton,
++    QProgressBar,
+     QTextEdit,
+     QVBoxLayout,
+     QWidget,
+@@ -359,15 +360,16 @@
+ 
+ 
+ class ModelDownloadDialog(QDialog):
+-    """Download missing models (non-first-launch) with live log."""
++    """Download missing models with visual progress bar, speed stats, and clean logging."""
+ 
+     _log_signal = pyqtSignal(str)
++    _progress_signal = pyqtSignal(int, float, float, float)
+ 
+     def __init__(self, missing_models, hub="ms", proxy="system", parent=None):
+         super().__init__(parent)
+         self.setWindowTitle(t("window_download"))
+-        self.setMinimumWidth(520)
+-        self.setMinimumHeight(300)
++        self.setMinimumWidth(540)
++        self.setMinimumHeight(340)
+         self.setWindowFlags(
+             Qt.WindowType.Dialog
+             | Qt.WindowType.WindowTitleHint
+@@ -378,9 +380,36 @@
+         layout = QVBoxLayout(self)
+ 
+         names = ", ".join(m["name"] for m in missing_models)
+-        info = QLabel(t("downloading_models").format(names=names))
++        info = QLabel(f"<b>Загрузка модели:</b> {names}")
+         info.setWordWrap(True)
++        info.setStyleSheet("font-size: 13px; color: #cdd6f4;")
+         layout.addWidget(info)
++
++        # Visual Progress Bar
++        self._progress_bar = QProgressBar()
++        self._progress_bar.setRange(0, 100)
++        self._progress_bar.setValue(0)
++        self._progress_bar.setStyleSheet("""
++            QProgressBar {
++                border: 1px solid #45475a;
++                border-radius: 5px;
++                text-align: center;
++                background: #181825;
++                color: #ffffff;
++                font-size: 11px;
++                font-weight: bold;
++                height: 22px;
++            }
++            QProgressBar::chunk {
++                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #89b4fa, stop:1 #b4befe);
++                border-radius: 4px;
++            }
++        """)
++        layout.addWidget(self._progress_bar)
++
++        self._stats_label = QLabel("Подключение к серверу загрузки...")
++        self._stats_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
++        layout.addWidget(self._stats_label)
+ 
+         self._log_view = QTextEdit()
+         self._log_view.setReadOnly(True)
+@@ -390,22 +419,55 @@
+         )
+         layout.addWidget(self._log_view)
+ 
++        btn_box = QHBoxLayout()
++        btn_box.addStretch()
++
++        self._cancel_btn = QPushButton("Отмена")
++        self._cancel_btn.setStyleSheet("""
++            QPushButton {
++                background: #313244; color: #cdd6f4; border: 1px solid #585b70;
++                border-radius: 4px; padding: 6px 16px;
++            }
++            QPushButton:hover { background: #45475a; }
++        """)
++        self._cancel_btn.clicked.connect(self._on_cancel)
++        btn_box.addWidget(self._cancel_btn)
++
+         self._close_btn = QPushButton(t("btn_close"))
+         self._close_btn.clicked.connect(self.reject)
+         self._close_btn.hide()
+-        layout.addWidget(self._close_btn)
++        btn_box.addWidget(self._close_btn)
++        layout.addLayout(btn_box)
+ 
+         self._missing = missing_models
+         self._hub = hub
+         self._proxy = proxy
+         self._error = None
++        self._cancelled = False
+ 
+         self._log_signal.connect(self._append_log)
++        self._progress_signal.connect(self._on_progress_update)
+         self._log_handler = _LogCapture(self._log_signal.emit)
+ 
+         QTimer.singleShot(100, self._start_download)
+ 
++    def _on_cancel(self):
++        self._cancelled = True
++        self.reject()
++
++    def _on_progress_update(self, percent, downloaded_mb, total_mb, speed_mb_s):
++        self._progress_bar.setValue(percent)
++        remaining_mb = max(total_mb - downloaded_mb, 0)
++        eta_sec = int(remaining_mb / max(speed_mb_s, 0.01))
++        eta_str = f" (~{eta_sec // 60} мин)" if eta_sec > 60 else f" (~{eta_sec} сек)"
++        self._stats_label.setText(
++            f"Скачано: {downloaded_mb:.1f} МБ / {total_mb:.1f} МБ ({percent}%) — {speed_mb_s:.2f} МБ/с{eta_str}"
++        )
++
+     def _append_log(self, text):
++        # Filter out noisy live microphone speech recognition & translation logs
++        if any(k in text for k in ("Speech segment", "ASR [", "Translate (", "MEM[", "vad_buf", "worker_rss")):
++            return
+         self._log_view.append(text)
+         self._log_view.verticalScrollBar().setValue(
+             self._log_view.verticalScrollBar().maximum()
+@@ -451,6 +513,24 @@
+                     download_asr(
+                         "whisper", model_size=size, hub=self._hub, proxy=self._proxy
+                     )
++                elif any(k in m["type"].lower() for k in ("hymt", "hy-mt", "hunyuan")):
++                    log.info("Downloading Tencent HY-MT1.5 1.8B GGUF weights...")
++                    from hymt_engine import LocalHYMTEngine
++                    def _prog_cb(pct, dl_mb, tot_mb, spd):
++                        self._progress_signal.emit(pct, dl_mb, tot_mb, spd)
++                    LocalHYMTEngine.download_model(progress_callback=_prog_cb)
++                elif "600m" in m["type"].lower() and "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 600M INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("600m")
++                elif "1.3b" in m["type"].lower() and "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 1.3B INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("1.3b")
++                elif "nllb" in m["type"].lower():
++                    log.info("Downloading Meta NLLB-200 INT8 weights...")
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.download_model("600m")
+         except Exception as e:
+             self._error = str(e)
+             log.error(f"Download failed: {e}", exc_info=True)
 diff --git a/main.py b/main.py
 --- a/main.py
 +++ b/main.py
@@ -174,7 +374,26 @@ diff --git a/main.py b/main.py
          }
          target_state = {
              "type": engine_type,
-@@ -1129,6 +1139,8 @@
+@@ -1082,10 +1092,18 @@
+         try:
+             tl_start = time.perf_counter()
+             translated = None
++            last_subwin_update = 0.0
+             for partial in self._translator.translate_iter(text, source_lang):
+                 translated = partial
+                 if self._overlay:
+                     self._overlay.update_streaming(msg_id, partial)
++                if self._subwin and self._subwin.isVisible() and partial:
++                    now = time.perf_counter()
++                    if now - last_subwin_update >= 0.06:  # 60ms throttle for smooth live text animation
++                        last_subwin_update = now
++                        self._subwin.update_streaming_text(text, partial)
++            if self._subwin and self._subwin.isVisible() and translated:
++                self._subwin.update_streaming_text(text, translated)
+             tl_ms = (time.perf_counter() - tl_start) * 1000
+             self._translate_count += 1
+             pt, ct = self._translator.last_usage
+@@ -1129,6 +1147,8 @@
              self._transcript.finalize_no_translation(msg_id)
              if self._overlay:
                  self._overlay.update_translation(msg_id, f"[error: {e}]", 0)
@@ -183,7 +402,7 @@ diff --git a/main.py b/main.py
  
      def _translate_extra_langs(self, text, source_lang, extra_langs, tl_dict):
          """Translate into additional languages for subtitle window (parallel)."""
-@@ -1357,18 +1369,28 @@
+@@ -1357,18 +1377,28 @@
  
      @staticmethod
      def _get_segmenter(lang: str):
@@ -221,7 +440,7 @@ diff --git a/main.py b/main.py
          if len(parts) > 1:
              return parts
  
-@@ -1441,6 +1463,14 @@
+@@ -1441,6 +1471,14 @@
  
          full_text = result["text"].strip()
          if not full_text or not any(c.isalnum() for c in full_text):
@@ -236,7 +455,7 @@ diff --git a/main.py b/main.py
              return False
  
          # Strip echo from previous commit's overlap
-@@ -1618,7 +1648,16 @@
+@@ -1618,7 +1656,16 @@
              log.debug(f"Noise filter: {seg_len:.1f}s segment produced only '{original_text}', skipping")
              return
  
@@ -254,7 +473,7 @@ diff --git a/main.py b/main.py
  
      def _capture_loop(self):
          silence_chunk = np.zeros(
-@@ -2022,10 +2061,14 @@
+@@ -2022,10 +2069,14 @@
  
      menu.addAction(subwin_toggle_action)
  
@@ -271,7 +490,7 @@ diff --git a/main.py b/main.py
  
      def on_toggle_subwin_ct(checked):
          subwin.set_click_through(checked)
-@@ -2035,14 +2078,28 @@
+@@ -2035,14 +2086,28 @@
          settings["subtitle_mode"] = sm
          panel._current_settings["subtitle_mode"] = sm
          _save_settings(settings)
@@ -399,7 +618,114 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  except Exception:
      _HOOKPROC = None
      _MSLLHOOKSTRUCT = None
-@@ -818,14 +820,13 @@
+@@ -225,7 +227,36 @@
+         self._update_height()
+         self.update()
+ 
++    def set_streaming_text(self, text: str) -> bool:
++        """Lightweight in-place text update for token-by-token streaming.
++        
++        Bypasses entry/exit animations and geometry re-triggering.
++        Returns True if line count / desired height changed.
++        """
++        if text == self._text:
++            return False
++
++        old_h = self.height()
++        self._text = text
++        self._content_opacity_val = 1.0
++        self._slide_offset_x_val = 0.0
++        self._slide_offset_y_val = 0.0
++        self._pending_text = None
++        self._text_cache = None
++
++        self._rewrap()
++        new_h = self.desired_height()
++        height_changed = (new_h != old_h)
++        if height_changed:
++            self.setFixedHeight(new_h)
++
++        self.update()
++        return height_changed
++
+     def set_text(self, text: str):
++        if text == self._text:
++            return
++
+         if self._text and text != self._text and self._exit_animation != "none":
+             self._pending_text = text
+             self._stop_all_animations()
+@@ -247,11 +278,13 @@
+         self._slide_offset_y_val = 0.0
+         self._pending_text = None
+ 
++        old_h = self.height()
+         self._text = text
+         self._text_cache = None
+         self._update_height()
+         self.update()
+-        self.height_changed.emit()
++        if self.desired_height() != old_h:
++            self.height_changed.emit()
+ 
+         if text:
+             self.animate_in()
+@@ -536,6 +569,7 @@
+     """
+ 
+     update_text_signal = pyqtSignal(str, str)  # original, translations_json
++    update_streaming_signal = pyqtSignal(str, str)  # original, partial_translation
+     position_changed = pyqtSignal()
+     window_closed = pyqtSignal()
+     click_through_toggled = pyqtSignal(bool)
+@@ -570,6 +604,7 @@
+ 
+         self._setup_ui()
+         self.update_text_signal.connect(self._on_update_text)
++        self.update_streaming_signal.connect(self._on_update_streaming_text)
+ 
+     @staticmethod
+     def _is_pos_visible(x, y, margin=50):
+@@ -675,19 +710,20 @@
+                 total += spacing
+         return max(total, 20)
+ 
+-    def _fit_height_snap(self):
++    def _fit_height_snap(self, anchor_bottom: bool = True):
+         new_h = self._calc_target_height()
+         old_h = self.height()
+         if new_h == old_h:
+             return
+         if self._height_anim and self._height_anim.state() != QPropertyAnimation.State.Stopped:
+             self._height_anim.stop()
+-        self.move(self.x(), self.y() - (new_h - old_h) // 2)
++        target_y = (self.y() - (new_h - old_h)) if anchor_bottom else (self.y() - (new_h - old_h) // 2)
++        self.move(self.x(), target_y)
+         self.setFixedHeight(new_h)
+         self._clamp_to_screen()
+         self.position_changed.emit()
+ 
+-    def _fit_height_animated(self):
++    def _fit_height_animated(self, anchor_bottom: bool = True):
+         new_h = self._calc_target_height()
+         old_h = self.height()
+         if new_h == old_h:
+@@ -695,12 +731,12 @@
+         if self._height_anim and self._height_anim.state() != QPropertyAnimation.State.Stopped:
+             self._height_anim.stop()
+ 
+-        target_y = self.y() - (new_h - old_h) // 2
++        target_y = (self.y() - (new_h - old_h)) if anchor_bottom else (self.y() - (new_h - old_h) // 2)
+         self.setMinimumHeight(min(old_h, new_h))
+         self.setMaximumHeight(max(old_h, new_h))
+ 
+         anim = QPropertyAnimation(self, b"geometry")
+-        anim.setDuration(150)
++        anim.setDuration(120)
+         anim.setStartValue(QRect(self.x(), self.y(), self.width(), old_h))
+         anim.setEndValue(QRect(self.x(), target_y, self.width(), new_h))
+         anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+@@ -818,14 +854,13 @@
                      ctypes.windll.user32.SetWindowLongW(
                          hwnd, _GWL_EXSTYLE, style | _WS_EX_TRANSPARENT
                      )
@@ -416,7 +742,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
          except Exception:
              pass
  
-@@ -836,17 +837,21 @@
+@@ -836,17 +871,21 @@
          def _hook_callback(nCode, wParam, lParam):
              if nCode >= 0 and wParam == 0x0207:  # WM_MBUTTONDOWN (Strictly Middle Mouse Button / Wheel only)
                  try:
@@ -449,7 +775,7 @@ diff --git a/subtitle_window.py b/subtitle_window.py
                  except Exception:
                      pass
              return _user32.CallNextHookEx(self._mouse_hook, nCode, wParam, lParam)
-@@ -865,9 +870,10 @@
+@@ -865,9 +904,10 @@
              self._mouse_hook = None
              self._hook_proc = None
  
@@ -463,10 +789,110 @@ diff --git a/subtitle_window.py b/subtitle_window.py
  
      def showEvent(self, event):
          super().showEvent(event)
+@@ -923,6 +963,36 @@
+         super().paintEvent(event)
+ 
+     # --- Text updates ---
++    def update_streaming_text(self, original: str, partial_translation: str):
++        """Thread-safe streaming text update for live word-by-word subtitle display."""
++        self.update_streaming_signal.emit(original, partial_translation)
++
++    @pyqtSlot(str, str)
++    def _on_update_streaming_text(self, original: str, partial_translation: str):
++        target_lang = ""
++        for line_cfg in self._settings.get("lines", []):
++            if line_cfg.get("type") == "translation":
++                target_lang = line_cfg.get("lang", "")
++                break
++
++        trans_dict = {target_lang: partial_translation} if target_lang else {"": partial_translation}
++
++        max_sentences = max(1, self._settings.get("sentences", 1))
++        if not self._sentences:
++            self._sentences.append((original, trans_dict))
++        elif self._sentences[-1][0] == original:
++            self._sentences[-1] = (original, trans_dict)
++        else:
++            self._sentences.append((original, trans_dict))
++
++        if len(self._sentences) > max_sentences:
++            self._sentences = self._sentences[-max_sentences:]
++
++        if self._is_hidden_by_timeout:
++            self._restore_from_auto_hide()
++
++        self._refresh_display(streaming=True)
++
+     def update_text(self, original: str, translations: dict | str):
+         """Thread-safe text update.
+ 
+@@ -957,15 +1027,19 @@
+     def _insert_sentence(self, original: str, translations: dict):
+         """Insert a single sentence and refresh display."""
+ 
+-        max_sentences = self._settings.get("sentences", 1)
+-        self._sentences.append((original, translations))
++        max_sentences = max(1, self._settings.get("sentences", 1))
++        if self._sentences and self._sentences[-1][0] == original:
++            self._sentences[-1] = (original, translations)
++        else:
++            self._sentences.append((original, translations))
++
+         if len(self._sentences) > max_sentences:
+             self._sentences = self._sentences[-max_sentences:]
+ 
+         if self._is_hidden_by_timeout:
+             self._restore_from_auto_hide()
+ 
+-        self._refresh_display()
++        self._refresh_display(streaming=False)
+         self._restart_auto_hide_timer()
+         self._last_insert_time = time.monotonic() * 1000
+ 
+@@ -977,15 +1051,16 @@
+         self._pending_segment_timers.clear()
+ 
+ 
+-    def _refresh_display(self):
++    def _refresh_display(self, streaming: bool = False):
+         if not self._sentences:
+             for tw in self._text_widgets:
+                 tw.set_text("")
+-            self._fit_height_snap()
++            self._fit_height_snap(anchor_bottom=True)
+             return
+ 
+         lines_cfg = [ln for ln in self._settings.get("lines", []) if ln.get("enabled", True)]
+         wi = 0
++        any_height_changed = False
+ 
+         for cfg in lines_cfg:
+             if wi >= len(self._text_widgets):
+@@ -1011,8 +1086,19 @@
+                             if v:
+                                 texts.append(v)
+                                 break
+-            tw.set_text(" | ".join(texts) if len(texts) > 1 else (texts[0] if texts else ""))
++            content = " | ".join(texts) if len(texts) > 1 else (texts[0] if texts else "")
++            if streaming:
++                if tw.set_streaming_text(content):
++                    any_height_changed = True
++            else:
++                tw.set_text(content)
+             wi += 1
++
++        if streaming:
++            if any_height_changed:
++                self._fit_height_snap(anchor_bottom=True)
++        else:
++            self._fit_height_animated(anchor_bottom=True)
+ 
+     def get_target_languages(self) -> set:
+         """Return set of unique target language codes from enabled translation lines."""
 diff --git a/translator.py b/translator.py
 --- a/translator.py
 +++ b/translator.py
-@@ -222,6 +222,45 @@
+@@ -222,6 +222,75 @@
          self._temperature = temperature
          self._streaming = streaming
          self._timeout = timeout
@@ -489,43 +915,83 @@ diff --git a/translator.py b/translator.py
 +                LocalNLLBEngine.unload()
 +            except Exception:
 +                pass
-+        elif (
-+            "127.0.0.1:8080" in api_base_str
-+            or "localhost:8080" in api_base_str
-+            or api_base_str in ("local", "nllb", "offline")
-+            or "nllb" in model_str
-+        ):
-+            self._is_local_nllb = True
-+            log.info(f"Translator: using in-process LocalNLLBEngine for {model} (zero-network, ultra-fast)")
 +            try:
-+                from nllb_engine import LocalNLLBEngine
-+                LocalNLLBEngine.get_instance(requested_variant=model_str)
-+            except Exception as le:
-+                log.warning(f"Could not initialize LocalNLLBEngine for {model}: {le}")
-+        else:
-+            self._is_local_nllb = False
-+            try:
-+                from nllb_engine import LocalNLLBEngine
-+                LocalNLLBEngine.unload()
++                from hymt_engine import LocalHYMTEngine
++                LocalHYMTEngine.unload()
 +            except Exception:
 +                pass
++        else:
++            is_hymt = any(k in model_str for k in ("hymt", "hy-mt", "hunyuan"))
++            is_nllb = not is_hymt and (
++                "127.0.0.1:8080" in api_base_str
++                or "localhost:8080" in api_base_str
++                or api_base_str in ("local", "nllb", "offline")
++                or "nllb" in model_str
++            )
++
++            if is_hymt:
++                self._is_local_hymt = True
++                self._is_local_nllb = False
++                try:
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.unload()
++                except Exception:
++                    pass
++                log.info(f"Translator: configured LocalHYMTEngine for {model} (asynchronous warmup enabled, 0ms GUI block)")
++                try:
++                    from hymt_engine import LocalHYMTEngine
++                    LocalHYMTEngine.warmup_in_background()
++                except Exception as we:
++                    log.debug(f"HY-MT background warmup notice: {we}")
++            elif is_nllb:
++                self._is_local_hymt = False
++                self._is_local_nllb = True
++                try:
++                    from hymt_engine import LocalHYMTEngine
++                    LocalHYMTEngine.unload()
++                except Exception:
++                    pass
++                log.info(f"Translator: configured LocalNLLBEngine for {model} (lazy loading, 0ms GUI block)")
++            else:
++                self._is_local_hymt = False
++                self._is_local_nllb = False
++                try:
++                    from nllb_engine import LocalNLLBEngine
++                    LocalNLLBEngine.unload()
++                except Exception:
++                    pass
++                try:
++                    from hymt_engine import LocalHYMTEngine
++                    LocalHYMTEngine.unload()
++                except Exception:
++                    pass
          self._overrides = {k: v for k, v in (overrides or {}).items() if v is not None}
          self._extra_body = dict(extra_body) if extra_body else {}
          if self._overrides:
-@@ -268,6 +307,7 @@
+@@ -268,6 +337,8 @@
          """Create a new Translator with a different target language, sharing the same client."""
          t = Translator.__new__(Translator)
          t._client = self._client
 +        t._is_local_nllb = getattr(self, "_is_local_nllb", False)
++        t._is_local_hymt = getattr(self, "_is_local_hymt", False)
          t._no_system_role = self._no_system_role
          t._thinking_style = self._thinking_style
          t._json_response = self._json_response
-@@ -360,6 +400,15 @@
+@@ -360,6 +431,24 @@
          return kwargs
  
      def translate(self, text: str, source_language: str = "en"):
 +        if getattr(self, "_is_disabled", False):
 +            return ""
++        if getattr(self, "_is_local_hymt", False):
++            from hymt_engine import LocalHYMTEngine
++            if not LocalHYMTEngine.is_cached():
++                return "[HY-MT 1.8B: веса модели не скачаны на диск]"
++            result = LocalHYMTEngine.get_instance(self._model).translate(
++                text, target_language=self._target_language, source_language=source_language
++            )
++            self._append_history(text, result)
++            return result
 +        if getattr(self, "_is_local_nllb", False):
 +            from nllb_engine import LocalNLLBEngine
 +            result = LocalNLLBEngine.get_instance(self._model).translate(
@@ -536,12 +1002,25 @@ diff --git a/translator.py b/translator.py
          system_prompt = self._build_system_prompt(source_language)
          if self._streaming:
              result = self._translate_streaming(system_prompt, text)
-@@ -378,6 +427,17 @@
+@@ -378,6 +467,30 @@
          The final yielded value is always the complete translation.
          Caller should use the last yielded value as the final result.
          """
 +        if getattr(self, "_is_disabled", False):
 +            yield ""
++            return
++        if getattr(self, "_is_local_hymt", False):
++            from hymt_engine import LocalHYMTEngine
++            if not LocalHYMTEngine.is_cached():
++                yield "[HY-MT 1.8B: веса модели не скачаны на диск]"
++                return
++            final_res = ""
++            for partial in LocalHYMTEngine.get_instance(self._model).translate_stream(
++                text, target_language=self._target_language, source_language=source_language
++            ):
++                final_res = partial
++                yield partial
++            self._append_history(text, final_res)
 +            return
 +        if getattr(self, "_is_local_nllb", False):
 +            from nllb_engine import LocalNLLBEngine

@@ -26,6 +26,7 @@ __pycache__/
 # LiveTranslate working directory (managed by SETUP_ECOSYSTEM.bat and apply_patches.py)
 stage_1_audio/LiveTranslate/
 stage_1_audio/nllb_server/models/
+stage_1_audio/nllb_server/backends/
 stage_2_screen/OverTranslate/current/
 bin/
 *.exe

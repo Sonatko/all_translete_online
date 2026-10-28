@@ -47,6 +47,7 @@ echo.
 echo  [Stage 2: Screen OCR ^& Text - OverTranslate]
 echo  - Ctrl+Alt+A:   Screen OCR In-Place Translation (Drag bounding box)
 echo  - Ctrl+C+C:     Instant QuickLookup ^& Context Breakdown (Double Copy)
+echo  - Ctrl+Alt+C:   QuickTranslate (In-Place Text Replacement in any chat/input)
 echo  - Ctrl+Alt+W:   Show / Hide OverTranslate Main Window
 echo ======================================================================
 echo  To stop all services cleanly, run STOP.bat

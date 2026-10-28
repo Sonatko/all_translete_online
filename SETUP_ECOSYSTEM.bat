@@ -41,6 +41,10 @@ if exist "%~dp0stage_2_screen\OverTranslate\current\OverTranslate.exe" (
 echo   [DOWNLOAD] OverTranslate missing. Downloading OverTranslate Portable release...
 if not exist "%~dp0stage_2_screen\OverTranslate\current" mkdir "%~dp0stage_2_screen\OverTranslate\current"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$zip = '%~dp0stage_2_screen\OverTranslate\OverTranslate-win-Portable.zip'; $urls = @('https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip', 'https://ghproxy.net/https://github.com/Hon-Lu/OverTranslate/releases/latest/download/OverTranslate-win-Portable.zip'); $downloaded = $false; foreach ($u in $urls) { try { Write-Host \"Trying $u...\"; Invoke-WebRequest -Uri $u -OutFile $zip -TimeoutSec 60 -ErrorAction Stop; $downloaded = $true; break } catch { Write-Warning 'Mirror failed, trying next...' } }; if ($downloaded) { Write-Host 'Extracting OverTranslate...'; Expand-Archive -Path $zip -DestinationPath '%~dp0stage_2_screen\OverTranslate\current' -Force; Remove-Item $zip -Force; Write-Host 'OverTranslate extracted successfully!' } else { Write-Error 'Failed to download OverTranslate' }"
+if exist "%~dp0CONFIG\stage_2_screen\OverTranslate.patched.dll" (
+    copy /Y "%~dp0CONFIG\stage_2_screen\OverTranslate.patched.dll" "%~dp0stage_2_screen\OverTranslate\current\OverTranslate.dll" >nul
+    echo   [PATCH] Injected QuickTranslate clipboard non-flushing patch into OverTranslate.dll
+)
 
 :check_models
 :: ---------------------------------------------------------------------
@@ -78,11 +82,9 @@ if not exist "%~dp0stage_1_audio\LiveTranslate\user_settings.json" (
 )
 
 if not exist "%APPDATA%\OverTranslate" mkdir "%APPDATA%\OverTranslate" 2>nul
-if not exist "%APPDATA%\OverTranslate\appsettings.json" (
-    copy /Y "%~dp0CONFIG\stage_2_screen\appsettings.template.json" "%APPDATA%\OverTranslate\appsettings.json" >nul
-    echo   [OK] Applied OverTranslate appsettings.json from CONFIG template
-) else (
-    echo   [OK] OverTranslate appsettings.json already active
+if exist "%~dp0CONFIG\stage_2_screen\appsettings.json" (
+    copy /Y "%~dp0CONFIG\stage_2_screen\appsettings.json" "%APPDATA%\OverTranslate\appsettings.json" >nul
+    echo   [OK] Applied OverTranslate authoritative appsettings.json from CONFIG (Bilingual RU^<^-^>EN)
 )
 
 echo.

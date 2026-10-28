@@ -27,47 +27,21 @@ def apply_stage1_orchestration():
     print("  STAGE 1: AUDIO ENGINE ORCHESTRATION & INJECTION")
     print("============================================================")
 
-    # 1. Copy custom modules (Zero-loss standalone components)
-    print("\n[1/3] Injecting custom high-performance modules...")
+    # 1. Copy authoritative custom modules & modified engine components
+    print("\n[1/2] Injecting authoritative Stage 1 engine modules...")
     if os.path.exists(custom_modules_dir):
         for fname in os.listdir(custom_modules_dir):
-            if fname.endswith(".py"):
+            if fname.endswith(".py") or fname.endswith(".txt"):
                 src = os.path.join(custom_modules_dir, fname)
                 dst = os.path.join(target_dir, fname)
                 shutil.copy2(src, dst)
-                print(f"  [OK] Injected module: {fname}")
+                print(f"  [OK] Injected: {fname}")
     else:
-        print(f"  [WARNING] Custom modules directory not found: {custom_modules_dir}")
+        print(f"  [ERROR] Custom modules directory not found: {custom_modules_dir}")
+        return False
 
-    # 2. Apply unified surgical patch
-    print("\n[2/3] Applying surgical orchestrator patch...")
-    if os.path.exists(patch_file):
-        rel_dir = os.path.relpath(target_dir, workspace_root).replace("\\", "/")
-        # Check if already applied (reverse check)
-        chk_rev = subprocess.run(
-            ["git", "apply", "--check", "--reverse", "--ignore-whitespace", f"--directory={rel_dir}", patch_file],
-            cwd=workspace_root,
-            capture_output=True,
-            text=True,
-        )
-        if chk_rev.returncode == 0:
-            print("  [OK] orchestrator_stage1.patch is already applied.")
-        else:
-            res = subprocess.run(
-                ["git", "apply", "--ignore-whitespace", f"--directory={rel_dir}", patch_file],
-                cwd=workspace_root,
-                capture_output=True,
-                text=True,
-            )
-            if res.returncode == 0:
-                print("  [APPLIED] Successfully applied orchestrator_stage1.patch")
-            else:
-                print(f"  [WARNING] Patch apply warning / error: {res.stderr.strip()}")
-    else:
-        print(f"  [ERROR] Patch file not found: {patch_file}")
-
-    # 3. Synchronize authoritative settings
-    print("\n[3/3] Synchronizing authoritative user_settings.json...")
+    # 2. Synchronize authoritative settings
+    print("\n[2/2] Synchronizing authoritative user_settings.json...")
     if os.path.exists(settings_src):
         shutil.copy2(settings_src, settings_dst)
         print("  [OK] Synchronized user_settings.json")

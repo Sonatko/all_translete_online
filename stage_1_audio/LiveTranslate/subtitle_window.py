@@ -601,6 +601,19 @@ class _SubtitleTextWidget(QWidget):
         painter.end()
 
 
+def _calc_adaptive_reading_ms(text: str) -> int:
+    """Calculate adaptive reading duration based on sentence length (Netflix/BBC standards):
+    - Base perception time: 400 ms
+    - Per-word reading rate: 220 ms
+    - Floor: 800 ms (short words like 'OK', 'Yes' clear in 0.8s)
+    - Ceiling: 2600 ms
+    """
+    if not text:
+        return 800
+    words = [w for w in text.split() if any(c.isalnum() for c in w)]
+    return max(800, min(2600, 400 + len(words) * 220))
+
+
 class SubtitleWindow(QWidget):
     """Clean text-only subtitle window for OBS capture.
 
@@ -635,8 +648,9 @@ class SubtitleWindow(QWidget):
         self._auto_hide_timer.setSingleShot(True)
         self._auto_hide_timer.timeout.connect(self._on_auto_hide_timeout)
         self._is_hidden_by_timeout = False
-        # Atomic Complete Pair Pacing State (Mimi Invariant)
-        self._min_display_ms = 2000  # 2.0s guaranteed calm reading window
+        # Atomic Complete Pair Pacing State (Adaptive Reading Window)
+        self._min_display_ms = 2000  # Default reading window
+        self._current_reading_ms = 2000  # Dynamically adapted per sentence length
         self._last_insert_time = 0.0
         self._pending_pair = None
         self._pacing_timer = QTimer(self)
@@ -1015,7 +1029,7 @@ class SubtitleWindow(QWidget):
         # Never overwrite a completed subtitle pair during its protected reading window!
         now_ms = time.monotonic() * 1000
         elapsed = now_ms - self._last_insert_time
-        if self._sentences and self._last_insert_time > 0 and elapsed < self._min_display_ms:
+        if self._sentences and self._last_insert_time > 0 and elapsed < self._current_reading_ms:
             return
 
         target_lang = ""
@@ -1051,8 +1065,8 @@ class SubtitleWindow(QWidget):
         now_ms = time.monotonic() * 1000
         elapsed = now_ms - self._last_insert_time
 
-        # If nothing is displayed yet or if the current pair has completed its 2.0s reading window:
-        if self._last_insert_time == 0.0 or elapsed >= self._min_display_ms:
+        # If nothing is displayed yet or if the current pair has completed its adaptive reading window:
+        if self._last_insert_time == 0.0 or elapsed >= self._current_reading_ms:
             if self._pacing_timer.isActive():
                 self._pacing_timer.stop()
             self._pending_pair = None
@@ -1062,7 +1076,7 @@ class SubtitleWindow(QWidget):
             # Current pair is still protected. Save the new complete pair as the pending replacement.
             self._pending_pair = (original, translations)
             if not self._pacing_timer.isActive():
-                remaining = max(50, int(self._min_display_ms - elapsed))
+                remaining = max(50, int(self._current_reading_ms - elapsed))
                 self._pacing_timer.start(remaining)
 
     def _on_pacing_timer_timeout(self):
@@ -1073,6 +1087,7 @@ class SubtitleWindow(QWidget):
 
     def _insert_sentence(self, original: str, translations: dict):
         """Insert a single complete pair and refresh display."""
+        self._current_reading_ms = _calc_adaptive_reading_ms(original)
         # Always maintain strictly 1 current complete pair (atomic slide replacement)
         self._sentences = [(original, translations)]
 

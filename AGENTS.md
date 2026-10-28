@@ -55,16 +55,21 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - If any file is excluded by `.gitignore` in upstream submodules (e.g., `user_settings.json`), it must either be explicitly un-ignored or tracked via `CONFIG/` so that no user settings can ever be lost during cleanups.
 
 ### 7. Professional Git Flow, Branching Protocol & Test-Driven Verification Gate
-- **Strict Branching Strategy**:
+- **Strict Branching Strategy (Anti-Merge-Hell Standard)**:
   - `main`: Protected, production-ready release branch. Never code experimental features directly on `main`.
-  - `feature/<stage>-<name>`: Isolated branches for discrete improvements (e.g., `feature/stage1-asr-optimization`, `feature/stage1-mt-speedup`).
-  - `refactor/<name>`: Architectural cleanups and technical debt elimination.
+  - `feature/<stage>-<name>`: Isolated umbrella/feature branches for discrete milestones.
+  - `spike/<name>`: Short-lived exploration branches (hours to 1-2 days) for unverified open-source repos and rapid prototyping. Delete with `git branch -D` if discarded to prevent repo clutter.
+  - `fix/<name>`: Discrete, atomic micro-fix branches. Never bundle bugfixes with in-progress feature development.
   - `test/<name>`: Benchmarking suites and diagnostic testbeds.
+  - `refactor/<name>`: Architectural cleanups and technical debt elimination.
+- **Short-Lived Topic Branches & Milestone Tags**:
+  - Never maintain long-lived branches that linger for weeks and drift away from the base.
+  - Tag successful verification checkpoints (`git tag ...`) for instant, risk-free rollbacks.
 - **The Test-Driven Verification Gate (Evidence Before Claims)**:
   - No task or checklist item may be marked complete simply with a checkbox.
   - Completion requires tangible, reproducible instrumental output (Inference Latency in ms, RAM/VRAM in MB, Word/Character Error Rate, CPU Load %) captured via test scripts and logged in `dev_notes/`.
   - A feature branch is merged into `main` ONLY after passing the end-to-end regression check:
-    1. Automated smoke gate (`stage_1_audio\.venv\Scripts\python.exe tests\test_stage1_smoke.py` passes all checks).
+    1. Automated smoke gate passes all checks.
     2. Clean process lifecycle (START.bat & STOP.bat).
     3. Golden Control Scheme verification (`F9` Master Toggle, `2x MMB` Click-through, `MMB Drag`).
     4. Performance budget compliance (<200–350 ms latency, 0 MB game stutter).

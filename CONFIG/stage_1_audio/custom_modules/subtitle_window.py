@@ -1142,11 +1142,8 @@ class SubtitleWindow(QWidget):
                 tw.set_text(content)
             wi += 1
 
-        if streaming:
-            if any_height_changed:
-                self._fit_height_snap(anchor_bottom=True)
-        else:
-            self._fit_height_animated(anchor_bottom=True)
+        # Instant snap eliminates Windows DWM transparent backbuffer resize flicker
+        self._fit_height_snap(anchor_bottom=True)
 
     def get_target_languages(self) -> set:
         """Return set of unique target language codes from enabled translation lines."""

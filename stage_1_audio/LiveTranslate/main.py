@@ -1097,13 +1097,6 @@ class LiveTranslateApp:
                 translated = partial
                 if self._overlay:
                     self._overlay.update_streaming(msg_id, partial)
-                if self._subwin and self._subwin.isVisible() and partial:
-                    now = time.perf_counter()
-                    if now - last_subwin_update >= 0.06:  # 60ms throttle for smooth live text animation
-                        last_subwin_update = now
-                        self._subwin.update_streaming_text(text, partial)
-            if self._subwin and self._subwin.isVisible() and translated:
-                self._subwin.update_streaming_text(text, translated)
             tl_ms = (time.perf_counter() - tl_start) * 1000
             self._translate_count += 1
             pt, ct = self._translator.last_usage
@@ -1395,8 +1388,9 @@ class LiveTranslateApp:
             parts = [p for p in seg.segment(text) if p.strip()]
         else:
             # Zero-dependency regex fallback: split after sentence-ending punctuation (.!?。！？)
+            # Avoid false splits on common honorifics and abbreviations (e.g., Mr., Mrs., Dr.)
             import re
-            raw_parts = re.split(r'(?<=[.!?])\s+|(?<=[。！？])', text)
+            raw_parts = re.split(r'(?<!\bMr)(?<!\bMrs)(?<!\bDr)(?<!\bMs)(?<!\bProf)(?<!\bSt)(?<=[.!?])\s+|(?<=[。！？])', text)
             parts = [p.strip() for p in raw_parts if p.strip()]
 
         if len(parts) > 1:

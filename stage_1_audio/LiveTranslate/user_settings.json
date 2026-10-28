@@ -9,7 +9,7 @@
   "vad_threshold": 0.5,
   "energy_threshold": 0.02,
   "min_speech_duration": 0.2,
-  "max_speech_duration": 7.0,
+  "max_speech_duration": 4.0,
   "silence_mode": "fixed",
   "silence_duration": 0.25,
   "asr_language": "auto",
@@ -68,7 +68,7 @@
   "subtitle_mode": {
     "enabled": true,
     "sentences": 1,
-    "window_width": 1500,
+    "window_width": 1000,
     "line_spacing": 7,
     "bg_color": "#000000",
     "bg_opacity": 128,
@@ -117,8 +117,8 @@
         "type": "translation"
       }
     ],
-    "window_x": 570,
-    "window_y": 106
+    "window_x": 202,
+    "window_y": 23
   },
   "overlay_x": 160,
   "overlay_y": 389,

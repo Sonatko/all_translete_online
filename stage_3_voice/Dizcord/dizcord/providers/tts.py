@@ -596,3 +596,82 @@ class KokoroTTS(TTSProvider):
             return [(v, v) for v in sorted(self._load().get_voices())]
         except Exception:
             return [(v, v) for pair in _KOKORO_VOICE.values() for v in pair]
+
+
+@register
+class PocketTTS(TTSProvider):
+    id = "pocket_tts"
+    name = "Kyutai Pocket-TTS (Cloned Voice)"
+    local = True
+    description = ("State-of-the-art offline neural speech synthesis with voice cloning (Mimi codec + Flow Matching). "
+                   "Speaks in your own cloned voice timbre on CPU with studio clarity.")
+    requires = ["pocket_tts", "safetensors"]
+    pip_hint = "pip install pocket-tts safetensors"
+    fields = [
+        Field("voice_profile", "Voice profile", "path", str(MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"),
+              help="Path to your .safetensors voice profile or built-in voice (alba, marius, juergen)"),
+        Field("temperature", "Temperature", "float", 0.3, min=0.1, max=1.0, step=0.05),
+    ]
+    _model = None
+    _loaded_profile_path = None
+    _cached_state = None
+
+    def _load(self):
+        import pocket_tts
+        from huggingface_hub import hf_hub_download
+        import safetensors.torch
+        if PocketTTS._model is None:
+            weights_file = hf_hub_download(
+                "latent-variable/pocket-tts-cloning-en", "languages/english/model.safetensors"
+            )
+            m = pocket_tts.TTSModel.load_model()
+            state = safetensors.torch.load_file(weights_file)
+            m.load_state_dict(state, strict=True)
+            m.has_voice_cloning = True
+            PocketTTS._model = m
+        return PocketTTS._model
+
+    def _get_voice_state(self, voice: str):
+        import pocket_tts
+        m = self._load()
+        vp = Path(self.s("voice_profile"))
+        if not vp.is_absolute():
+            vp = MODELS_DIR / "pocket_tts" / vp
+        if not vp.exists():
+            alt = Path("stage_3_voice/models/pocket_tts/my_pocket_voice.safetensors")
+            if alt.exists():
+                vp = alt
+
+        target_voice = voice if not _is_auto(voice) else str(vp)
+        if PocketTTS._cached_state is not None and PocketTTS._loaded_profile_path == target_voice:
+            return PocketTTS._cached_state
+
+        if target_voice.endswith(".safetensors") and Path(target_voice).is_file():
+            st = pocket_tts.models.tts_model._import_model_state(target_voice, m.device)
+        elif target_voice in ("alba", "marius", "juergen", "paul", "charles", "george", "michael"):
+            st = m.get_state_for_audio_prompt(target_voice)
+        elif vp.is_file():
+            st = pocket_tts.models.tts_model._import_model_state(str(vp), m.device)
+        else:
+            st = m.get_state_for_audio_prompt("alba")
+
+        PocketTTS._cached_state = st
+        PocketTTS._loaded_profile_path = target_voice
+        return st
+
+    def synthesize(self, text: str, lang: str, voice: str, gender: str = "female") -> tuple[np.ndarray, int]:
+        m = self._load()
+        with self.lock:
+            st = self._get_voice_state(voice)
+            wav_tensor = m.generate_audio(st, text, copy_state=True)
+            audio = wav_tensor.squeeze().cpu().numpy()
+            peak = np.max(np.abs(audio))
+            if peak > 0.001:
+                audio = audio * (0.90 / peak)
+            return audio.astype(np.float32), int(m.sample_rate)
+
+    def list_voices(self, lang: str | None = None) -> list[tuple[str, str]]:
+        voices = [("my_pocket_voice", "My Cloned Voice (my_pocket_voice.safetensors)")]
+        for v in ("juergen", "marius", "paul", "charles", "george", "michael", "alba"):
+            voices.append((v, f"Pocket-TTS - {v.title()}"))
+        return voices

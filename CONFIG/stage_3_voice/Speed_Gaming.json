@@ -8,7 +8,7 @@
     "speak": true,
     "show_subtitles": true,
     "skip_same_language": true,
-    "output_device": "",
+    "output_device": "Playback 1/2",
     "volume": 1.0,
     "voice_speed": 1.0,
     "voice_pitch": 0.0,
@@ -23,23 +23,23 @@
     "target_lang": "en",
     "follow_their_language": false,
     "speak": true,
-    "output_device": "Playback 1/2",
+    "output_device": "Playback 3/4",
     "volume": 1.0,
     "voice_speed": 1.0,
     "voice_pitch": 0.0,
     "passthrough": true,
     "passthrough_volume": 1.0,
-    "monitor_device": "",
-    "monitor_volume": 0.5,
-    "monitor": false
+    "monitor_device": "Playback 1/2",
+    "monitor_volume": 0.8,
+    "monitor": true
   },
   "input": {
     "listen_mode": "app",
     "listen_app": "discord",
     "listen_device": "",
-    "mic_device": "",
+    "mic_device": "NVIDIA Broadcast",
     "mic_mode": "ptt",
-    "ptt_key": "f8",
+    "ptt_key": "shift+middle",
     "hear_key": "f9",
     "listen_vad": {
       "auto": true,
@@ -89,18 +89,25 @@
     "custom_prompt": ""
   },
   "tts": {
-    "provider": "kokoro",
+    "provider": "pocket_tts",
     "settings": {
       "piper": {
         "length_scale": 0.95
       },
       "kokoro": {
         "speed": 1.05
+      },
+      "pocket_tts": {
+        "voice_profile": "stage_3_voice/models/pocket_tts/my_pocket_voice.safetensors",
+        "temperature": 0.3
       }
     },
     "voices": {
       "kokoro": {
         "outgoing": "am_michael"
+      },
+      "pocket_tts": {
+        "outgoing": "my_pocket_voice"
       }
     },
     "gender": "male"

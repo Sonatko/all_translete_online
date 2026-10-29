@@ -780,6 +780,41 @@ class Engine(TextEngine):
         key = (self.profile["input"].get("ptt_key") or "").strip()
         if self.profile["input"]["mic_mode"] not in ("ptt", "toggle") or not key:
             return
+
+        is_mouse = any(m in key.lower() for m in ("middle", "mouse", "wheel", "mmb", "xbutton"))
+        if is_mouse:
+            try:
+                from pynput import mouse as pynput_mouse
+                require_shift = "shift" in key.lower()
+                target_button = pynput_mouse.Button.middle
+                if "xbutton1" in key.lower() or "mouse4" in key.lower():
+                    target_button = pynput_mouse.Button.x1
+                elif "xbutton2" in key.lower() or "mouse5" in key.lower():
+                    target_button = pynput_mouse.Button.x2
+
+                def on_click(x, y, button, pressed):
+                    if button != target_button:
+                        return
+                    if pressed:
+                        if require_shift and not keyboard.is_pressed("shift"):
+                            return
+                        if not self._ptt_down:
+                            self._ptt_down = True
+                            self.set_ptt(True)
+                    else:
+                        if self._ptt_down:
+                            self._ptt_down = False
+                            if self.profile["input"]["mic_mode"] == "ptt":
+                                self.set_ptt(False)
+
+                m_listener = pynput_mouse.Listener(on_click=on_click)
+                m_listener.daemon = True
+                m_listener.start()
+                self._hotkey_hooks.append(("mouse", m_listener))
+            except Exception as e:
+                self.emit_error(f"Could not register mouse hotkey '{key}': {e}")
+            return
+
         try:
             def on_down(_e):
                 if not self._ptt_down:
@@ -803,7 +838,12 @@ class Engine(TextEngine):
             import keyboard
             for kind, h in self._hotkey_hooks:
                 try:
-                    keyboard.remove_hotkey(h) if kind == "hotkey" else keyboard.unhook(h)
+                    if kind == "mouse":
+                        h.stop()
+                    elif kind == "hotkey":
+                        keyboard.remove_hotkey(h)
+                    else:
+                        keyboard.unhook(h)
                 except Exception:  # noqa: BLE001
                     pass
         except Exception:

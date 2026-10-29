@@ -257,6 +257,41 @@ class EcosystemHub(QMainWindow):
         self._poll_process_status()
         self.poll_timer.start()
         self._populate_inventory_table()
+        self._update_hub_profile_styles()
+
+    def _update_hub_profile_styles(self):
+        try:
+            from stage_3_voice.studio.config import load_settings
+            cfg = load_settings()
+            mode = cfg.get("audio", {}).get("routing_mode", "topping")
+        except Exception:
+            mode = "topping"
+
+        if mode == "topping":
+            self.btn_hub_topping.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; border: 1px solid #60a5fa;")
+            self.btn_hub_cable.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 10px; border: 1px solid #374151;")
+        else:
+            self.btn_hub_cable.setStyleSheet("background-color: #059669; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; border: 1px solid #34d399;")
+            self.btn_hub_topping.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 10px; border: 1px solid #374151;")
+
+    def _on_hub_switch_profile(self, mode: str):
+        try:
+            from stage_3_voice.studio.routing_presets import RoutingPresets
+            from stage_3_voice.studio.config import load_settings, save_settings
+            import subprocess
+            cfg = load_settings()
+            success, msg = RoutingPresets.apply_preset(mode, cfg)
+            if success:
+                save_settings(cfg)
+                self._update_hub_profile_styles()
+
+                hw = RoutingPresets.get_hardware_info()
+                if mode == "cable" and not hw.get("has_cable", False):
+                    bat = PROJECT_ROOT / "INSTALL_VIRTUAL_CABLE.bat"
+                    if bat.is_file():
+                        subprocess.Popen(["cmd.exe", "/c", str(bat)])
+        except Exception as e:
+            log.error("Failed to switch profile: %s", e)
 
     def closeEvent(self, event):
         self.poll_timer.stop()
@@ -385,6 +420,45 @@ class EcosystemHub(QMainWindow):
         grid.addWidget(self.card_stage3, 1, 0, 1, 2)
 
         layout.addLayout(grid)
+
+        # 1-Click Audio Hardware Profile Selector
+        prof_frame = QFrame()
+        prof_frame.setStyleSheet("""
+            QFrame {
+                background-color: #1a1b1e;
+                border: 1px solid #2e3035;
+                border-radius: 8px;
+                padding: 8px 12px;
+            }
+        """)
+        h_prof = QHBoxLayout(prof_frame)
+        h_prof.setSpacing(10)
+
+        lbl_prof_icon = QLabel("🎧")
+        lbl_prof_icon.setStyleSheet("font-size: 18px;")
+        h_prof.addWidget(lbl_prof_icon)
+
+        v_prof_text = QVBoxLayout()
+        v_prof_text.setSpacing(1)
+        self.lbl_prof_title = QLabel("<b>Аудио-профиль в играх (1 клик):</b>")
+        self.lbl_prof_title.setStyleSheet("color: #ffffff; font-size: 11px;")
+        self.lbl_prof_desc = QLabel("Выберите вариант под ваше оборудование:")
+        self.lbl_prof_desc.setStyleSheet("color: #9ca3af; font-size: 10px;")
+        v_prof_text.addWidget(self.lbl_prof_title)
+        v_prof_text.addWidget(self.lbl_prof_desc)
+        h_prof.addLayout(v_prof_text, stretch=1)
+
+        self.btn_hub_topping = QPushButton("🎛 Topping E2x2 (Аппаратный)")
+        self.btn_hub_topping.setFixedHeight(32)
+        self.btn_hub_topping.clicked.connect(lambda: self._on_hub_switch_profile("topping"))
+        h_prof.addWidget(self.btn_hub_topping)
+
+        self.btn_hub_cable = QPushButton("🔌 Виртуальный Кабель (Обычный ПК)")
+        self.btn_hub_cable.setFixedHeight(32)
+        self.btn_hub_cable.clicked.connect(lambda: self._on_hub_switch_profile("cable"))
+        h_prof.addWidget(self.btn_hub_cable)
+
+        layout.addWidget(prof_frame)
 
         # Voice Wizard Hero Card
         wiz_frame = QFrame()

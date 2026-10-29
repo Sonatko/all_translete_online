@@ -31,11 +31,13 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QMessageBox,
 )
 
 from .audio_engine import AudioEngine
 from .config import load_settings, save_settings
 from .model_manager import ModelManager
+from .routing_presets import RoutingPresets
 
 log = logging.getLogger("Studio.GUI")
 
@@ -341,8 +343,26 @@ class StudioWindow(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(12)
 
+        # 1-Click Hardware Profiles Selector Banner
+        grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик (1-Click Hardware Profiles)")
+        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
+        h_prof = QHBoxLayout(grp_profiles)
+        h_prof.setSpacing(10)
+
+        self.btn_prof_topping = QPushButton("🎛 Режим: Звуковая карта Topping (Аппаратный 0 ms)")
+        self.btn_prof_topping.setFixedHeight(38)
+        self.btn_prof_topping.clicked.connect(lambda: self._on_switch_profile("topping"))
+        h_prof.addWidget(self.btn_prof_topping, stretch=1)
+
+        self.btn_prof_cable = QPushButton("🔌 Режим: Виртуальный Кабель (Для обычных ПК без Topping)")
+        self.btn_prof_cable.setFixedHeight(38)
+        self.btn_prof_cable.clicked.connect(lambda: self._on_switch_profile("cable"))
+        h_prof.addWidget(self.btn_prof_cable, stretch=1)
+
+        layout.addWidget(grp_profiles)
+
         # Device Selection Grid
-        grp_devs = QGroupBox("Аудиоустройства и интеграция с Topping E2x2 OTG")
+        grp_devs = QGroupBox("Аудиоустройства и интеграция")
         grid = QGridLayout(grp_devs)
         grid.setSpacing(10)
 
@@ -496,6 +516,7 @@ class StudioWindow(QMainWindow):
         layout.addWidget(info_frame)
 
         layout.addStretch()
+        self._update_profile_buttons_style()
         return w
 
     # =========================================================================
@@ -598,6 +619,7 @@ class StudioWindow(QMainWindow):
 
         layout.addLayout(models_grid)
         layout.addStretch()
+        self._update_profile_buttons_style()
         return w
 
     # =========================================================================
@@ -741,6 +763,94 @@ class StudioWindow(QMainWindow):
         if bat.is_file():
             subprocess.Popen(["cmd.exe", "/c", str(bat)])
         save_settings(self.cfg)
+
+    def _update_profile_buttons_style(self):
+        mode = self.cfg.get("audio", {}).get("routing_mode", "topping")
+        if mode == "topping":
+            self.btn_prof_topping.setStyleSheet("""
+                QPushButton {
+                    background-color: #2563eb;
+                    color: #ffffff;
+                    font-weight: bold;
+                    border: 2px solid #60a5fa;
+                    border-radius: 6px;
+                }
+            """)
+            self.btn_prof_cable.setStyleSheet("""
+                QPushButton {
+                    background-color: #1f2937;
+                    color: #9ca3af;
+                    border: 1px solid #374151;
+                    border-radius: 6px;
+                }
+                QPushButton:hover { background-color: #374151; }
+            """)
+        else:
+            self.btn_prof_cable.setStyleSheet("""
+                QPushButton {
+                    background-color: #059669;
+                    color: #ffffff;
+                    font-weight: bold;
+                    border: 2px solid #34d399;
+                    border-radius: 6px;
+                }
+            """)
+            self.btn_prof_topping.setStyleSheet("""
+                QPushButton {
+                    background-color: #1f2937;
+                    color: #9ca3af;
+                    border: 1px solid #374151;
+                    border-radius: 6px;
+                }
+                QPushButton:hover { background-color: #374151; }
+            """)
+
+    def _on_switch_profile(self, mode: str):
+        success, msg = RoutingPresets.apply_preset(mode, self.cfg)
+        if success:
+            save_settings(self.cfg)
+            self._update_profile_buttons_style()
+            self._refresh_device_combos()
+
+            hw = RoutingPresets.get_hardware_info()
+            if mode == "cable" and not hw.get("has_cable", False):
+                reply = QMessageBox.question(
+                    self,
+                    "Установка Виртуального Кабеля",
+                    "На вашем ПК пока не найден виртуальный кабель (VB-Cable).\n\n"
+                    "Хотите установить его автоматически в 1 клик?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    import subprocess
+                    from pathlib import Path
+                    bat = Path(__file__).resolve().parent.parent.parent / "INSTALL_VIRTUAL_CABLE.bat"
+                    if bat.is_file():
+                        subprocess.Popen(["cmd.exe", "/c", str(bat)])
+            else:
+                QMessageBox.information(self, "Профиль переключен", msg)
+
+    def _refresh_device_combos(self):
+        cur_in = self.cfg.get("audio", {}).get("input_device", "")
+        cur_out = self.cfg.get("audio", {}).get("output_device", "")
+        cur_side = self.cfg.get("audio", {}).get("sidetone_device", "")
+
+        for i in range(self.combo_in.count()):
+            if cur_in.lower() in self.combo_in.itemText(i).lower():
+                self.combo_in.setCurrentIndex(i)
+                break
+        for i in range(self.combo_out.count()):
+            if cur_out.lower() in self.combo_out.itemText(i).lower():
+                self.combo_out.setCurrentIndex(i)
+                break
+        for i in range(self.combo_side.count()):
+            if cur_side.lower() in self.combo_side.itemText(i).lower():
+                self.combo_side.setCurrentIndex(i)
+                break
+
+        self.node_mic.sub_lbl.setText(cur_in)
+        self.node_out.sub_lbl.setText(f"{cur_out} ➔ Игра")
+        self.engine.restart_streams()
 
     def _on_voice_changed(self, idx: int):
         voice_key = self.combo_voices.currentData()

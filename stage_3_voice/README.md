@@ -61,11 +61,11 @@ It captures the user's spoken Russian voice from their hardware microphone, tran
 
 ---
 
-## 5. Reference Open-Source Base: `LiveLingo`
-* **Upstream:** [roirude/LiveLingo](https://github.com/roirude/LiveLingo) (MIT, Windows).
-* **Architecture:** Decoupled multi-threaded pipeline (`capture` -> `transcribe` -> `translate` -> `synthesize` -> `playback`).
-* **Planned Refinements:**
-  1. Replace slow cloud Google/Groq translation with local CUDA models.
-  2. Replace cloud Edge-TTS with local Kokoro-82M ONNX.
-  3. Replace VB-Cable dependency with native Topping E2x2 OTG Hardware Loopback.
-  4. Replace fixed 4-second chunking with adaptive Silero VAD (250 ms silence threshold).
+## 5. Selected Open-Source Base: `Dizcord`
+* **Upstream:** [Lagalizer/Dizcord](https://github.com/Lagalizer/Dizcord) (GPL-3.0, Oct 2026, Windows).
+* **Architecture:** Decoupled multi-threaded PySide6 pipeline (`capture` -> `VAD` -> `transcribe` -> `translate` -> `synthesize` -> `playback`).
+* **Key Native Advantages:**
+  1. Built-in native support for **Kokoro-82M ONNX** (`KokoroTTS`) and **Faster-Whisper** (`FasterWhisperSTT`).
+  2. Native loopback capture and playback via `PyAudioWPatch` and `sounddevice` with DirectSound/WASAPI.
+  3. Push-to-Talk, voice activity detection (VAD), live audio meters, and full Russian GUI localization out-of-the-box.
+  4. Fully offline operation without any paid cloud APIs.

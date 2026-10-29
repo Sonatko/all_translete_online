@@ -13,3 +13,4 @@ echo.
 start "" "%~dp0stage_3_voice\Dizcord\.venv\Scripts\pythonw.exe" "%~dp0launcher\hub.py"
 
 exit /b 0
+

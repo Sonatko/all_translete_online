@@ -1,13 +1,12 @@
 """Universal Real-Time Translation Hub & Ecosystem Orchestrator (PySide6).
-Provides centralized process supervision, AI model inventory auditing,
-safe patch isolation tracking, and an interactive personal voice cloning wizard.
+Supports Trilingual UI (Russian, English, Chinese), AI Models Storage Audit,
+Process Lifecycle Supervision, and Architecture / Signal Flow Guide.
 """
 from __future__ import annotations
 
 import logging
 import os
 from pathlib import Path
-import subprocess
 import sys
 from typing import Dict, List
 
@@ -15,6 +14,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QFrame,
     QGridLayout,
     QGroupBox,
@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .i18n import I18n
 from .models_inventory import ModelsInventory
 from .process_manager import EcosystemProcessManager
 from .voice_wizard import VoiceCloningWizard
@@ -43,11 +44,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 class StageCard(QFrame):
     """Visual status and control card for an ecosystem stage."""
 
-    def __init__(self, stage_id: str, title: str, description: str, hotkeys: str, on_start, on_stop=None, parent=None):
+    def __init__(self, stage_id: str, title_key: str, desc_key: str, hotkeys_key: str, on_start, on_stop=None, parent=None):
         super().__init__(parent)
         self.stage_id = stage_id
+        self.title_key = title_key
+        self.desc_key = desc_key
+        self.hotkeys_key = hotkeys_key
         self.on_start = on_start
         self.on_stop = on_stop
+        self._is_running = False
 
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet("""
@@ -65,13 +70,13 @@ class StageCard(QFrame):
 
         # Header Row: Title + Status Pill
         h_head = QHBoxLayout()
-        self.lbl_title = QLabel(f"<b>{title}</b>")
-        self.lbl_title.setStyleSheet("font-size: 14px; color: #ffffff;")
+        self.lbl_title = QLabel(f"<b>{I18n.t(self.title_key)}</b>")
+        self.lbl_title.setStyleSheet("font-size: 13px; color: #ffffff;")
         h_head.addWidget(self.lbl_title)
 
         h_head.addStretch()
 
-        self.status_pill = QLabel("⚪ Остановлен")
+        self.status_pill = QLabel(I18n.t("status_stopped_pill"))
         self.status_pill.setStyleSheet("""
             background-color: #212328;
             color: #9ca3af;
@@ -85,19 +90,19 @@ class StageCard(QFrame):
         layout.addLayout(h_head)
 
         # Description
-        self.lbl_desc = QLabel(description)
+        self.lbl_desc = QLabel(I18n.t(self.desc_key))
         self.lbl_desc.setWordWrap(True)
         self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px;")
         layout.addWidget(self.lbl_desc)
 
         # Hotkey Info
-        self.lbl_hotkeys = QLabel(f"<b>Горячие клавиши:</b> {hotkeys}")
+        self.lbl_hotkeys = QLabel(f"<b>Горячие клавиши:</b> {I18n.t(self.hotkeys_key)}")
         self.lbl_hotkeys.setStyleSheet("color: #60a5fa; font-size: 11px;")
         layout.addWidget(self.lbl_hotkeys)
 
         # Action Buttons
         h_btn = QHBoxLayout()
-        self.btn_action = QPushButton("▶ Запустить")
+        self.btn_action = QPushButton(I18n.t("btn_start"))
         self.btn_action.setFixedHeight(30)
         self.btn_action.setStyleSheet("""
             QPushButton {
@@ -116,7 +121,14 @@ class StageCard(QFrame):
         h_btn.addStretch()
         layout.addLayout(h_btn)
 
+    def retranslate(self):
+        self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
+        self.lbl_desc.setText(I18n.t(self.desc_key))
+        self.lbl_hotkeys.setText(f"<b>{I18n.t('stage1_hotkeys') if '1' in self.stage_id else 'Hotkeys:'}</b> {I18n.t(self.hotkeys_key)}")
+        self.set_running(self._is_running)
+
     def set_running(self, running: bool):
+        self._is_running = running
         if running:
             self.setStyleSheet("""
                 StageCard {
@@ -126,7 +138,7 @@ class StageCard(QFrame):
                     padding: 10px;
                 }
             """)
-            self.status_pill.setText("🟢 Работает")
+            self.status_pill.setText(I18n.t("status_running"))
             self.status_pill.setStyleSheet("""
                 background-color: #065f46;
                 color: #a7f3d0;
@@ -136,7 +148,7 @@ class StageCard(QFrame):
                 font-weight: bold;
                 border: 1px solid #059669;
             """)
-            self.btn_action.setText("⏹ Перезапустить" if self.on_stop else "Открыть окно")
+            self.btn_action.setText(I18n.t("btn_open") if "3" in self.stage_id else I18n.t("btn_start"))
         else:
             self.setStyleSheet("""
                 StageCard {
@@ -146,7 +158,7 @@ class StageCard(QFrame):
                     padding: 10px;
                 }
             """)
-            self.status_pill.setText("⚪ Остановлен")
+            self.status_pill.setText(I18n.t("status_stopped_pill"))
             self.status_pill.setStyleSheet("""
                 background-color: #212328;
                 color: #9ca3af;
@@ -156,7 +168,7 @@ class StageCard(QFrame):
                 font-weight: bold;
                 border: 1px solid #374151;
             """)
-            self.btn_action.setText("▶ Запустить")
+            self.btn_action.setText(I18n.t("btn_start"))
 
     def _on_action_clicked(self):
         if self.on_start:
@@ -164,16 +176,16 @@ class StageCard(QFrame):
 
 
 class EcosystemHub(QMainWindow):
-    """Main Orchestration and Health Hub Window."""
+    """Main Orchestration, Multilingual Control, and Health Hub Window."""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Universal Translation Ecosystem Hub & Supervisor")
-        self.resize(920, 680)
-        self.setMinimumSize(860, 600)
+        self.resize(940, 720)
+        self.setMinimumSize(880, 640)
 
         self._apply_theme()
         self._init_ui()
+        self._retranslate_ui()
 
         # Decoupled Process Supervisor Poller (every 1.5 seconds)
         self.poll_timer = QTimer(self)
@@ -191,41 +203,42 @@ class EcosystemHub(QMainWindow):
         root_layout.setContentsMargins(14, 14, 14, 14)
         root_layout.setSpacing(10)
 
-        # 1. Master Control Header Bar
+        # 1. Master Control Header Bar with Language Switcher
         root_layout.addLayout(self._create_master_header())
 
         # 2. Main Tabs
-        tabs = QTabWidget()
-        tabs.addTab(self._create_dashboard_tab(), "🚀 Пульт управления этапами")
-        tabs.addTab(self._create_inventory_tab(), "🧠 Инвентарь нейросетей (100% Офлайн)")
-        tabs.addTab(self._create_vault_tab(), "🛡 Патчи и Защита обновлений")
-        root_layout.addWidget(tabs, stretch=1)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._create_dashboard_tab(), "🚀 Dashboard")
+        self.tabs.addTab(self._create_inventory_tab(), "🧠 Models Inventory")
+        self.tabs.addTab(self._create_guide_tab(), "📖 Architecture & Models Guide")
+        self.tabs.addTab(self._create_vault_tab(), "🛡 Vault & Patches")
+        root_layout.addWidget(self.tabs, stretch=1)
 
     def _create_master_header(self) -> QHBoxLayout:
         h = QHBoxLayout()
-        h.setSpacing(12)
+        h.setSpacing(10)
 
         # Master Start
-        btn_start_all = QPushButton("🚀 ЗАПУСТИТЬ ВСЮ ЭКОСИСТЕМУ")
-        btn_start_all.setFixedHeight(44)
-        btn_start_all.setStyleSheet("""
+        self.btn_start_all = QPushButton()
+        self.btn_start_all.setFixedHeight(42)
+        self.btn_start_all.setStyleSheet("""
             QPushButton {
                 background-color: #059669;
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 13px;
                 border-radius: 6px;
-                padding: 0 18px;
+                padding: 0 16px;
             }
             QPushButton:hover { background-color: #10b981; }
         """)
-        btn_start_all.clicked.connect(EcosystemProcessManager.start_all)
-        h.addWidget(btn_start_all)
+        self.btn_start_all.clicked.connect(EcosystemProcessManager.start_all)
+        h.addWidget(self.btn_start_all)
 
         # Master Stop
-        btn_stop_all = QPushButton("⏹ ОСТАНОВИТЬ ВСЁ")
-        btn_stop_all.setFixedHeight(44)
-        btn_stop_all.setStyleSheet("""
+        self.btn_stop_all = QPushButton()
+        self.btn_stop_all.setFixedHeight(42)
+        self.btn_stop_all.setStyleSheet("""
             QPushButton {
                 background-color: #b91c1c;
                 color: #ffffff;
@@ -236,12 +249,27 @@ class EcosystemHub(QMainWindow):
             }
             QPushButton:hover { background-color: #dc2626; }
         """)
-        btn_stop_all.clicked.connect(EcosystemProcessManager.stop_all)
-        h.addWidget(btn_stop_all)
+        self.btn_stop_all.clicked.connect(EcosystemProcessManager.stop_all)
+        h.addWidget(self.btn_stop_all)
 
         h.addStretch()
 
-        self.lbl_system_summary = QLabel("Статус: 3 сервиса готовы к запуску | VRAM: 0 MB")
+        # Language Switcher
+        h_lang = QHBoxLayout()
+        self.lbl_lang = QLabel("🌐")
+        self.lbl_lang.setStyleSheet("font-size: 14px;")
+        h_lang.addWidget(self.lbl_lang)
+
+        self.combo_lang = QComboBox()
+        self.combo_lang.addItem("🇷🇺 Русский", "ru")
+        self.combo_lang.addItem("🇬🇧 English", "en")
+        self.combo_lang.addItem("🇨🇳 中文", "zh")
+        self.combo_lang.currentIndexChanged.connect(self._on_language_changed)
+        h_lang.addWidget(self.combo_lang)
+        h.addLayout(h_lang)
+
+        # System Summary Badge
+        self.lbl_system_summary = QLabel()
         self.lbl_system_summary.setStyleSheet("""
             color: #38bdf8;
             font-family: Consolas, monospace;
@@ -269,32 +297,23 @@ class EcosystemHub(QMainWindow):
         grid = QGridLayout()
         grid.setSpacing(10)
 
-        # Stage 1 Card
         self.card_stage1 = StageCard(
             "stage_1",
-            "Этап 1: Входящий звук и субтитры (LiveTranslate)",
-            "Sherpa-ONNX SenseVoice + Tencent HY-MT 1.8B GGUF. Прозрачные субтитры поверх игр и видео.",
-            "F9 (Вкл/Пауза), 2x MMB (Клик-сквозь), MMB Drag (Двигать)",
+            "stage1_title", "stage1_desc", "stage1_hotkeys",
             on_start=EcosystemProcessManager.start_stage_1,
         )
         grid.addWidget(self.card_stage1, 0, 0)
 
-        # Stage 2 Card
         self.card_stage2 = StageCard(
             "stage_2",
-            "Этап 2: Экранный OCR и текст (OverTranslate)",
-            "Сверхбыстрый перевод текста с экрана рамкой, перевод буфера обмена и замена текста в чатах.",
-            "Ctrl+Alt+A (Рамка), Ctrl+C+C (Словарь), Ctrl+Alt+C (Замена)",
+            "stage2_title", "stage2_desc", "stage2_hotkeys",
             on_start=EcosystemProcessManager.start_stage_2,
         )
         grid.addWidget(self.card_stage2, 0, 1)
 
-        # Stage 3 Card
         self.card_stage3 = StageCard(
             "stage_3",
-            "Этап 3: Исходящий голос в CS2 / Discord (Voice Studio)",
-            "Sber GigaAM v3 CTC + Opus-MT + Kyutai Pocket-TTS. Перевод речи в игре вашим клонированным голосом.",
-            "Shift + MMB (Колесико мыши = Рация PTT), Выход: Playback 3/4 ➔ Topping Loopback",
+            "stage3_title", "stage3_desc", "stage3_hotkeys",
             on_start=EcosystemProcessManager.start_stage_3,
         )
         grid.addWidget(self.card_stage3, 1, 0, 1, 2)
@@ -316,22 +335,19 @@ class EcosystemHub(QMainWindow):
         h_wiz.setSpacing(16)
 
         v_wiz_info = QVBoxLayout()
-        wiz_title = QLabel("⭐ <b>Студия обучения модели под свой голос (7-Second Voice Cloning)</b>")
-        wiz_title.setStyleSheet("font-size: 14px; color: #ffffff;")
-        v_wiz_info.addWidget(wiz_title)
+        self.lbl_wiz_title = QLabel()
+        self.lbl_wiz_title.setStyleSheet("font-size: 14px; color: #ffffff;")
+        v_wiz_info.addWidget(self.lbl_wiz_title)
 
-        wiz_desc = QLabel(
-            "Любой человек может за 7 секунд обучить модель говорить его собственным тембром. "
-            "Нажмите кнопку, прочитайте фразу в микрофон, и нейросеть сохранит ваш персональный профиль в CONFIG/."
-        )
-        wiz_desc.setWordWrap(True)
-        wiz_desc.setStyleSheet("color: #cbd5e1; font-size: 11px;")
-        v_wiz_info.addWidget(wiz_desc)
+        self.lbl_wiz_desc = QLabel()
+        self.lbl_wiz_desc.setWordWrap(True)
+        self.lbl_wiz_desc.setStyleSheet("color: #cbd5e1; font-size: 11px;")
+        v_wiz_info.addWidget(self.lbl_wiz_desc)
         h_wiz.addLayout(v_wiz_info, stretch=1)
 
-        btn_launch_wizard = QPushButton("🎙 ОБУЧИТЬ ГОЛОС ПОД СЕБЯ")
-        btn_launch_wizard.setFixedHeight(44)
-        btn_launch_wizard.setStyleSheet("""
+        self.btn_launch_wizard = QPushButton()
+        self.btn_launch_wizard.setFixedHeight(44)
+        self.btn_launch_wizard.setStyleSheet("""
             QPushButton {
                 background-color: #4f46e5;
                 color: #ffffff;
@@ -342,8 +358,8 @@ class EcosystemHub(QMainWindow):
             }
             QPushButton:hover { background-color: #6366f1; }
         """)
-        btn_launch_wizard.clicked.connect(self._on_open_voice_wizard)
-        h_wiz.addWidget(btn_launch_wizard)
+        self.btn_launch_wizard.clicked.connect(self._on_open_voice_wizard)
+        h_wiz.addWidget(self.btn_launch_wizard)
 
         layout.addWidget(wiz_frame)
         layout.addStretch()
@@ -360,20 +376,19 @@ class EcosystemHub(QMainWindow):
 
         # Header Info
         h_info = QHBoxLayout()
-        lbl_head = QLabel("<b>Аудит локальных нейросетей на SSD-диске (100% Офлайн-готовность):</b>")
-        lbl_head.setStyleSheet("color: #e5e7eb; font-size: 13px;")
-        h_info.addWidget(lbl_head)
+        self.lbl_inv_head = QLabel()
+        self.lbl_inv_head.setStyleSheet("color: #e5e7eb; font-size: 13px;")
+        h_info.addWidget(self.lbl_inv_head)
         h_info.addStretch()
 
-        btn_refresh = QPushButton("🔄 Обновить статус")
-        btn_refresh.clicked.connect(self._populate_inventory_table)
-        h_info.addWidget(btn_refresh)
+        self.btn_refresh = QPushButton()
+        self.btn_refresh.clicked.connect(self._populate_inventory_table)
+        h_info.addWidget(self.btn_refresh)
         layout.addLayout(h_info)
 
         # Table
         self.tbl_models = QTableWidget()
         self.tbl_models.setColumnCount(5)
-        self.tbl_models.setHorizontalHeaderLabels(["Этап", "Задача", "Модель", "Статус на диске", "Размер (МБ)"])
         self.tbl_models.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tbl_models.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.tbl_models)
@@ -382,6 +397,10 @@ class EcosystemHub(QMainWindow):
         return w
 
     def _populate_inventory_table(self):
+        self.tbl_models.setHorizontalHeaderLabels([
+            I18n.t("col_stage"), I18n.t("col_task"), I18n.t("col_model"),
+            I18n.t("col_status"), I18n.t("col_size")
+        ])
         items = ModelsInventory.get_inventory()
         self.tbl_models.setRowCount(len(items))
 
@@ -391,17 +410,89 @@ class EcosystemHub(QMainWindow):
             self.tbl_models.setItem(row, 2, QTableWidgetItem(it["name"]))
 
             if it["is_ready"]:
-                st_item = QTableWidgetItem("✔ Скачана (Готова)")
+                st_item = QTableWidgetItem(I18n.t("ready"))
                 st_item.setForeground(QColor("#10b981"))
             else:
-                st_item = QTableWidgetItem("❌ Не найдена")
+                st_item = QTableWidgetItem(I18n.t("missing"))
                 st_item.setForeground(QColor("#ef4444"))
             self.tbl_models.setItem(row, 3, st_item)
 
             self.tbl_models.setItem(row, 4, QTableWidgetItem(f"{it['size_mb']} MB"))
 
     # =========================================================================
-    # Tab 3: Safe Updates & Patch Vault
+    # Tab 3: Architecture & Models Guide (Pedagogical Overview)
+    # =========================================================================
+    def _create_guide_tab(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(14)
+
+        # Signal Flow Diagram Box
+        flow_box = QGroupBox("1. Схема движения звуковых потоков и OCR (Signal Flow Diagram)")
+        v_flow = QVBoxLayout(flow_box)
+        diag = QLabel("""
+<pre style="font-family: Consolas, monospace; color: #a7f3d0; font-size: 11px;">
+[ВХОДЯЩИЙ ЗВУК ИГР / СТРИМОВ (RU, EN, ZH)]
+    │
+    ▼ (WASAPI Loopback)
+[Этап 1: LiveTranslate] ──► [SenseVoice ASR (170ms)] ──► [HY-MT 1.8B GGUF (80ms)] ──► [ПРОЗРАЧНЫЕ СУБТИТРЫ]
+
+[ЭКРАННЫЙ ТЕКСТ / ИГРЫ (RU, EN, ZH)]
+    │
+    ▼ (Ctrl + Alt + A)
+[Этап 2: OverTranslate] ──► [Windows OCR / Paddle] ──► [Переводчик] ──► [Окно перевода / Замена в чате]
+
+[ИСХОДЯЩИЙ ГОЛОС В CS2 / DISCORD]
+    │
+    ▼ (Микрофон NVIDIA Broadcast)
+[Этап 3: Voice Studio] ──► [GigaAM v3 CTC (170ms)] ──► [Opus-MT (15ms)] ──► [Pocket-TTS Клон (800ms)]
+                                                                               │
+                                                                               ▼
+                                                                     [Topping Playback 3/4]
+                                                                               │
+                                                                      (Аппаратный Loopback)
+                                                                               │
+                                                                               ▼
+                                                                     [Микрофон CS2 и Discord]
+                                                                     Тиммейты слышат ваш английский!
+</pre>
+        """)
+        v_flow.addWidget(diag)
+        layout.addWidget(flow_box)
+
+        # Detailed Models Explanations Box
+        models_box = QGroupBox("2. Как работают наши нейросети под капотом (Model Technology Breakdown)")
+        v_models = QVBoxLayout(models_box)
+
+        models_info = QLabel("""
+<div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
+<b>1. Sber GigaAM v3 CTC (Sherpa-ONNX INT8, ~214 MB):</b><br>
+Конформерная архитектура (Conformer = CNN + Self-Attention) для моментального распознавания русской речи. 
+Благодаря CTC-декодированию (Connectionist Temporal Classification) не тратит время на авторегрессионный цикл и работает за <b>~170 мс на 2 ядрах CPU</b>.<br><br>
+
+<b>2. Tencent Hunyuan MT 1.8B (GGUF INT4, ~1080 MB):</b><br>
+Современная языковая модель перевода от Tencent, квантованная до 4 бит. Специально оптимизирована для живых диалогов, игрового сленга и триады языков: <b>Русский ⇄ Английский ⇄ Китайский</b>.<br><br>
+
+<b>3. Helsinki Opus-MT (CTranslate2 INT8, ~146 MB):</b><br>
+Ультра-легковесный трансформер MarianMT, оптимизированный в движке CTranslate2. Переводит тактические команды CS2 с русского на английский всего за <b>14–18 миллисекунд</b> с нулевой нагрузкой на GPU.<br><br>
+
+<b>4. Kyutai Pocket-TTS & Mimi Codec (Mimi + Flow Matching, ~320 MB):</b><br>
+Нейросеть последнего поколения (Kyutai 2025–2026). Использует 24 кГц нейронный аудиокодек <b>Mimi</b> и диффузионный поток <b>Flow Matching</b>. В отличие от старых XTTS-v2, она не роботит, не заикается и клонирует тембр всего по 7-секундному образцу голоса прямо на обычном процессоре за ~800 мс!
+</div>
+        """)
+        models_info.setWordWrap(True)
+        v_models.addWidget(models_info)
+        layout.addWidget(models_box)
+
+        layout.addStretch()
+        scroll.setWidget(w)
+        return scroll
+
+    # =========================================================================
+    # Tab 4: Safe Updates & Patch Vault
     # =========================================================================
     def _create_vault_tab(self) -> QWidget:
         w = QWidget()
@@ -442,8 +533,37 @@ class EcosystemHub(QMainWindow):
         return w
 
     # =========================================================================
-    # Supervisor Polling Loop (1.5 seconds)
+    # Multilingual & Polling Logic
     # =========================================================================
+    def _on_language_changed(self, idx: int):
+        lang = self.combo_lang.currentData()
+        I18n.set_language(lang)
+        self._retranslate_ui()
+
+    def _retranslate_ui(self):
+        self.setWindowTitle(I18n.t("title"))
+        self.btn_start_all.setText(I18n.t("start_all"))
+        self.btn_stop_all.setText(I18n.t("stop_all"))
+
+        self.tabs.setTabText(0, I18n.t("tab_dashboard"))
+        self.tabs.setTabText(1, I18n.t("tab_inventory"))
+        self.tabs.setTabText(2, I18n.t("tab_guide"))
+        self.tabs.setTabText(3, I18n.t("tab_vault"))
+
+        self.card_stage1.retranslate()
+        self.card_stage2.retranslate()
+        self.card_stage3.retranslate()
+
+        self.lbl_wiz_title.setText(f"<b>{I18n.t('wizard_hero_title')}</b>")
+        self.lbl_wiz_desc.setText(I18n.t("wizard_hero_desc"))
+        self.btn_launch_wizard.setText(I18n.t("btn_wizard"))
+
+        self.lbl_inv_head.setText(f"<b>{I18n.t('inventory_header')}</b>")
+        self.btn_refresh.setText(I18n.t("btn_refresh"))
+
+        self._populate_inventory_table()
+        self._poll_process_status()
+
     def _poll_process_status(self):
         status = EcosystemProcessManager.get_stage_status()
         self.card_stage1.set_running(status["stage_1"])
@@ -452,13 +572,13 @@ class EcosystemHub(QMainWindow):
 
         running_count = sum(1 for v in status.values() if v)
         if running_count == 3:
-            self.lbl_system_summary.setText("🟢 ВСЯ ЭКОСИСТЕМА АКТИВНА (3/3 процессов) | VRAM: 0 MB")
+            self.lbl_system_summary.setText(I18n.t("status_all_running"))
             self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
         elif running_count > 0:
-            self.lbl_system_summary.setText(f"🟡 Активно процессов: {running_count}/3 | VRAM: 0 MB")
+            self.lbl_system_summary.setText(I18n.t("status_partial", count=running_count))
             self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
         else:
-            self.lbl_system_summary.setText("⚪ Все сервисы остановлены | ОЗУ свободно | VRAM: 0 MB")
+            self.lbl_system_summary.setText(I18n.t("status_stopped"))
             self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
 
     def _on_open_voice_wizard(self):
@@ -478,7 +598,7 @@ class EcosystemHub(QMainWindow):
             QTabBar::tab {
                 background-color: #1f2125;
                 color: #9ca3af;
-                padding: 8px 18px;
+                padding: 8px 16px;
                 margin-right: 4px;
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
@@ -504,6 +624,13 @@ class EcosystemHub(QMainWindow):
                 padding: 0 6px;
                 color: #60a5fa;
                 font-weight: bold;
+            }
+            QComboBox {
+                background-color: #212328;
+                border: 1px solid #374151;
+                border-radius: 4px;
+                padding: 4px 10px;
+                color: #ffffff;
             }
             QTableWidget {
                 background-color: #1a1b1e;

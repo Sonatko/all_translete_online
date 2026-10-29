@@ -89,7 +89,7 @@
     "custom_prompt": ""
   },
   "tts": {
-    "provider": "piper",
+    "provider": "kokoro",
     "settings": {
       "piper": {
         "length_scale": 0.95
@@ -98,8 +98,12 @@
         "speed": 1.05
       }
     },
-    "voices": {},
-    "gender": "female"
+    "voices": {
+      "kokoro": {
+        "outgoing": "am_puck"
+      }
+    },
+    "gender": "male"
   },
   "speech": {
     "names": "short",

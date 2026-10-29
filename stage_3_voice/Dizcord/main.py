@@ -122,7 +122,8 @@ def main():
     from dizcord.edition import PUBLIC
     if PUBLIC or state.get("tour_pending"):      # the Manual / the guide read aloud: load their voice before the
         from dizcord import natural              # window exists (loading it freezes Python for a few seconds)
-        natural.preload()
+        if hasattr(natural, "preload"):
+            natural.preload()
     if state.get("tour_pending"):
         from dizcord.gui.tour import prepare_voice
         prepare_voice()                          # the guide's first steps are synthesised while the window is built

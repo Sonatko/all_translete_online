@@ -364,8 +364,8 @@ class StudioWindow(QMainWindow):
         self.combo_in.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_in, 0, 1)
 
-        # 2. Game Outgoing (Topping Voice / Playback 3/4)
-        lbl_out = QLabel("<b>2. Канал озвучки (Topping Voice / Playback 3/4):</b><br><span style='color: #9ca3af; font-size: 11px;'>Куда ИИ отправляет голос. В игре микрофон: Topping Mic</span>")
+        # 2. Game Outgoing (Голос ИИ / Playback 3/4)
+        lbl_out = QLabel("<b>2. Канал озвучки (Голос ИИ / Playback 3/4):</b><br><span style='color: #9ca3af; font-size: 11px;'>Куда ИИ отправляет голос. В игре микрофон: ИИ Микрофон</span>")
         grid.addWidget(lbl_out, 1, 0)
         self.combo_out = QComboBox()
         for idx, name in outputs:
@@ -378,8 +378,8 @@ class StudioWindow(QMainWindow):
         self.combo_out.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_out, 1, 1)
 
-        # 3. Headphones Sidetone (Topping Headphones / Playback 1/2)
-        lbl_side = QLabel("<b>3. Ваши наушники (Topping Headphones / Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Звук игры и самопрослушивание своего перевода</span>")
+        # 3. Headphones Sidetone (Наушники / Playback 1/2)
+        lbl_side = QLabel("<b>3. Ваши наушники (Наушники / Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Звук игры и самопрослушивание своего перевода</span>")
         grid.addWidget(lbl_side, 2, 0)
         self.combo_side = QComboBox()
         for idx, name in outputs:
@@ -408,7 +408,7 @@ class StudioWindow(QMainWindow):
         v_cheat.setSpacing(8)
 
         h_title_btn = QHBoxLayout()
-        lbl_cheat_title = QLabel("<b>💡 Короткие имена: Topping Mic | Topping Voice | Topping Headphones</b>")
+        lbl_cheat_title = QLabel("<b>💡 Короткие имена: ИИ Микрофон | Голос ИИ | Наушники</b>")
         lbl_cheat_title.setStyleSheet("color: #a5b4fc; font-size: 12px;")
         h_title_btn.addWidget(lbl_cheat_title)
         h_title_btn.addStretch()
@@ -430,8 +430,8 @@ class StudioWindow(QMainWindow):
         v_cheat.addLayout(h_title_btn)
 
         lbl_cheat_body = QLabel(
-            "• <b>Что ставить в Discord / CS2 (Микрофон):</b> выбирайте <b>Topping Mic</b> (он же Loopback 1/2).<br>"
-            "• <b>Что ставить в Windows (Звук):</b> обычные наушники <b>Topping Headphones</b> (Playback 1/2).<br>"
+            "• <b>Что ставить в Discord / CS2 (Микрофон):</b> выбирайте <b>ИИ Микрофон</b> (он же Loopback 1/2).<br>"
+            "• <b>Что ставить в Windows (Звук):</b> обычные <b>Наушники</b> (Playback 1/2).<br>"
             "• Нажмите фиолетовую кнопку справа вверху — и Windows сама переименует устройства в эти простые имена!"
         )
         lbl_cheat_body.setWordWrap(True)

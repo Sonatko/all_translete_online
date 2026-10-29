@@ -18,3 +18,4 @@ echo [OK] Devices renamed successfully!
 echo.
 pause
 exit /b 0
+

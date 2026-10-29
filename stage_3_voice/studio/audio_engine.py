@@ -94,7 +94,7 @@ class AudioEngine:
         return inputs, outputs
 
     def _resolve_device_id(self, name_hint: str, is_input: bool) -> Optional[int]:
-        """Find best matching device index by substring."""
+        """Find best matching device index by substring with smart renaming fallbacks."""
         if not name_hint:
             return None
         hint_lower = name_hint.lower()
@@ -105,6 +105,25 @@ class AudioEngine:
                 ch = d.get("max_input_channels" if is_input else "max_output_channels", 0)
                 if ch > 0 and hint_lower in d.get("name", "").lower():
                     return idx
+
+            # 2. Smart fallback if user renamed devices in Windows
+            if not is_input:
+                if "3/4" in hint_lower or "озвучк" in hint_lower or "loopback" in hint_lower:
+                    for idx, d in enumerate(devs):
+                        name = d.get("name", "").lower()
+                        if d.get("max_output_channels", 0) > 0 and ("3/4" in name or "озвучк" in name):
+                            return idx
+                elif "1/2" in hint_lower or "наушник" in hint_lower:
+                    for idx, d in enumerate(devs):
+                        name = d.get("name", "").lower()
+                        if d.get("max_output_channels", 0) > 0 and ("1/2" in name or "наушник" in name):
+                            return idx
+            else:
+                if "broadcast" in hint_lower or "микрофон" in hint_lower or "вход" in hint_lower:
+                    for idx, d in enumerate(devs):
+                        name = d.get("name", "").lower()
+                        if d.get("max_input_channels", 0) > 0 and ("broadcast" in name or "микрофон" in name or "analog" in name):
+                            return idx
         except Exception:
             pass
         return None

@@ -1,13 +1,14 @@
 {
   "audio": {
-    "input_device": "NVIDIA Broadcast",
-    "output_device": "Playback 3/4",
-    "sidetone_device": "Playback 1/2",
+    "input_device": "Микрофон (NVIDIA Broadcast)",
+    "output_device": "Playback 3/4 (6- E2x2 OTG)",
+    "sidetone_device": "Playback 1/2 (6- E2x2 OTG)",
     "sidetone_enabled": true,
     "sidetone_volume": 0.7,
     "passthrough_enabled": true,
     "passthrough_volume": 1.0,
-    "sample_rate": 48000
+    "sample_rate": 48000,
+    "routing_mode": "topping"
   },
   "ptt": {
     "key": "shift+middle",

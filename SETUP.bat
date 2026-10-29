@@ -51,6 +51,11 @@ if not exist "%VENV_PY%" (
 
 :: 3. Install Requirements
 echo [3/3] Installing core libraries (PySide6, Sherpa-ONNX, CTranslate2, Pocket-TTS)...
+"%VENV_PY%" -m pip --version >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [*] Bootstrapping pip into virtual environment...
+    "%VENV_PY%" -m ensurepip --upgrade >nul 2>&1
+)
 "%VENV_PY%" -m pip install --upgrade pip >nul 2>&1
 "%VENV_PY%" -m pip install -r "%~dp0stage_3_voice\Dizcord\requirements_studio.txt"
 

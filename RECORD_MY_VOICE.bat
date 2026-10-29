@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Studio Voice Cloning (Kyutai Pocket-TTS)
+title Studio Voice Cloning - Pocket TTS
 
 echo ======================================================================
-echo  СТУДИЙНАЯ ЗАПИСЬ И КЛОНИРОВАНИЕ ГОЛОСА (KYUTAI POCKET-TTS)
+echo  STUDIO VOICE RECORDING AND CLONING - KYUTAI POCKET-TTS
 echo ======================================================================
 echo.
 

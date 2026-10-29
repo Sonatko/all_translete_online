@@ -145,3 +145,4 @@ class RoutingPresets:
             return True, msg
 
         return False, "Неизвестный режим"
+

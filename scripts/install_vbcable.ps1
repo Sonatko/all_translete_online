@@ -42,3 +42,4 @@ Write-Host ""
 Write-Host "VB-Audio Virtual Cable is now installed and ready to use!" -ForegroundColor Green
 Write-Host "You can now use 'Cable Mode' with 0-effort in CS2 and Discord." -ForegroundColor Cyan
 Start-Sleep -Seconds 2
+

@@ -48,9 +48,9 @@ def test_imports():
     log_test("Core Dependency Imports", True, f"Successfully verified {len(modules)} modules")
 
 def test_bat_ascii_purity():
-    """Verify all root .bat scripts are 100% pure ASCII to prevent cmd.exe CP866 parsing faults."""
-    bat_files = list(PROJECT_ROOT.glob("*.bat"))
-    assert len(bat_files) > 0, "No .bat files found in root"
+    """Verify all root and scripts/ .bat scripts are 100% pure ASCII to prevent cmd.exe CP866 parsing faults."""
+    bat_files = list(PROJECT_ROOT.glob("*.bat")) + list((PROJECT_ROOT / "scripts").glob("*.bat"))
+    assert len(bat_files) > 0, "No .bat files found"
     
     non_ascii_found = []
     for bat in bat_files:
@@ -167,11 +167,11 @@ def test_hub_headless_lifecycle():
     for idx in range(window.combo_lang.count()):
         window.combo_lang.setCurrentIndex(idx)
         
-    # 4. Test audio preset profile buttons
+    # 4. Test audio preset profile buttons and restore topping
     assert hasattr(window, "btn_hub_topping"), "Missing Topping button"
     assert hasattr(window, "btn_hub_cable"), "Missing Cable button"
-    window._on_hub_switch_profile("topping")
     window._on_hub_switch_profile("cable")
+    window._on_hub_switch_profile("topping")
     
     # Close window cleanly
     window.close()

@@ -18,7 +18,7 @@ echo.
 echo Virtual environment missing or copied from another machine.
 echo Running automatic bootstrap setup (takes ~1 minute)...
 echo.
-call "%~dp0SETUP.bat"
+call "%~dp0scripts\setup.bat"
 if errorlevel 1 (
     echo.
     echo [ERROR] Setup failed. Please check your internet connection.

@@ -759,7 +759,7 @@ class StudioWindow(QMainWindow):
     def _on_run_renamer(self):
         import subprocess
         from pathlib import Path
-        bat = Path(__file__).resolve().parent.parent.parent / "RENAME_TOPPING.bat"
+        bat = Path(__file__).resolve().parent.parent.parent / "scripts" / "rename_audio.bat"
         if bat.is_file():
             subprocess.Popen(["cmd.exe", "/c", str(bat)])
         save_settings(self.cfg)
@@ -824,7 +824,7 @@ class StudioWindow(QMainWindow):
                 if reply == QMessageBox.StandardButton.Yes:
                     import subprocess
                     from pathlib import Path
-                    bat = Path(__file__).resolve().parent.parent.parent / "INSTALL_VIRTUAL_CABLE.bat"
+                    bat = Path(__file__).resolve().parent.parent.parent / "scripts" / "install_vbcable.bat"
                     if bat.is_file():
                         subprocess.Popen(["cmd.exe", "/c", str(bat)])
             else:

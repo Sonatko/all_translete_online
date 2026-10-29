@@ -287,7 +287,7 @@ class EcosystemHub(QMainWindow):
 
                 hw = RoutingPresets.get_hardware_info()
                 if mode == "cable" and not hw.get("has_cable", False):
-                    bat = PROJECT_ROOT / "INSTALL_VIRTUAL_CABLE.bat"
+                    bat = PROJECT_ROOT / "scripts" / "install_vbcable.bat"
                     if bat.is_file():
                         subprocess.Popen(["cmd.exe", "/c", str(bat)])
         except Exception as e:

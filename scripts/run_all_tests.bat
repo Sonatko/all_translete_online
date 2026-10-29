@@ -1,9 +1,10 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 title Translation Ecosystem - Automated Test Suite
 
-set "VENV_PY=%~dp0stage_3_voice\Dizcord\.venv\Scripts\python.exe"
+set "ROOT_DIR=%~dp0.."
+set "VENV_PY=%ROOT_DIR%\stage_3_voice\Dizcord\.venv\Scripts\python.exe"
 
 if not exist "%VENV_PY%" goto err_no_venv
 
@@ -12,7 +13,7 @@ echo  RUNNING COMPREHENSIVE VERIFICATION TEST SUITE
 echo ======================================================================
 echo.
 
-"%VENV_PY%" "%~dp0tests\test_stage3_and_hub_verification.py"
+"%VENV_PY%" "%ROOT_DIR%\tests\test_stage3_and_hub_verification.py"
 set "TEST_RES=%errorlevel%"
 
 echo.
@@ -34,7 +35,7 @@ goto end
 :err_no_venv
 echo [ERROR] Virtual environment not found at:
 echo %VENV_PY%
-echo Please run START.bat or SETUP.bat first to initialize the environment.
+echo Please run START.bat first to initialize the environment.
 set "TEST_RES=1"
 
 :end

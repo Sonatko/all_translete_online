@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-cd /d "%~dp0"
+cd /d "%~dp0.."
 title Translation Ecosystem - Setup Wizard
 
 echo ======================================================================
@@ -34,7 +34,8 @@ if not defined SYS_PY (
 echo [1/3] Python detected: !SYS_PY!
 
 :: 2. Create or Repair Virtual Environment
-set "VENV_DIR=%~dp0stage_3_voice\Dizcord\.venv"
+set "ROOT_DIR=%~dp0.."
+set "VENV_DIR=%ROOT_DIR%\stage_3_voice\Dizcord\.venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (
@@ -57,7 +58,7 @@ if !errorlevel! neq 0 (
     "%VENV_PY%" -m ensurepip --upgrade >nul 2>&1
 )
 "%VENV_PY%" -m pip install --upgrade pip >nul 2>&1
-"%VENV_PY%" -m pip install -r "%~dp0stage_3_voice\Dizcord\requirements_studio.txt"
+"%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\Dizcord\requirements_studio.txt"
 
 echo.
 echo ======================================================================

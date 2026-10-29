@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+runtime/
+dist/
+
+# your own data never goes to GitHub (keys, profiles, transcripts, logs, downloaded models)
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep

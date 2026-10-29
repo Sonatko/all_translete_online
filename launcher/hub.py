@@ -42,12 +42,10 @@ try:
     from launcher.i18n import I18n
     from launcher.models_inventory import ModelsInventory
     from launcher.process_manager import EcosystemProcessManager
-    from launcher.voice_wizard import VoiceCloningWizard
 except ImportError:
     from i18n import I18n
     from models_inventory import ModelsInventory
     from process_manager import EcosystemProcessManager
-    from voice_wizard import VoiceCloningWizard
 
 log = logging.getLogger("Launcher.Hub")
 
@@ -196,16 +194,21 @@ class EcosystemHub(QMainWindow):
 
         self._apply_theme()
         self._init_ui()
-        self._retranslate_ui()
+        self._retranslate_ui(is_initial=True)
 
-        # Decoupled Process Supervisor Poller (every 1.5 seconds)
+        # Decoupled Process Supervisor Poller (every 2.0 seconds)
         self.poll_timer = QTimer(self)
-        self.poll_timer.setInterval(1500)
+        self.poll_timer.setInterval(2000)
         self.poll_timer.timeout.connect(self._poll_process_status)
-        self.poll_timer.start()
 
-        # Initial check
+        # Defer disk inventory scan and process checking to after window renders
+        QTimer.singleShot(40, self._initial_load)
+
+    def _initial_load(self):
+        """Runs right after GUI window appears on screen for instant startup."""
         self._poll_process_status()
+        self.poll_timer.start()
+        self._populate_inventory_table()
 
     def closeEvent(self, event):
         self.poll_timer.stop()
@@ -407,8 +410,6 @@ class EcosystemHub(QMainWindow):
         self.tbl_models.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.tbl_models.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.tbl_models)
-
-        self._populate_inventory_table()
         return w
 
     def _populate_inventory_table(self):
@@ -555,7 +556,7 @@ class EcosystemHub(QMainWindow):
         I18n.set_language(lang)
         self._retranslate_ui()
 
-    def _retranslate_ui(self):
+    def _retranslate_ui(self, is_initial: bool = False):
         self.setWindowTitle(I18n.t("title"))
         self.btn_start_all.setText(I18n.t("start_all"))
         self.btn_stop_all.setText(I18n.t("stop_all"))
@@ -576,8 +577,9 @@ class EcosystemHub(QMainWindow):
         self.lbl_inv_head.setText(f"<b>{I18n.t('inventory_header')}</b>")
         self.btn_refresh.setText(I18n.t("btn_refresh"))
 
-        self._populate_inventory_table()
-        self._poll_process_status()
+        if not is_initial:
+            self._populate_inventory_table()
+            self._poll_process_status()
 
     def _poll_process_status(self):
         status = EcosystemProcessManager.get_stage_status()
@@ -597,6 +599,10 @@ class EcosystemHub(QMainWindow):
             self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
 
     def _on_open_voice_wizard(self):
+        try:
+            from launcher.voice_wizard import VoiceCloningWizard
+        except ImportError:
+            from voice_wizard import VoiceCloningWizard
         wiz = VoiceCloningWizard(self)
         wiz.exec()
         self._populate_inventory_table()

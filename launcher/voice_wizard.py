@@ -325,9 +325,15 @@ class VoiceCloningWizard(QDialog):
             from huggingface_hub import hf_hub_download
             import safetensors.torch
 
-            weights_file = hf_hub_download(
-                "latent-variable/pocket-tts-cloning-en", "languages/english/model.safetensors"
-            )
+            local_weights = MODELS_DIR / "model.safetensors"
+            if local_weights.is_file():
+                weights_file = str(local_weights)
+            else:
+                weights_file = hf_hub_download(
+                    "latent-variable/pocket-tts-cloning-en",
+                    "languages/english/model.safetensors",
+                    local_files_only=True,
+                )
             m = pocket_tts.TTSModel.load_model()
             state = safetensors.torch.load_file(weights_file)
             m.load_state_dict(state, strict=True)

@@ -201,11 +201,17 @@ class ModelManager:
             from huggingface_hub import hf_hub_download
             import safetensors.torch
 
-            log.info("Loading Pocket-TTS backbone weights...")
-            weights_file = hf_hub_download(
-                "latent-variable/pocket-tts-cloning-en",
-                "languages/english/model.safetensors",
-            )
+            local_weights = MODELS_DIR / "pocket_tts" / "model.safetensors"
+            if local_weights.is_file():
+                log.info("Loading Pocket-TTS backbone weights from local SSD (%s)...", local_weights)
+                weights_file = str(local_weights)
+            else:
+                log.info("Loading Pocket-TTS backbone weights from cache...")
+                weights_file = hf_hub_download(
+                    "latent-variable/pocket-tts-cloning-en",
+                    "languages/english/model.safetensors",
+                    local_files_only=True,
+                )
             model = pocket_tts.TTSModel.load_model()
             state = safetensors.torch.load_file(weights_file)
             model.load_state_dict(state, strict=True)

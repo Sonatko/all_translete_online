@@ -134,9 +134,11 @@ class StageCard(QFrame):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_desc.setText(I18n.t(self.desc_key))
         self.lbl_hotkeys.setText(f"<b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
-        self.set_running(self._is_running)
+        self.set_running(self._is_running, force=True)
 
-    def set_running(self, running: bool):
+    def set_running(self, running: bool, force: bool = False):
+        if not force and self._is_running == running:
+            return
         self._is_running = running
         if running:
             self.setStyleSheet("""
@@ -588,15 +590,17 @@ class EcosystemHub(QMainWindow):
         self.card_stage3.set_running(status["stage_3"])
 
         running_count = sum(1 for v in status.values() if v)
-        if running_count == 3:
-            self.lbl_system_summary.setText(I18n.t("status_all_running"))
-            self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
-        elif running_count > 0:
-            self.lbl_system_summary.setText(I18n.t("status_partial", count=running_count))
-            self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
-        else:
-            self.lbl_system_summary.setText(I18n.t("status_stopped"))
-            self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
+        if getattr(self, "_last_running_count", None) != running_count:
+            self._last_running_count = running_count
+            if running_count == 3:
+                self.lbl_system_summary.setText(I18n.t("status_all_running"))
+                self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
+            elif running_count > 0:
+                self.lbl_system_summary.setText(I18n.t("status_partial", count=running_count))
+                self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
+            else:
+                self.lbl_system_summary.setText(I18n.t("status_stopped"))
+                self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
 
     def _on_open_voice_wizard(self):
         try:

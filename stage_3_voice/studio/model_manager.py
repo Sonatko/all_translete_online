@@ -46,14 +46,21 @@ class ModelManager:
     # =========================================================================
     # RAM Telemetry
     # =========================================================================
-    @staticmethod
-    def get_process_ram_mb() -> float:
-        """Return Resident Set Size (RSS) memory in Megabytes."""
+    _cached_ram_mb: float = 0.0
+    _last_ram_check: float = 0.0
+
+    @classmethod
+    def get_process_ram_mb(cls) -> float:
+        """Return Resident Set Size (RSS) memory in Megabytes with 1-second caching."""
+        now = time.monotonic()
+        if now - cls._last_ram_check < 1.0:
+            return cls._cached_ram_mb
         try:
-            process = psutil.Process(os.getpid())
-            return process.memory_info().rss / (1024.0 * 1024.0)
+            cls._cached_ram_mb = psutil.Process(os.getpid()).memory_info().rss / (1024.0 * 1024.0)
+            cls._last_ram_check = now
+            return cls._cached_ram_mb
         except Exception:
-            return 0.0
+            return cls._cached_ram_mb
 
     def get_status_summary(self) -> Dict[str, Any]:
         """Return live status and memory footprint."""

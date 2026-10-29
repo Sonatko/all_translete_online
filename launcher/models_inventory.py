@@ -12,18 +12,29 @@ log = logging.getLogger("Launcher.ModelsInventory")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+_SIZE_CACHE: Dict[str, Tuple[float, float]] = {}
+
+
 def get_dir_size_mb(path: Path) -> float:
-    """Calculate total folder size in Megabytes."""
-    total = 0
+    """Calculate total folder size in Megabytes with mtime caching."""
     try:
+        if not path.exists():
+            return 0.0
+        mtime = path.stat().st_mtime
+        p_str = str(path)
+        if p_str in _SIZE_CACHE and _SIZE_CACHE[p_str][0] == mtime:
+            return _SIZE_CACHE[p_str][1]
+
         if path.is_file():
-            return path.stat().st_size / (1024.0 * 1024.0)
-        for p in path.glob("**/*.*"):
-            if p.is_file():
-                total += p.stat().st_size
+            size = path.stat().st_size / (1024.0 * 1024.0)
+        else:
+            total = sum(p.stat().st_size for p in path.glob("**/*.*") if p.is_file())
+            size = total / (1024.0 * 1024.0)
+
+        _SIZE_CACHE[p_str] = (mtime, size)
+        return size
     except Exception:
-        pass
-    return total / (1024.0 * 1024.0)
+        return 0.0
 
 
 class ModelsInventory:

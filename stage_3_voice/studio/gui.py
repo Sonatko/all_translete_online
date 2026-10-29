@@ -172,6 +172,10 @@ class StudioWindow(QMainWindow):
         self._apply_dark_style()
         self._init_ui()
 
+        # Cache last state to avoid redundant Qt stylesheet re-parsing at 30 FPS
+        self._last_rendered_state = None
+        self._last_rendered_master = None
+
         # Connect audio transcript callback to GUI
         self.engine.on_transcript_callback = self._on_new_transcript
 
@@ -587,23 +591,28 @@ class StudioWindow(QMainWindow):
         self.meter_mic.setValue(int(self.engine.mic_peak_db))
         self.meter_out.setValue(int(self.engine.out_peak_db))
 
-        # 2. PTT Banner State
+        # 2. PTT Banner State (Guarded to prevent Qt CSS re-parsing 30 times/sec)
         state = self.engine.engine_state
-        if not self.engine._master_enabled:
-            self.ptt_banner.setText("⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F9 для включения)")
-            self.ptt_banner.setStyleSheet("background-color: #374151; color: #9ca3af; font-weight: bold; border-radius: 6px;")
-        elif state == "RECORDING":
-            self.ptt_banner.setText("🔴 ИДЕТ ЗАПИСЬ РЕЧИ (Shift + MMB нажат)...")
-            self.ptt_banner.setStyleSheet("background-color: #991b1b; color: #ffffff; font-weight: bold; border-radius: 6px;")
-        elif state == "PROCESSING":
-            self.ptt_banner.setText("⚡ ПЕРЕВОД И ГЕНЕРАЦИЯ ГОЛОСА...")
-            self.ptt_banner.setStyleSheet("background-color: #854d0e; color: #fef08a; font-weight: bold; border-radius: 6px;")
-        elif state == "SPEAKING":
-            self.ptt_banner.setText("🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 1+2)")
-            self.ptt_banner.setStyleSheet("background-color: #065f46; color: #a7f3d0; font-weight: bold; border-radius: 6px;")
-        else:
-            self.ptt_banner.setText("🎙 Нажмите Shift + Колесико мыши (MMB) для записи речи")
-            self.ptt_banner.setStyleSheet("background-color: #1f2937; color: #9ca3af; font-weight: bold; border: 1px solid #374151; border-radius: 6px;")
+        master_enabled = self.engine._master_enabled
+        if state != self._last_rendered_state or master_enabled != self._last_rendered_master:
+            self._last_rendered_state = state
+            self._last_rendered_master = master_enabled
+
+            if not master_enabled:
+                self.ptt_banner.setText("⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F9 для включения)")
+                self.ptt_banner.setStyleSheet("background-color: #374151; color: #9ca3af; font-weight: bold; border-radius: 6px;")
+            elif state == "RECORDING":
+                self.ptt_banner.setText("🔴 ИДЕТ ЗАПИСЬ РЕЧИ (Shift + MMB нажат)...")
+                self.ptt_banner.setStyleSheet("background-color: #991b1b; color: #ffffff; font-weight: bold; border-radius: 6px;")
+            elif state == "PROCESSING":
+                self.ptt_banner.setText("⚡ ПЕРЕВОД И ГЕНЕРАЦИЯ ГОЛОСА...")
+                self.ptt_banner.setStyleSheet("background-color: #854d0e; color: #fef08a; font-weight: bold; border-radius: 6px;")
+            elif state == "SPEAKING":
+                self.ptt_banner.setText("🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 1+2)")
+                self.ptt_banner.setStyleSheet("background-color: #065f46; color: #a7f3d0; font-weight: bold; border-radius: 6px;")
+            else:
+                self.ptt_banner.setText("🎙 Нажмите Shift + Колесико мыши (MMB) для записи речи")
+                self.ptt_banner.setStyleSheet("background-color: #1f2937; color: #9ca3af; font-weight: bold; border: 1px solid #374151; border-radius: 6px;")
 
         # 3. Chain Nodes Status & Latency Badges
         stt_status = self.mm._stt_status

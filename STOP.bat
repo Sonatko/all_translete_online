@@ -7,14 +7,14 @@ echo  STOPPING TRANSLATION ECOSYSTEM PROCESSES
 echo ======================================================================
 echo.
 
-echo [1/2] Terminating Screen Translation (OverTranslate)...
+echo [1/3] Terminating Screen Translation (OverTranslate)...
 taskkill /F /IM OverTranslate.exe >nul 2>&1
 
 echo [2/3] Terminating Audio Translation (LiveTranslate)...
 powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*stage_1_audio*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
 
-echo [3/3] Terminating Voice Pipeline (Stage 3 Dizcord)...
-powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*stage_3_voice*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
+echo [3/3] Terminating Voice Pipeline (Stage 3 Studio & Voice)...
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*stage_3_voice*' -or $_.CommandLine -like '*studio*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
 
 echo.
 echo All ecosystem processes stopped cleanly and safely!

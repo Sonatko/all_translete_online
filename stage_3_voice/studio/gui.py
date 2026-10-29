@@ -349,6 +349,7 @@ class StudioWindow(QMainWindow):
             if cur_in.lower() in self.combo_in.itemText(i).lower():
                 self.combo_in.setCurrentIndex(i)
                 break
+        self.combo_in.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_in, 0, 1)
 
         # 2. Game Outgoing (Playback 3/4)
@@ -361,6 +362,7 @@ class StudioWindow(QMainWindow):
             if cur_out.lower() in self.combo_out.itemText(i).lower():
                 self.combo_out.setCurrentIndex(i)
                 break
+        self.combo_out.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_out, 1, 1)
 
         # 3. Headphones Sidetone (Playback 1/2)
@@ -373,6 +375,7 @@ class StudioWindow(QMainWindow):
             if cur_side.lower() in self.combo_side.itemText(i).lower():
                 self.combo_side.setCurrentIndex(i)
                 break
+        self.combo_side.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_side, 2, 1)
 
         layout.addWidget(grp_devs)
@@ -638,6 +641,23 @@ class StudioWindow(QMainWindow):
             self.btn_master.setText("⏸ ПАУЗА (F9)")
             self.btn_master.setStyleSheet("background-color: #4b5563; color: #fff; font-weight: bold; border-radius: 6px;")
 
+    def _on_device_changed(self):
+        in_name = self.combo_in.currentData()
+        out_name = self.combo_out.currentData()
+        side_name = self.combo_side.currentData()
+
+        if in_name:
+            self.cfg["audio"]["input_device"] = in_name
+            self.node_mic.sub_lbl.setText(in_name)
+        if out_name:
+            self.cfg["audio"]["output_device"] = out_name
+            self.node_out.sub_lbl.setText(f"{out_name} ➔ Игра")
+        if side_name:
+            self.cfg["audio"]["sidetone_device"] = side_name
+
+        save_settings(self.cfg)
+        self.engine.restart_streams()
+
     def _on_passthrough_toggle(self, checked: bool):
         self.cfg["audio"]["passthrough_enabled"] = checked
         save_settings(self.cfg)
@@ -770,3 +790,4 @@ class StudioWindow(QMainWindow):
                 height: 18px;
             }
         """)
+

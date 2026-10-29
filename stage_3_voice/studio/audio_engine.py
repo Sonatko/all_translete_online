@@ -209,6 +209,75 @@ class AudioEngine:
 
         log.info("Audio engine stopped.")
 
+    def restart_streams(self) -> bool:
+        """Restart audio streams with newly selected devices without stopping the worker thread."""
+        if self._in_stream:
+            try:
+                self._in_stream.stop()
+                self._in_stream.close()
+            except Exception:
+                pass
+            self._in_stream = None
+
+        if self._out_stream:
+            try:
+                self._out_stream.stop()
+                self._out_stream.close()
+            except Exception:
+                pass
+            self._out_stream = None
+
+        if self._sidetone_stream:
+            try:
+                self._sidetone_stream.stop()
+                self._sidetone_stream.close()
+            except Exception:
+                pass
+            self._sidetone_stream = None
+
+        audio_cfg = self.config.get("audio", {})
+        in_id = self._resolve_device_id(audio_cfg.get("input_device", "NVIDIA Broadcast"), is_input=True)
+        out_id = self._resolve_device_id(audio_cfg.get("output_device", "Playback 3/4"), is_input=False)
+        side_id = self._resolve_device_id(audio_cfg.get("sidetone_device", "Playback 1/2"), is_input=False)
+
+        try:
+            self._in_stream = sd.InputStream(
+                device=in_id,
+                channels=1,
+                samplerate=DEFAULT_SR,
+                blocksize=BLOCK_SIZE,
+                dtype="float32",
+                callback=self._in_callback,
+            )
+            self._in_stream.start()
+
+            self._out_stream = sd.OutputStream(
+                device=out_id,
+                channels=1,
+                samplerate=DEFAULT_SR,
+                blocksize=BLOCK_SIZE,
+                dtype="float32",
+                callback=self._out_callback,
+            )
+            self._out_stream.start()
+
+            if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
+                self._sidetone_stream = sd.OutputStream(
+                    device=side_id,
+                    channels=1,
+                    samplerate=DEFAULT_SR,
+                    blocksize=BLOCK_SIZE,
+                    dtype="float32",
+                    callback=self._sidetone_callback,
+                )
+                self._sidetone_stream.start()
+
+            log.info("Audio streams restarted successfully with new devices.")
+            return True
+        except Exception as e:
+            log.error("Failed to restart audio streams: %s", e)
+            return False
+
     # =========================================================================
     # Audio Callbacks
     # =========================================================================
@@ -420,3 +489,4 @@ class AudioEngine:
             finally:
                 if not self._is_ptt_pressed:
                     self.engine_state = "IDLE"
+

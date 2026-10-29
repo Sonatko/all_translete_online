@@ -95,3 +95,4 @@ class HotkeyListener:
         if button == mouse.Button.middle:
             self._middle_pressed = pressed
             self._update_ptt_state()
+

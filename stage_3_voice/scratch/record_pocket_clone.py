@@ -8,6 +8,7 @@ and synthesizes a realistic tactical game phrase in the user's voice.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -133,6 +134,14 @@ def main():
     profile_path = SCRIPT_DIR / "my_pocket_voice.safetensors"
     pocket_tts.export_model_state(model_state, str(profile_path))
     print(f"[OK] Профиль сохранен в {profile_path.name} (готов для мгновенного синтеза в игре).")
+
+    # Auto-sync to authoritative CONFIG and permanent models folders
+    config_voice = ROOT_DIR / "CONFIG" / "stage_3_voice" / "my_pocket_voice.safetensors"
+    models_voice = STAGE3_DIR / "models" / "pocket_tts" / "my_pocket_voice.safetensors"
+    for dest in (config_voice, models_voice):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(profile_path, dest)
+    print(f"[OK] Голосовой профиль автоматически синхронизирован в {config_voice.relative_to(ROOT_DIR)}")
 
     test_phrase = "Enemy spotted on B site! Fall back and hold the angles, I am covering you."
     print(f"\nСинтез боевой игровой фразы вашим новым чистым голосом:")

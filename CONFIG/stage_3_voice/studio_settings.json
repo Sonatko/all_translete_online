@@ -1,0 +1,34 @@
+{
+  "audio": {
+    "input_device": "NVIDIA Broadcast",
+    "output_device": "Playback 3/4",
+    "sidetone_device": "Playback 1/2",
+    "sidetone_enabled": true,
+    "sidetone_volume": 0.7,
+    "passthrough_enabled": true,
+    "passthrough_volume": 1.0,
+    "sample_rate": 48000
+  },
+  "ptt": {
+    "key": "shift+middle",
+    "tail_ms": 200,
+    "master_key": "f9"
+  },
+  "models": {
+    "stt_provider": "gigaam",
+    "stt_threads": 2,
+    "mt_provider": "opus_mt",
+    "mt_threads": 2,
+    "tts_provider": "pocket_tts",
+    "tts_voice": "my_pocket_voice",
+    "tts_temperature": 0.3,
+    "auto_load_on_startup": true
+  },
+  "ui": {
+    "dark_theme": true,
+    "always_on_top": false,
+    "show_vu_meters": true,
+    "window_width": 780,
+    "window_height": 620
+  }
+}

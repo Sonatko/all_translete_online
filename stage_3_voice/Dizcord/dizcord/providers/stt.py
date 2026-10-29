@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import os
+from pathlib import Path
 import re
 
 import numpy as np
@@ -315,3 +316,81 @@ class GoogleSTT(STTProvider):
         text = " ".join(x["alternatives"][0].get("transcript", "") for x in res if x.get("alternatives"))
         det = L.normalize(res[0].get("languageCode")) if res and res[0].get("languageCode") else None
         return text.strip(), det or language
+
+
+@register
+class GigaAMSTT(STTProvider):
+    id = "gigaam"
+    name = "Sber GigaAM v3 (Fast CTC)"
+    local = True
+    description = ("Ultra-fast offline Russian speech recognition using SberDevices GigaAM-v3 Conformer CTC "
+                   "(sherpa-onnx INT8). 4-5x faster than Whisper on CPU.")
+    requires = ["sherpa_onnx"]
+    pip_hint = "pip install sherpa-onnx"
+    fields = [
+        Field("model_path", "Model file", "path", str(MODELS_DIR / "giga-am-v3" / "model.int8.onnx")),
+        Field("tokens_path", "Tokens file", "path", str(MODELS_DIR / "giga-am-v3" / "tokens.txt")),
+        Field("cpu_threads", "CPU threads", "int", 2, min=1, max=16, help="2 threads allocated for Zen 4"),
+    ]
+    has_downloads = True
+    _recognizer = None
+    _recognizer_key = None
+
+    def _files(self):
+        out = []
+        for key in ("model_path", "tokens_path"):
+            p = Path(self.s(key))
+            if not p.is_file():
+                out.append(p)
+        return out
+
+    def downloads_needed(self, langs):
+        files = self._files()
+        if not files:
+            return []
+        return [("Sber GigaAM v3 (sherpa-onnx)", 225_000_000)]
+
+    def download(self, langs, progress=None, cancelled=lambda: False):
+        from huggingface_hub import snapshot_download
+        models_dir = Path(self.s("model_path")).parent
+        models_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_download(
+            repo_id="csukuangfj/sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16",
+            local_dir=str(models_dir),
+            allow_patterns=["model.int8.onnx", "tokens.txt"]
+        )
+
+    def download_dir(self):
+        return str(Path(self.s("model_path")).parent)
+
+    def _load(self):
+        import sherpa_onnx
+        key = (str(self.s("model_path")), str(self.s("tokens_path")), int(self.s("cpu_threads", 2)))
+        if self._recognizer is not None and self._recognizer_key == key:
+            return self._recognizer
+        mp = Path(self.s("model_path"))
+        tp = Path(self.s("tokens_path"))
+        if not mp.is_file() or not tp.is_file():
+            self.download([])
+        self._recognizer = sherpa_onnx.OfflineRecognizer.from_nemo_ctc(
+            model=str(mp),
+            tokens=str(tp),
+            num_threads=int(self.s("cpu_threads", 2)),
+            provider="cpu"
+        )
+        self._recognizer_key = key
+        return self._recognizer
+
+    def warmup(self):
+        with self.lock:
+            self._load()
+
+    def transcribe(self, audio, language):
+        with self.lock:
+            rec = self._load()
+            stream = rec.create_stream()
+            stream.accept_waveform(SR, audio)
+            rec.decode_stream(stream)
+            text = stream.result.text.strip()
+        return text, "ru"
+

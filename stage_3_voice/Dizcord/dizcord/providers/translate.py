@@ -9,8 +9,10 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .. import languages as L
+from ..config import MODELS_DIR
 from .base import Field, Provider, ProviderError, register
 
 
@@ -341,3 +343,84 @@ class ArgosTranslate(TranslateProvider):
         with self.lock:
             self._ensure(src, tgt)
             return apply_glossary(tr.translate(text, src, tgt), ctx), source
+
+
+@register
+class MarianMTTranslate(TranslateProvider):
+    id = "opus_mt"
+    name = "Opus-MT (MarianMT INT8)"
+    local = True
+    description = ("Ultra-fast offline neural machine translation (Helsinki-NLP/opus-mt-ru-en) using "
+                   "CTranslate2 INT8. Runs in ~15-20 ms on 2 CPU cores with zero GPU/VRAM usage.")
+    requires = ["ctranslate2", "sentencepiece"]
+    pip_hint = "pip install ctranslate2 sentencepiece"
+    fields = [
+        Field("model_dir", "Model folder", "path", str(MODELS_DIR / "opus-mt-ru-en-ct2")),
+        Field("cpu_threads", "CPU threads", "int", 2, min=1, max=16, help="2 threads allocated for Zen 4"),
+        Field("beam_size", "Beam size", "int", 1, min=1, max=5, help="1 = fastest greedy search"),
+    ]
+    has_downloads = True
+    _translator = None
+    _sp_source = None
+    _sp_target = None
+    _loaded_key = None
+
+    def downloads_needed(self, langs):
+        folder = Path(self.s("model_dir"))
+        if (folder / "model.bin").is_file() and (folder / "source.spm").is_file():
+            return []
+        return [("Opus-MT RU->EN (CTranslate2)", 153_000_000)]
+
+    def download(self, langs, progress=None, cancelled=lambda: False):
+        from huggingface_hub import snapshot_download
+        folder = Path(self.s("model_dir"))
+        folder.mkdir(parents=True, exist_ok=True)
+        snapshot_download(
+            repo_id="gaudi/opus-mt-ru-en-ctranslate2",
+            local_dir=str(folder),
+        )
+
+    def download_dir(self):
+        return str(self.s("model_dir"))
+
+    def _load(self):
+        import ctranslate2
+        import sentencepiece as spm
+        key = (str(self.s("model_dir")), int(self.s("cpu_threads", 2)))
+        if self._translator is not None and self._loaded_key == key:
+            return self._translator, self._sp_source, self._sp_target
+        folder = Path(self.s("model_dir"))
+        if not (folder / "model.bin").is_file():
+            self.download([])
+        self._translator = ctranslate2.Translator(
+            str(folder),
+            device="cpu",
+            compute_type="int8",
+            intra_threads=int(self.s("cpu_threads", 2)),
+            inter_threads=1,
+        )
+        self._sp_source = spm.SentencePieceProcessor(str(folder / "source.spm"))
+        self._sp_target = spm.SentencePieceProcessor(str(folder / "target.spm"))
+        self._loaded_key = key
+        return self._translator, self._sp_source, self._sp_target
+
+    def warmup(self):
+        with self.lock:
+            self._load()
+
+    def translate(self, text, source, target, ctx):
+        with self.lock:
+            translator, sp_src, sp_tgt = self._load()
+            tokens = sp_src.encode(text, out_type=str) + ["</s>"]
+            results = translator.translate_batch(
+                [tokens],
+                beam_size=int(self.s("beam_size", 1)),
+                return_scores=False,
+                repetition_penalty=1.2,
+                no_repeat_ngram_size=3,
+                max_decoding_length=128
+            )
+            raw = sp_tgt.decode(results[0].hypotheses[0])
+            out = apply_glossary(raw, ctx)
+        return out, source or "ru"
+

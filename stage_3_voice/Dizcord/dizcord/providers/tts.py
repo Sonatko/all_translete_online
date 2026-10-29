@@ -566,11 +566,17 @@ class KokoroTTS(TTSProvider):
 
     def _load(self):
         from kokoro_onnx import Kokoro
+        import onnxruntime as rt
         if KokoroTTS._engine is None:
             mp, vp = Path(self.s("model_path")), Path(self.s("voices_path"))
             if not mp.exists() or not vp.exists():
                 raise ProviderError(f"Kokoro: model files not found ({mp.name}, {vp.name}) - Voice tab → Download.")
-            KokoroTTS._engine = Kokoro(str(mp), str(vp))
+            opts = rt.SessionOptions()
+            opts.intra_op_num_threads = 2
+            opts.inter_op_num_threads = 1
+            opts.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+            sess = rt.InferenceSession(str(mp), sess_options=opts, providers=["CPUExecutionProvider"])
+            KokoroTTS._engine = Kokoro.from_session(sess, str(vp))
         return KokoroTTS._engine
 
     def synthesize(self, text, lang, voice, gender="female"):

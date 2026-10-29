@@ -23,7 +23,7 @@
     "target_lang": "en",
     "follow_their_language": false,
     "speak": true,
-    "output_device": "CABLE Input",
+    "output_device": "Playback 1/2",
     "volume": 1.0,
     "voice_speed": 1.0,
     "voice_pitch": 0.0,

@@ -31,14 +31,25 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .i18n import I18n
-from .models_inventory import ModelsInventory
-from .process_manager import EcosystemProcessManager
-from .voice_wizard import VoiceCloningWizard
+CURRENT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = CURRENT_DIR.parent
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+try:
+    from launcher.i18n import I18n
+    from launcher.models_inventory import ModelsInventory
+    from launcher.process_manager import EcosystemProcessManager
+    from launcher.voice_wizard import VoiceCloningWizard
+except ImportError:
+    from i18n import I18n
+    from models_inventory import ModelsInventory
+    from process_manager import EcosystemProcessManager
+    from voice_wizard import VoiceCloningWizard
 
 log = logging.getLogger("Launcher.Hub")
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class StageCard(QFrame):

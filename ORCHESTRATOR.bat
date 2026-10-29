@@ -9,29 +9,37 @@ echo ======================================================================
 echo    ГЛАВНЫЙ ОРКЕСТРАТОР ЭКОСИСТЕМЫ ПЕРЕВОДА В РЕАЛЬНОМ ВРЕМЕНИ
 echo ======================================================================
 echo.
-echo  [1] Запустить ВСЮ экосистему разом (Этап 1 + Этап 2 + Этап 3 Студия)
-echo  [2] Запустить Этап 1: Входящие субтитры игр/видео (LiveTranslate)
-echo  [3] Запустить Этап 2: Перевод экрана и текста (OverTranslate)
-echo  [4] Запустить Этап 3: Студия исходящего голоса в CS2 (Voice Studio)
+echo  [1] ОТКРЫТЬ ГРАФИЧЕСКИЙ ЦЕНТР УПРАВЛЕНИЯ (GUI HUB)
+echo  [2] Запустить ВСЮ экосистему разом (Этапы 1, 2, 3)
+echo  [3] Запустить только Этап 1: Входящие субтитры (LiveTranslate)
+echo  [4] Запустить только Этап 2: Экранный переводчик (OverTranslate)
+echo  [5] Запустить только Этап 3: Студия голоса CS2 (Voice Studio)
 echo.
 echo  ----------------------------------------------------------------------
-echo  [5] Записать и обновить клонированный голос (RECORD_MY_VOICE)
+echo  [6] Запустить мастер клонирования голоса под себя (RECORD_MY_VOICE)
 echo  [9] ОСТАНОВИТЬ ВСЕ ЗАПУЩЕННЫЕ МОДУЛИ (STOP.bat)
 echo  [0] Выход
 echo ======================================================================
 echo.
 set /p CHOICE="Выберите действие [0-9] и нажмите Enter: "
 
-if "%CHOICE%"=="1" goto START_ALL
-if "%CHOICE%"=="2" goto START_STAGE1
-if "%CHOICE%"=="3" goto START_STAGE2
-if "%CHOICE%"=="4" goto START_STAGE3
-if "%CHOICE%"=="5" goto RECORD_VOICE
+if "%CHOICE%"=="1" goto LAUNCH_HUB
+if "%CHOICE%"=="2" goto START_ALL
+if "%CHOICE%"=="3" goto START_STAGE1
+if "%CHOICE%"=="4" goto START_STAGE2
+if "%CHOICE%"=="5" goto START_STAGE3
+if "%CHOICE%"=="6" goto RECORD_VOICE
 if "%CHOICE%"=="9" goto STOP_ALL
 if "%CHOICE%"=="0" exit /b 0
 
 echo Неверный ввод, повторите попытку...
 timeout /t 2 >nul
+goto MENU
+
+:LAUNCH_HUB
+echo.
+echo [▶] Запуск графического Центра Управления...
+call "%~dp0LAUNCHER.bat"
 goto MENU
 
 :START_ALL

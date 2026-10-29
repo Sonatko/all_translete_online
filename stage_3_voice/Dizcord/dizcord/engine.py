@@ -175,27 +175,38 @@ class Pipeline:
         return cable_recording_side(output_name)
 
     def _check_passthrough(self) -> bool:
-        if self.dir != "incoming" or not self.cfg.get("passthrough") or self.app_capture:
+        if not self.cfg.get("passthrough") or self.app_capture:
             return False
-        inp = self.p["input"]
-        res = self.engine.outputs.resolve
-        if inp["listen_mode"] == "loopback" and res(self.cfg["output_device"]) == res(inp["listen_device"]):
-            self.engine.emit_error("Pass-through disabled: you can't play the captured device back into "
-                                   "itself (feedback loop). Capture a separate device (e.g. CABLE-B / Voicemeeter).")
-            return False
+        if self.dir == "incoming":
+            inp = self.p["input"]
+            res = self.engine.outputs.resolve
+            if inp["listen_mode"] == "loopback" and res(self.cfg["output_device"]) == res(inp["listen_device"]):
+                self.engine.emit_error("Pass-through disabled: you can't play the captured device back into "
+                                       "itself (feedback loop). Capture a separate device (e.g. CABLE-B / Voicemeeter).")
+                return False
         return True
 
     # ------------------------------------------------------------ audio thread
     def _on_audio(self, chunk: np.ndarray):
         if not self.running or self.segmenter is None:
             return
-        if self._passthrough_ok and self.engine.hears_people():
-            try:
-                self.engine.outputs.get(self.cfg["output_device"]).push_live(
-                    chunk, self.source.samplerate, float(self.cfg.get("passthrough_volume", 1.0)))
-            except Exception as e:
-                self._passthrough_ok = False
-                self.engine.emit_error(f"Pass-through failed: {e}")
+        if self._passthrough_ok:
+            should_pass = True
+            if self.dir == "incoming":
+                should_pass = self.engine.hears_people()
+            else:
+                # Outgoing: pass live mic only when NOT translating via PTT and NOT playing AI speech
+                is_translating = (self.segmenter.mode in ("ptt", "toggle") and self.segmenter.ptt_down)
+                is_ai_speaking = self.engine.outputs.any_playing("outgoing")
+                should_pass = not is_translating and not is_ai_speaking
+
+            if should_pass:
+                try:
+                    self.engine.outputs.get(self.cfg["output_device"]).push_live(
+                        chunk, self.source.samplerate, float(self.cfg.get("passthrough_volume", 1.0)))
+                except Exception as e:
+                    self._passthrough_ok = False
+                    self.engine.emit_error(f"Pass-through failed: {e}")
         self.segmenter.muted = self._should_mute()
         self.segmenter.feed(chunk)
 

@@ -27,6 +27,8 @@
     "volume": 1.0,
     "voice_speed": 1.0,
     "voice_pitch": 0.0,
+    "passthrough": true,
+    "passthrough_volume": 1.0,
     "monitor_device": "",
     "monitor_volume": 0.5,
     "monitor": false
@@ -36,7 +38,7 @@
     "listen_app": "discord",
     "listen_device": "",
     "mic_device": "",
-    "mic_mode": "vad",
+    "mic_mode": "ptt",
     "ptt_key": "f8",
     "hear_key": "f9",
     "listen_vad": {

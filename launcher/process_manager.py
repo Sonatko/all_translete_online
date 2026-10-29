@@ -24,34 +24,49 @@ class EcosystemProcessManager:
     """Monitors and controls the lifecycle of all stages."""
 
     @staticmethod
-    def get_stage_status() -> Dict[str, bool]:
-        """Check whether each stage is currently running (ultra-fast filtered scan ~1.5ms)."""
+    def get_stage_status() -> Dict[str, Any]:
+        """Check whether each stage is currently running and collect live resource telemetry."""
         status = {
-            "stage_1": False,
-            "stage_2": False,
-            "stage_3": False,
+            "stage_1": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
+            "stage_2": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
+            "stage_3": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
+            "total_ram_mb": 0.0,
+            "total_cpu_pct": 0.0,
+            "running_count": 0,
         }
         try:
-            # Query name first (fast C-level call). Avoid expensive cmdline queries for system processes.
             for p in psutil.process_iter(["name"]):
                 try:
                     name = (p.info.get("name") or "").lower()
+                    matched = None
                     if "overtranslate" in name:
-                        status["stage_2"] = True
-                        continue
-
-                    if "python" in name:
+                        matched = "stage_2"
+                    elif "python" in name:
                         cmdline = " ".join(p.cmdline() or []).lower()
                         if "hub.py" in cmdline:
                             continue
                         if "stage_1_audio" in cmdline or "livetranslate" in cmdline:
-                            status["stage_1"] = True
+                            matched = "stage_1"
                         elif "stage_3_voice" in cmdline or "studio" in cmdline:
-                            status["stage_3"] = True
+                            matched = "stage_3"
+
+                    if matched and not status[matched]["running"]:
+                        mem_mb = round(p.memory_info().rss / (1024.0 * 1024.0), 1)
+                        cpu = round(p.cpu_percent(interval=None), 1)
+                        status[matched]["running"] = True
+                        status[matched]["pid"] = p.pid
+                        status[matched]["ram_mb"] = mem_mb
+                        status[matched]["cpu_pct"] = cpu
+                        status["total_ram_mb"] += mem_mb
+                        status["total_cpu_pct"] += cpu
+                        status["running_count"] += 1
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
         except Exception as e:
             log.warning("Process scan error: %s", e)
+
+        status["total_ram_mb"] = round(status["total_ram_mb"], 1)
+        status["total_cpu_pct"] = round(status["total_cpu_pct"], 1)
         return status
 
     @classmethod

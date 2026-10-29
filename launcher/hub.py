@@ -109,7 +109,7 @@ class StageCard(QFrame):
         self.lbl_hotkeys.setStyleSheet("color: #60a5fa; font-size: 11px;")
         layout.addWidget(self.lbl_hotkeys)
 
-        # Action Buttons
+        # Action Buttons and Live Telemetry
         h_btn = QHBoxLayout()
         self.btn_action = QPushButton(I18n.t("btn_start"))
         self.btn_action.setFixedHeight(30)
@@ -127,14 +127,60 @@ class StageCard(QFrame):
         self.btn_action.clicked.connect(self._on_action_clicked)
         h_btn.addWidget(self.btn_action)
 
+        # Resource Telemetry Badge
+        self.lbl_telemetry = QLabel(I18n.t("res_stopped"))
+        self.lbl_telemetry.setStyleSheet("""
+            color: #9ca3af;
+            font-family: Consolas, monospace;
+            font-size: 11px;
+            background-color: #1f2937;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #374151;
+        """)
+        h_btn.addWidget(self.lbl_telemetry)
+
         h_btn.addStretch()
         layout.addLayout(h_btn)
+
+        self._last_metrics = {"running": False, "ram_mb": 0.0, "cpu_pct": 0.0, "pid": None}
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_desc.setText(I18n.t(self.desc_key))
         self.lbl_hotkeys.setText(f"<b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
-        self.set_running(self._is_running, force=True)
+        self.update_telemetry(self._last_metrics, force=True)
+
+    def update_telemetry(self, data: Dict[str, Any], force: bool = False):
+        self._last_metrics = data
+        running = data.get("running", False)
+        self.set_running(running, force=force)
+
+        if running:
+            ram = data.get("ram_mb", 0.0)
+            cpu = data.get("cpu_pct", 0.0)
+            pid = data.get("pid", "-")
+            self.lbl_telemetry.setText(I18n.t("res_metrics", ram=ram, cpu=cpu, pid=pid))
+            self.lbl_telemetry.setStyleSheet("""
+                color: #34d399;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                background-color: #064e3b;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid #059669;
+            """)
+        else:
+            self.lbl_telemetry.setText(I18n.t("res_stopped"))
+            self.lbl_telemetry.setStyleSheet("""
+                color: #9ca3af;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                background-color: #1f2937;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid #374151;
+            """)
 
     def set_running(self, running: bool, force: bool = False):
         if not force and self._is_running == running:
@@ -585,22 +631,23 @@ class EcosystemHub(QMainWindow):
 
     def _poll_process_status(self):
         status = EcosystemProcessManager.get_stage_status()
-        self.card_stage1.set_running(status["stage_1"])
-        self.card_stage2.set_running(status["stage_2"])
-        self.card_stage3.set_running(status["stage_3"])
+        self.card_stage1.update_telemetry(status["stage_1"])
+        self.card_stage2.update_telemetry(status["stage_2"])
+        self.card_stage3.update_telemetry(status["stage_3"])
 
-        running_count = sum(1 for v in status.values() if v)
-        if getattr(self, "_last_running_count", None) != running_count:
-            self._last_running_count = running_count
-            if running_count == 3:
-                self.lbl_system_summary.setText(I18n.t("status_all_running"))
-                self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
-            elif running_count > 0:
-                self.lbl_system_summary.setText(I18n.t("status_partial", count=running_count))
-                self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
-            else:
-                self.lbl_system_summary.setText(I18n.t("status_stopped"))
-                self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
+        running_count = status.get("running_count", 0)
+        total_ram = status.get("total_ram_mb", 0.0)
+        total_cpu = status.get("total_cpu_pct", 0.0)
+
+        if running_count == 3:
+            self.lbl_system_summary.setText(f"🟢 {I18n.t('status_all_running').split('|')[0].strip()} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
+            self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
+        elif running_count > 0:
+            self.lbl_system_summary.setText(f"🟡 {I18n.t('status_partial', count=running_count).split('|')[0].strip()} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
+            self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
+        else:
+            self.lbl_system_summary.setText(I18n.t("status_stopped"))
+            self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
 
     def _on_open_voice_wizard(self):
         try:

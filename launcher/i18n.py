@@ -44,6 +44,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "missing": "❌ Не найдена",
         "lang_selector": "Язык интерфейса / Language / 语言:",
         "hotkeys_label": "Горячие клавиши:",
+        "res_metrics": "⚡ ОЗУ: {ram} МБ | ЦП: {cpu}% | PID: {pid}",
+        "res_stopped": "⚡ 0 МБ ОЗУ | 0% ЦП (Служба остановлена)",
     },
     "en": {
         "title": "Universal Real-Time Translation Ecosystem Hub & Supervisor",
@@ -83,6 +85,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "missing": "❌ Not Found",
         "lang_selector": "Interface Language / 语言:",
         "hotkeys_label": "Hotkeys:",
+        "res_metrics": "⚡ RAM: {ram} MB | CPU: {cpu}% | PID: {pid}",
+        "res_stopped": "⚡ 0 MB RAM | 0% CPU (Service Stopped)",
     },
     "zh": {
         "title": "通用实时翻译生态控制中心 (Hub & Supervisor)",
@@ -122,6 +126,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "missing": "❌ 未找到",
         "lang_selector": "界面语言 / Language / Язык:",
         "hotkeys_label": "快捷键:",
+        "res_metrics": "⚡ 内存占用: {ram} MB | CPU: {cpu}% | PID: {pid}",
+        "res_stopped": "⚡ 0 MB 内存 | 0% CPU (服务已停止)",
     }
 }
 

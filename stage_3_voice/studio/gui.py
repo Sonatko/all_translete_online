@@ -350,7 +350,7 @@ class StudioWindow(QMainWindow):
         inputs, outputs = AudioEngine.get_devices()
 
         # 1. Microphone Input
-        lbl_in = QLabel("<b>1. Ваш микрофон (куда вы говорите):</b><br><span style='color: #9ca3af; font-size: 11px;'>Рекомендуется: NVIDIA Broadcast или Input 1/2</span>")
+        lbl_in = QLabel("<b>1. Ваш микрофон (голос):</b><br><span style='color: #9ca3af; font-size: 11px;'>NVIDIA Broadcast или Вход 1</span>")
         grid.addWidget(lbl_in, 0, 0)
         self.combo_in = QComboBox()
         for idx, name in inputs:
@@ -364,8 +364,8 @@ class StudioWindow(QMainWindow):
         self.combo_in.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_in, 0, 1)
 
-        # 2. Game Outgoing (Playback 3/4 -> Loopback)
-        lbl_out = QLabel("<b>2. Канал озвучки в игру (Playback 3/4 ➔ Topping Loopback):</b><br><span style='color: #9ca3af; font-size: 11px;'>Сюда ИИ отправляет голос. В игре выберите микрофон: Loopback 1/2</span>")
+        # 2. Game Outgoing (Topping Voice / Playback 3/4)
+        lbl_out = QLabel("<b>2. Канал озвучки (Topping Voice / Playback 3/4):</b><br><span style='color: #9ca3af; font-size: 11px;'>Куда ИИ отправляет голос. В игре микрофон: Topping Mic</span>")
         grid.addWidget(lbl_out, 1, 0)
         self.combo_out = QComboBox()
         for idx, name in outputs:
@@ -378,8 +378,8 @@ class StudioWindow(QMainWindow):
         self.combo_out.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_out, 1, 1)
 
-        # 3. Headphones Sidetone (Playback 1/2)
-        lbl_side = QLabel("<b>3. Ваши наушники (Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Чтобы вы сами слышали свой английский перевод в ушах</span>")
+        # 3. Headphones Sidetone (Topping Headphones / Playback 1/2)
+        lbl_side = QLabel("<b>3. Ваши наушники (Topping Headphones / Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Звук игры и самопрослушивание своего перевода</span>")
         grid.addWidget(lbl_side, 2, 0)
         self.combo_side = QComboBox()
         for idx, name in outputs:
@@ -394,7 +394,7 @@ class StudioWindow(QMainWindow):
 
         layout.addWidget(grp_devs)
 
-        # Topping E2x2 Quick Cheat Sheet
+        # 1-Click Auto-Renamer Button & Cheat Sheet
         cheat_box = QFrame()
         cheat_box.setStyleSheet("""
             QFrame {
@@ -405,15 +405,34 @@ class StudioWindow(QMainWindow):
             }
         """)
         v_cheat = QVBoxLayout(cheat_box)
-        v_cheat.setSpacing(6)
-        lbl_cheat_title = QLabel("<b>💡 Памятка: Как это работает и что выбрать в Discord / CS2 (чтобы никогда не забыть)</b>")
+        v_cheat.setSpacing(8)
+
+        h_title_btn = QHBoxLayout()
+        lbl_cheat_title = QLabel("<b>💡 Короткие имена: Topping Mic | Topping Voice | Topping Headphones</b>")
         lbl_cheat_title.setStyleSheet("color: #a5b4fc; font-size: 12px;")
-        v_cheat.addWidget(lbl_cheat_title)
+        h_title_btn.addWidget(lbl_cheat_title)
+        h_title_btn.addStretch()
+
+        self.btn_rename = QPushButton("⚡ Переименовать в Windows в 1 клик")
+        self.btn_rename.setStyleSheet("""
+            QPushButton {
+                background-color: #4f46e5;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 4px 10px;
+            }
+            QPushButton:hover { background-color: #6366f1; }
+        """)
+        self.btn_rename.clicked.connect(self._on_run_renamer)
+        h_title_btn.addWidget(self.btn_rename)
+        v_cheat.addLayout(h_title_btn)
 
         lbl_cheat_body = QLabel(
-            "• <b>Что поставить в Discord / CS2 / Telegram:</b> в настройках звука в поле <i>«Устройство ввода (Микрофон)»</i> выберите <b>Loopback 1/2 (Topping E2x2 OTG)</b>.<br>"
-            "• <b>Что поставить в Windows:</b> звук по умолчанию оставляйте обычным — ваши наушники <b>Playback 1/2</b>.<br>"
-            "• <b>Физика процесса (на пальцах):</b> Вы зажимаете <i>Shift + MMB</i> и говорите на русском. Программа за ~0.2 сек переводит фразу и озвучивает её вашим клонированным голосом в скрытый канал <i>Playback 3/4</i>. Внутри звуковой карты Topping встроен аппаратный мост, который без единой миллисекунды задержки направляет этот звук в <i>Loopback 1/2</i>. Игра думает, что это ваш реальный микрофон, и тиммейты слышат чистый английский язык!"
+            "• <b>Что ставить в Discord / CS2 (Микрофон):</b> выбирайте <b>Topping Mic</b> (он же Loopback 1/2).<br>"
+            "• <b>Что ставить в Windows (Звук):</b> обычные наушники <b>Topping Headphones</b> (Playback 1/2).<br>"
+            "• Нажмите фиолетовую кнопку справа вверху — и Windows сама переименует устройства в эти простые имена!"
         )
         lbl_cheat_body.setWordWrap(True)
         lbl_cheat_body.setStyleSheet("color: #e2e8f0; font-size: 11px; line-height: 1.4;")
@@ -714,6 +733,13 @@ class StudioWindow(QMainWindow):
     def _on_sidetone_slider(self, val: int):
         self.lbl_sidetone_val.setText(f"{val}%")
         self.cfg["audio"]["sidetone_volume"] = val / 100.0
+
+    def _on_run_renamer(self):
+        import subprocess
+        from pathlib import Path
+        bat = Path(__file__).resolve().parent.parent.parent / "RENAME_TOPPING.bat"
+        if bat.is_file():
+            subprocess.Popen(["cmd.exe", "/c", str(bat)])
         save_settings(self.cfg)
 
     def _on_voice_changed(self, idx: int):

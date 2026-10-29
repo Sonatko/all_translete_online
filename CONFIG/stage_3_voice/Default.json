@@ -1,0 +1,137 @@
+{
+  "name": "Default",
+  "version": 2,
+  "incoming": {
+    "enabled": true,
+    "source_lang": "en",
+    "target_lang": "ru",
+    "speak": true,
+    "show_subtitles": true,
+    "skip_same_language": true,
+    "output_device": "",
+    "volume": 1.0,
+    "voice_speed": 1.0,
+    "voice_pitch": 0.0,
+    "passthrough": false,
+    "passthrough_volume": 1.0,
+    "duck_passthrough": 0.25,
+    "hear_originals": false
+  },
+  "outgoing": {
+    "enabled": true,
+    "source_lang": "ru",
+    "target_lang": "en",
+    "follow_their_language": false,
+    "speak": true,
+    "output_device": "CABLE Input",
+    "volume": 1.0,
+    "voice_speed": 1.0,
+    "voice_pitch": 0.0,
+    "monitor_device": "",
+    "monitor_volume": 0.5,
+    "monitor": false
+  },
+  "input": {
+    "listen_mode": "app",
+    "listen_app": "discord",
+    "listen_device": "",
+    "mic_device": "",
+    "mic_mode": "vad",
+    "ptt_key": "f8",
+    "hear_key": "f9",
+    "listen_vad": {
+      "auto": true,
+      "threshold_db": -45.0,
+      "silence_ms": 550,
+      "min_speech_ms": 350,
+      "max_utterance_s": 12.0,
+      "pre_roll_ms": 300
+    },
+    "mic_vad": {
+      "auto": true,
+      "threshold_db": -42.0,
+      "silence_ms": 500,
+      "min_speech_ms": 300,
+      "max_utterance_s": 15.0,
+      "pre_roll_ms": 300
+    },
+    "pause_listen_while_speaking": true,
+    "ignore_mic_while_playing": false,
+    "mic_gain_db": 0.0,
+    "listen_gain_db": 0.0
+  },
+  "stt": {
+    "provider": "faster_whisper",
+    "settings": {
+      "faster_whisper": {
+        "model": "base",
+        "beam_size": 1
+      }
+    }
+  },
+  "translation": {
+    "provider": "google_free",
+    "settings": {},
+    "style": "natural",
+    "context_lines": 4,
+    "glossary": "",
+    "keep_profanity": true
+  },
+  "ai": {
+    "provider": "openai",
+    "settings": {},
+    "custom_prompt": ""
+  },
+  "tts": {
+    "provider": "kokoro",
+    "settings": {
+      "kokoro": {}
+    },
+    "voices": {},
+    "gender": "female"
+  },
+  "speech": {
+    "names": "short",
+    "repeat_names": false,
+    "catchup": true
+  },
+  "speakers": {
+    "enabled": false,
+    "client_id": ""
+  },
+  "chat": {
+    "auto_translate": false,
+    "target_lang": "ru",
+    "skip_same_language": true,
+    "include_embeds": true,
+    "my_name": "",
+    "history": 5,
+    "poll_ms": 700,
+    "overlay_attach": true,
+    "overlay_lines": 6,
+    "engine": "",
+    "display": "inline",
+    "hotkey_inline": "ctrl+alt+i",
+    "speak": false,
+    "speak_mode": "queue",
+    "select_translate": true,
+    "select_scope": "discord",
+    "popup_seconds": 10,
+    "hotkey_selection": "ctrl+alt+t",
+    "hotkey_draft": "ctrl+alt+y",
+    "hotkey_ocr": "ctrl+alt+o",
+    "compose_lang": "auto",
+    "draft_send": false,
+    "ocr_lang": "auto",
+    "clipboard_watch": false
+  },
+  "ui": {
+    "subtitle_font_size": 22,
+    "subtitle_opacity": 0.85,
+    "subtitle_show_original": true,
+    "subtitle_lines": 3,
+    "subtitle_show_mine": true,
+    "autosave_transcript": true,
+    "autosave_settings": true
+  }
+}

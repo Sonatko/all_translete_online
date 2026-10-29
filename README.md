@@ -47,22 +47,21 @@ A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC
 ## 🚀 Quickstart & Daily Operations
 
 ### 1. Launch the Ecosystem
-You can run any of the convenient launchers from the project root:
-
-- 👉 **`LAUNCHER.bat` (Recommended)**: Opens the **Universal Graphical Hub (PySide6)** with:
-  - Real-time status cards for Stages 1, 2, and 3.
-  - **7-Second Personal Voice Cloning Studio (Wizard)**.
+### 1. Launch the Ecosystem
+- 👉 **`START.bat`**: **The Single 1-Click Entry Point**. Launches the **Universal Graphical Hub (PySide6)** in under 0.25 seconds:
+  - Supervised status cards with live RAM / CPU / PID metrics for Stages 1, 2, and 3.
+  - **7-Second Personal Voice Cloning Studio (Wizard)** with instant headphone preview.
   - **100% Offline AI Models Storage Audit** (all models verified locally on SSD).
   - Trilingual UI language switch (**Русский / English / 中文**).
-- **`START.bat`**: 1-Click quick launcher starting all 3 stages simultaneously in the background.
-- **`ORCHESTRATOR.bat`**: Interactive terminal management console.
+  - Interactive **Audio & Signal Flow Guide** explaining Topping Loopback.
 
 ### 2. Stop the Ecosystem
-- Double-click **`STOP.bat`**: Gracefully and safely terminates all ecosystem processes, audio hooks, and frees Topping sound card streams.
+- Double-click **`STOP.bat`**: Instantly (<0.25s) terminates all ecosystem processes, audio hooks, and frees sound card streams.
 
 ---
 
-## 🎛 Topping E2x2 OTG Hardware Routing Matrix
+## 🎛 Topping E2x2 OTG Hardware Routing & Loopback Guide
+📖 **Full Pedagogical Russian Guide:** [HOW_TOPPING_WORKS.md](HOW_TOPPING_WORKS.md) (Шпаргалка на века)
 
 To ensure **0 ms virtual cable delay** and 0% audio stuttering, the system utilizes the hardware DSP loopback of the **Topping E2x2 OTG** interface:
 

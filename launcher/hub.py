@@ -551,6 +551,47 @@ class EcosystemHub(QMainWindow):
         v_models.addWidget(models_info)
         layout.addWidget(models_box)
 
+        # Section 3: Topping E2x2 Loopback Guide (Forget-Proof Standard)
+        loopback_box = QGroupBox("3. Звуковая карта Topping E2x2: Как устроен Loopback и что выбрать в Discord (Шпаргалка на века)")
+        v_loopback = QVBoxLayout(loopback_box)
+        loopback_info = QLabel("""
+<div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
+<b style="color: #38bdf8; font-size: 13px;">Что такое Loopback простыми словами?</b><br>
+<b>Loopback (аппаратная петля)</b> — это встроенный в звуковую карту Topping «провод-невидимка». Он аппаратно перенаправляет любой звук, отправленный в канал <b>Playback 3/4</b>, прямо во вход виртуального микрофона <b>Loopback 1/2</b> со скоростью света (0 мс задержки) и с 0% нагрузки на процессор.<br><br>
+
+<b style="color: #a7f3d0; font-size: 13px;">Шпаргалка: Куда что нажимать в Windows и Discord (За 30 секунд):</b><br>
+<table border="0" cellpadding="8" style="background-color: #16171a; border-radius: 6px; width: 100%; border: 1px solid #2e3035;">
+<tr style="background-color: #212328; color: #ffffff;">
+    <th align="left">Программа / Место</th>
+    <th align="left">Что выбрать в настройках звука</th>
+    <th align="left">Зачем это нужно</th>
+</tr>
+<tr>
+    <td><b>1. Windows (Вывод звука)</b></td>
+    <td><code style="color: #60a5fa; font-weight: bold;">Playback 1/2</code></td>
+    <td>Обычный звук: вы слышите игру, музыку, тиммейтов и свой перевод в наушниках.</td>
+</tr>
+<tr>
+    <td><b>2. Наш Лаунчер (Этап 3)</b></td>
+    <td><code style="color: #60a5fa; font-weight: bold;">Вывод ➔ Playback 3/4</code></td>
+    <td>Канал озвучки: ИИ бесшумно отправляет сгенерированный английский голос в карту Topping.</td>
+</tr>
+<tr>
+    <td><b>3. Discord / CS2 / Telegram</b></td>
+    <td><b style="color: #34d399; font-size: 13px;">Loopback 1/2 (Topping E2x2 OTG)</b></td>
+    <td><b>Самое главное!</b> Микрофон в игре, через который тиммейты слышат ваш чистый перевод!</td>
+</tr>
+</table><br>
+
+<b style="color: #facc15; font-size: 12px;">Почему эта схема вечная и не ломается:</b><br>
+Вам не нужны виртуальные кабели (типа VB-Audio Cable), которые постоянно слетают при обновлениях Windows и дают задержку 100+ мс. 
+Всё смешивание делает сам чип Topping на уровне железа. Даже если через год вы переустановите систему, достаточно просто запустить START.bat и выбрать эти 3 пункта!
+</div>
+        """)
+        loopback_info.setWordWrap(True)
+        v_loopback.addWidget(loopback_info)
+        layout.addWidget(loopback_box)
+
         layout.addStretch()
         scroll.setWidget(w)
         return scroll

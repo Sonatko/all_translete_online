@@ -350,7 +350,8 @@ class StudioWindow(QMainWindow):
         inputs, outputs = AudioEngine.get_devices()
 
         # 1. Microphone Input
-        grid.addWidget(QLabel("Входной микрофон (речь для перевода):"), 0, 0)
+        lbl_in = QLabel("<b>1. Ваш микрофон (куда вы говорите):</b><br><span style='color: #9ca3af; font-size: 11px;'>Рекомендуется: NVIDIA Broadcast или Input 1/2</span>")
+        grid.addWidget(lbl_in, 0, 0)
         self.combo_in = QComboBox()
         for idx, name in inputs:
             self.combo_in.addItem(f"[{idx}] {name}", name)
@@ -363,8 +364,9 @@ class StudioWindow(QMainWindow):
         self.combo_in.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_in, 0, 1)
 
-        # 2. Game Outgoing (Playback 3/4)
-        grid.addWidget(QLabel("Вывод перевода в игру (Topping Loopback):"), 1, 0)
+        # 2. Game Outgoing (Playback 3/4 -> Loopback)
+        lbl_out = QLabel("<b>2. Канал озвучки в игру (Playback 3/4 ➔ Topping Loopback):</b><br><span style='color: #9ca3af; font-size: 11px;'>Сюда ИИ отправляет голос. В игре выберите микрофон: Loopback 1/2</span>")
+        grid.addWidget(lbl_out, 1, 0)
         self.combo_out = QComboBox()
         for idx, name in outputs:
             self.combo_out.addItem(f"[{idx}] {name}", name)
@@ -377,7 +379,8 @@ class StudioWindow(QMainWindow):
         grid.addWidget(self.combo_out, 1, 1)
 
         # 3. Headphones Sidetone (Playback 1/2)
-        grid.addWidget(QLabel("Наушники (Самопрослушивание своего перевода):"), 2, 0)
+        lbl_side = QLabel("<b>3. Ваши наушники (Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Чтобы вы сами слышали свой английский перевод в ушах</span>")
+        grid.addWidget(lbl_side, 2, 0)
         self.combo_side = QComboBox()
         for idx, name in outputs:
             self.combo_side.addItem(f"[{idx}] {name}", name)
@@ -390,6 +393,32 @@ class StudioWindow(QMainWindow):
         grid.addWidget(self.combo_side, 2, 1)
 
         layout.addWidget(grp_devs)
+
+        # Topping E2x2 Quick Cheat Sheet
+        cheat_box = QFrame()
+        cheat_box.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1e1b4b, stop:1 #0f172a);
+                border: 1px solid #4f46e5;
+                border-radius: 8px;
+                padding: 12px;
+            }
+        """)
+        v_cheat = QVBoxLayout(cheat_box)
+        v_cheat.setSpacing(6)
+        lbl_cheat_title = QLabel("<b>💡 Памятка: Как это работает и что выбрать в Discord / CS2 (чтобы никогда не забыть)</b>")
+        lbl_cheat_title.setStyleSheet("color: #a5b4fc; font-size: 12px;")
+        v_cheat.addWidget(lbl_cheat_title)
+
+        lbl_cheat_body = QLabel(
+            "• <b>Что поставить в Discord / CS2 / Telegram:</b> в настройках звука в поле <i>«Устройство ввода (Микрофон)»</i> выберите <b>Loopback 1/2 (Topping E2x2 OTG)</b>.<br>"
+            "• <b>Что поставить в Windows:</b> звук по умолчанию оставляйте обычным — ваши наушники <b>Playback 1/2</b>.<br>"
+            "• <b>Физика процесса (на пальцах):</b> Вы зажимаете <i>Shift + MMB</i> и говорите на русском. Программа за ~0.2 сек переводит фразу и озвучивает её вашим клонированным голосом в скрытый канал <i>Playback 3/4</i>. Внутри звуковой карты Topping встроен аппаратный мост, который без единой миллисекунды задержки направляет этот звук в <i>Loopback 1/2</i>. Игра думает, что это ваш реальный микрофон, и тиммейты слышат чистый английский язык!"
+        )
+        lbl_cheat_body.setWordWrap(True)
+        lbl_cheat_body.setStyleSheet("color: #e2e8f0; font-size: 11px; line-height: 1.4;")
+        v_cheat.addWidget(lbl_cheat_body)
+        layout.addWidget(cheat_box)
 
         # Switches and Sliders
         grp_opts = QGroupBox("Режимы микрофона и громкость мониторинга")

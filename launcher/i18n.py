@@ -43,6 +43,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ready": "✔ Скачана (Готова)",
         "missing": "❌ Не найдена",
         "lang_selector": "Язык интерфейса / Language / 语言:",
+        "hotkeys_label": "Горячие клавиши:",
     },
     "en": {
         "title": "Universal Real-Time Translation Ecosystem Hub & Supervisor",
@@ -81,6 +82,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ready": "✔ Ready (Offline)",
         "missing": "❌ Not Found",
         "lang_selector": "Interface Language / 语言:",
+        "hotkeys_label": "Hotkeys:",
     },
     "zh": {
         "title": "通用实时翻译生态控制中心 (Hub & Supervisor)",
@@ -119,6 +121,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ready": "✔ 已就绪 (离线)",
         "missing": "❌ 未找到",
         "lang_selector": "界面语言 / Language / Язык:",
+        "hotkeys_label": "快捷键:",
     }
 }
 

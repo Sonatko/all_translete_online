@@ -124,7 +124,7 @@ class StageCard(QFrame):
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_desc.setText(I18n.t(self.desc_key))
-        self.lbl_hotkeys.setText(f"<b>{I18n.t('stage1_hotkeys') if '1' in self.stage_id else 'Hotkeys:'}</b> {I18n.t(self.hotkeys_key)}")
+        self.lbl_hotkeys.setText(f"<b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
         self.set_running(self._is_running)
 
     def set_running(self, running: bool):
@@ -195,6 +195,10 @@ class EcosystemHub(QMainWindow):
 
         # Initial check
         self._poll_process_status()
+
+    def closeEvent(self, event):
+        self.poll_timer.stop()
+        super().closeEvent(event)
 
     def _init_ui(self):
         central = QWidget(self)

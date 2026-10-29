@@ -55,6 +55,9 @@ class VoiceCloningWizard(QDialog):
         self.test_audio_data: Optional[np.ndarray] = None
         self.sample_rate = 24000
 
+        self._mon_stream = None
+        self._current_mic_peak = 0.0
+
         self._init_ui()
         self._apply_style()
 
@@ -63,11 +66,46 @@ class VoiceCloningWizard(QDialog):
         self.sig_cloning_finished.connect(self._on_cloning_finished)
         self.sig_error.connect(self._on_error)
 
-        # Microphone monitor timer (100 ms)
+        self._start_mic_monitor()
+
+        # Microphone monitor UI update timer (50 ms, non-blocking)
         self.mic_timer = QTimer(self)
-        self.mic_timer.setInterval(80)
+        self.mic_timer.setInterval(50)
         self.mic_timer.timeout.connect(self._poll_mic_level)
         self.mic_timer.start()
+
+    def _start_mic_monitor(self):
+        try:
+            self._stop_mic_monitor()
+            mic_id = self.combo_mic.currentData() if hasattr(self, 'combo_mic') else None
+            def _mon_cb(indata, frames, time_info, status):
+                peak = float(np.max(np.abs(indata[:, 0])))
+                self._current_mic_peak = max(peak, self._current_mic_peak * 0.85)
+
+            self._mon_stream = sd.InputStream(
+                device=mic_id,
+                channels=1,
+                samplerate=48000,
+                blocksize=960,
+                dtype="float32",
+                callback=_mon_cb
+            )
+            self._mon_stream.start()
+        except Exception:
+            pass
+
+    def _stop_mic_monitor(self):
+        if self._mon_stream:
+            try:
+                self._mon_stream.stop()
+                self._mon_stream.close()
+            except Exception:
+                pass
+            self._mon_stream = None
+
+    def closeEvent(self, event):
+        self._stop_mic_monitor()
+        super().closeEvent(event)
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -230,17 +268,8 @@ class VoiceCloningWizard(QDialog):
         layout.addLayout(h_foot)
 
     def _poll_mic_level(self):
-        """Poll input level for visual VU meter."""
-        try:
-            mic_id = self.combo_mic.currentData()
-            if mic_id is not None:
-                # Short non-blocking sample
-                data = sd.rec(int(48000 * 0.05), samplerate=48000, channels=1, device=mic_id, blocking=False)
-                sd.wait()
-                peak = float(np.max(np.abs(data)))
-                self.vu_bar.setValue(min(100, int(peak * 180)))
-        except Exception:
-            pass
+        """Poll input level smoothly without blocking the GUI."""
+        self.vu_bar.setValue(min(100, int(self._current_mic_peak * 200)))
 
     def _on_start_recording(self):
         self.btn_record.setEnabled(False)
@@ -249,6 +278,7 @@ class VoiceCloningWizard(QDialog):
         self.lbl_status.setText("🔴 ИДЕТ ЗАПИСЬ... ЧИТАЙТЕ ТЕКСТ В МИКРОФОН!")
         self.lbl_status.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 14px;")
 
+        self._stop_mic_monitor()
         mic_id = self.combo_mic.currentData()
         threading.Thread(target=self._recording_worker, args=(mic_id,), daemon=True).start()
 
@@ -345,6 +375,7 @@ class VoiceCloningWizard(QDialog):
         self.lbl_status.setText(f"✔ Обучение завершено за {latency_s:.2f} сек! Слепок вашего тембра успешно сохранен.")
         self.lbl_status.setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;")
         self.rec_progress.setFormat("Готово! Профиль сохранен.")
+        self._start_mic_monitor()
 
         # Play automatic preview in headphones
         self._on_play_sample()
@@ -353,6 +384,7 @@ class VoiceCloningWizard(QDialog):
         self.btn_record.setEnabled(True)
         self.lbl_status.setText(f"❌ Ошибка калибровки: {err_msg[:60]}")
         self.lbl_status.setStyleSheet("color: #ef4444; font-weight: bold;")
+        self._start_mic_monitor()
 
     def _on_play_sample(self):
         """Play synthesized test phrase into headphones Playback 1/2."""

@@ -39,9 +39,9 @@ class EcosystemProcessManager:
 
                     if "overtranslate.exe" in name:
                         status["stage_2"] = True
-                    elif "stage_1_audio" in cmdline or "livetranslate" in cmdline:
+                    elif ("stage_1_audio" in cmdline or "livetranslate" in cmdline) and "hub.py" not in cmdline:
                         status["stage_1"] = True
-                    elif "stage_3_voice" in cmdline and "studio" in cmdline:
+                    elif "stage_3_voice" in cmdline and "studio" in cmdline and "hub.py" not in cmdline:
                         status["stage_3"] = True
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue

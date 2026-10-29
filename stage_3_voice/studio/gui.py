@@ -182,6 +182,13 @@ class StudioWindow(QMainWindow):
         self.ui_timer.timeout.connect(self._update_telemetry)
         self.ui_timer.start()
 
+    def closeEvent(self, event):
+        """Clean shutdown when user closes window."""
+        self.ui_timer.stop()
+        self.engine.stop()
+        save_settings(self.cfg)
+        super().closeEvent(event)
+
     # =========================================================================
     # UI Layout Construction
     # =========================================================================

@@ -50,6 +50,8 @@ class AudioEngine:
         # Queues for asynchronous playback
         self._out_queue: queue.Queue = queue.Queue(maxsize=100)
         self._sidetone_queue: queue.Queue = queue.Queue(maxsize=100)
+        self._out_pending = np.array([], dtype=np.float32)
+        self._sidetone_pending = np.array([], dtype=np.float32)
 
         # Inference worker thread
         self._work_queue: queue.Queue = queue.Queue()
@@ -322,16 +324,25 @@ class AudioEngine:
                         self._out_queue.put_nowait(passthrough_chunk)
 
     def _out_callback(self, outdata, frames, time_info, status):
-        """Outgoing playback to Playback 3/4 (Loopback 1+2)."""
-        try:
-            chunk = self._out_queue.get_nowait()
-            if len(chunk) < frames:
-                outdata[:len(chunk), 0] = chunk
-                outdata[len(chunk):, 0] = 0.0
+        """Outgoing playback to Playback 3/4 (Loopback 1+2) with continuous sample FIFO."""
+        pending = [self._out_pending]
+        while sum(len(p) for p in pending) < frames:
+            try:
+                pending.append(self._out_queue.get_nowait())
+            except queue.Empty:
+                break
+        merged = np.concatenate(pending) if len(pending) > 1 else pending[0]
+
+        if len(merged) >= frames:
+            outdata[:, 0] = merged[:frames]
+            self._out_pending = merged[frames:]
+        else:
+            if len(merged) > 0:
+                outdata[:len(merged), 0] = merged
+                outdata[len(merged):, 0] = 0.0
             else:
-                outdata[:, 0] = chunk[:frames]
-        except queue.Empty:
-            outdata.fill(0.0)
+                outdata.fill(0.0)
+            self._out_pending = np.array([], dtype=np.float32)
 
         # Output level telemetry
         peak = float(np.max(np.abs(outdata[:, 0])))
@@ -339,16 +350,25 @@ class AudioEngine:
         self.out_peak_db = max(peak_db, self.out_peak_db - 2.0)
 
     def _sidetone_callback(self, outdata, frames, time_info, status):
-        """Headphones monitor playback to Playback 1/2."""
-        try:
-            chunk = self._sidetone_queue.get_nowait()
-            if len(chunk) < frames:
-                outdata[:len(chunk), 0] = chunk
-                outdata[len(chunk):, 0] = 0.0
+        """Headphones monitor playback to Playback 1/2 with continuous sample FIFO."""
+        pending = [self._sidetone_pending]
+        while sum(len(p) for p in pending) < frames:
+            try:
+                pending.append(self._sidetone_queue.get_nowait())
+            except queue.Empty:
+                break
+        merged = np.concatenate(pending) if len(pending) > 1 else pending[0]
+
+        if len(merged) >= frames:
+            outdata[:, 0] = merged[:frames]
+            self._sidetone_pending = merged[frames:]
+        else:
+            if len(merged) > 0:
+                outdata[:len(merged), 0] = merged
+                outdata[len(merged):, 0] = 0.0
             else:
-                outdata[:, 0] = chunk[:frames]
-        except queue.Empty:
-            outdata.fill(0.0)
+                outdata.fill(0.0)
+            self._sidetone_pending = np.array([], dtype=np.float32)
 
     # =========================================================================
     # PTT Trigger & Dispatch

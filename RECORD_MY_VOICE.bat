@@ -1,5 +1,7 @@
 @echo off
 chcp 65001 >nul
+set PYTHONUNBUFFERED=1
+set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 title Studio Voice Cloning - Pocket TTS
 
@@ -8,7 +10,7 @@ echo  STUDIO VOICE RECORDING AND CLONING - KYUTAI POCKET-TTS
 echo ======================================================================
 echo.
 
-"%~dp0stage_3_voice\Dizcord\.venv\Scripts\python.exe" "%~dp0stage_3_voice\scratch\record_pocket_clone.py"
+"%~dp0stage_3_voice\Dizcord\.venv\Scripts\python.exe" -u "%~dp0stage_3_voice\scratch\record_pocket_clone.py"
 
 echo.
 pause

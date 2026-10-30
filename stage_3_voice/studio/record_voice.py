@@ -17,10 +17,8 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 STAGE3_DIR = SCRIPT_DIR.parent
 ROOT_DIR = STAGE3_DIR.parent
-DIZCORD_DIR = STAGE3_DIR / "Dizcord"
 
 sys.path.insert(0, str(ROOT_DIR))
-sys.path.insert(0, str(DIZCORD_DIR))
 
 os.environ["COQUI_TOS_AGREED"] = "1"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
@@ -32,8 +30,6 @@ import scipy.signal as signal
 import torch
 from huggingface_hub import hf_hub_download
 import safetensors.torch
-
-from dizcord.audio import devices, player
 
 
 def main():
@@ -53,18 +49,19 @@ def main():
     print()
     print("-" * 74)
 
-    inputs = devices.InputDevice.list()
-    outputs = devices.OutputDevice.list()
+    all_devs = sd.query_devices()
+    inputs = [d["name"] for d in all_devs if d["max_input_channels"] > 0]
+    outputs = [d["name"] for d in all_devs if d["max_output_channels"] > 0]
 
     # Prefer NVIDIA Broadcast or Topping Analog 1/2
     mic_idx = None
-    for i, d in enumerate(inputs):
-        if "nvidia broadcast" in d.lower():
+    for i, d in enumerate(all_devs):
+        if d["max_input_channels"] > 0 and "nvidia broadcast" in d["name"].lower():
             mic_idx = i
             break
     if mic_idx is None:
-        for i, d in enumerate(inputs):
-            if "analog 1/2" in d.lower():
+        for i, d in enumerate(all_devs):
+            if d["max_input_channels"] > 0 and "analog 1/2" in d["name"].lower():
                 mic_idx = i
                 break
     if mic_idx is None:
@@ -72,15 +69,15 @@ def main():
 
     # Prefer Topping Playback 1/2
     out_idx = None
-    for i, d in enumerate(outputs):
-        if "playback 1/2" in d.lower():
+    for i, d in enumerate(all_devs):
+        if d["max_output_channels"] > 0 and "playback 1/2" in d["name"].lower():
             out_idx = i
             break
     if out_idx is None:
         out_idx = sd.default.device[1]
 
-    mic_name = inputs[mic_idx] if mic_idx < len(inputs) else "Default"
-    out_name = outputs[out_idx] if out_idx < len(outputs) else "Default"
+    mic_name = all_devs[mic_idx]["name"] if mic_idx is not None else "Default"
+    out_name = all_devs[out_idx]["name"] if out_idx is not None else "Default"
 
     print(f"[ВХОД МИКРОФОНА] : {mic_name}")
     print(f"[ВЫХОД НАУШНИКОВ] : {out_name}")
@@ -165,11 +162,8 @@ def main():
 
     print("\n[▶ ВОСПРОИЗВЕДЕНИЕ В ВАШИ НАУШНИКИ...]")
     try:
-        dev = player.OutputDevice(out_name)
-        dev.open()
-        clip = dev.play(gen_audio, tts_model.sample_rate, 1.0, "clean_cloned_play")
-        clip.done.wait(10.0)
-        dev.close()
+        sd.play(gen_audio, samplerate=tts_model.sample_rate, device=out_idx)
+        sd.wait()
     except Exception as exc:
         print(f"[NOTE] Воспроизведение пропущено: {exc}")
 
@@ -180,3 +174,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -10,7 +10,7 @@ import logging
 import os
 from pathlib import Path
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
@@ -196,8 +196,82 @@ class LatencyEstimator:
         }
 
 
+class PipelineNodeWidget(QFrame):
+    """Modular sub-card representing an isolated DSP/AI pipeline stage node."""
+
+    def __init__(self, step_idx: str, step_type: str, title: str, backend: str, parent=None):
+        super().__init__(parent)
+        self.step_idx = step_idx
+        self.step_type = step_type
+        self.title_text = title
+        self.backend_text = backend
+
+        self.setStyleSheet("""
+            PipelineNodeWidget {
+                background-color: #0b1120;
+                border: 1px solid #1e293b;
+                border-radius: 6px;
+            }
+        """)
+        self.setMinimumWidth(110)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(2)
+
+        # 1. Step Category / Number
+        self.lbl_cat = QLabel(f"{step_idx}. {step_type}".upper())
+        self.lbl_cat.setStyleSheet("color: #64748b; font-size: 9px; font-weight: bold; letter-spacing: 0.5px;")
+        layout.addWidget(self.lbl_cat)
+
+        # 2. Main Component Name
+        self.lbl_title = QLabel(title)
+        self.lbl_title.setStyleSheet("color: #38bdf8; font-size: 11px; font-weight: bold;")
+        self.lbl_title.setWordWrap(True)
+        layout.addWidget(self.lbl_title)
+
+        # 3. Execution Target / Metric Badge
+        self.lbl_backend = QLabel(backend)
+        self.lbl_backend.setStyleSheet("color: #94a3b8; font-size: 10px; font-family: Consolas, monospace;")
+        self.lbl_backend.setWordWrap(True)
+        layout.addWidget(self.lbl_backend)
+
+    def update_node(self, title: str = None, backend: str = None, active: bool = False, metric: str = None):
+        if title is not None:
+            self.title_text = title
+            self.lbl_title.setText(title)
+        if backend is not None:
+            self.backend_text = backend
+
+        display_sub = self.backend_text
+        if metric:
+            display_sub = f"{self.backend_text} | {metric}"
+        self.lbl_backend.setText(display_sub)
+
+        if active:
+            self.setStyleSheet("""
+                PipelineNodeWidget {
+                    background-color: #0f233a;
+                    border: 1px solid #38bdf8;
+                    border-radius: 6px;
+                }
+            """)
+            self.lbl_title.setStyleSheet("color: #7dd3fc; font-size: 11px; font-weight: bold;")
+            self.lbl_backend.setStyleSheet("color: #34d399; font-size: 10px; font-family: Consolas, monospace; font-weight: bold;")
+        else:
+            self.setStyleSheet("""
+                PipelineNodeWidget {
+                    background-color: #0b1120;
+                    border: 1px solid #1e293b;
+                    border-radius: 6px;
+                }
+            """)
+            self.lbl_title.setStyleSheet("color: #38bdf8; font-size: 11px; font-weight: bold;")
+            self.lbl_backend.setStyleSheet("color: #94a3b8; font-size: 10px; font-family: Consolas, monospace;")
+
+
 class StageCard(QFrame):
-    """Visual pipeline flow, dynamic latency chips, and control card for a translation program."""
+    """Visual pipeline flow with modular node cards, hardware monitor, and process controls."""
 
     def __init__(
         self,
@@ -256,18 +330,19 @@ class StageCard(QFrame):
         h_head.addWidget(self.status_pill)
         layout.addLayout(h_head)
 
-        # 2. Pipeline Flow Schema Banner
+        # 2. Modular Pipeline Node Cards (Sub-cards for each DSP/AI step)
+        self.nodes_frame = QFrame()
+        self.nodes_frame.setStyleSheet("background: transparent; border: none;")
+        self.nodes_layout = QHBoxLayout(self.nodes_frame)
+        self.nodes_layout.setContentsMargins(0, 2, 0, 2)
+        self.nodes_layout.setSpacing(6)
+        self.nodes: List[PipelineNodeWidget] = []
+        self._init_nodes()
+        layout.addWidget(self.nodes_frame)
+
+        # Compatibility flow label (hidden, kept for backwards compatibility)
         self.lbl_flow = QLabel(I18n.t(self.flow_key))
-        self.lbl_flow.setStyleSheet("""
-            background-color: #111827;
-            color: #38bdf8;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 6px 10px;
-            border-radius: 5px;
-            border: 1px solid #1f2937;
-        """)
-        layout.addWidget(self.lbl_flow)
+        self.lbl_flow.hide()
 
         # 3. Plain Human Description
         self.lbl_desc = QLabel(I18n.t(self.desc_key))
@@ -286,11 +361,11 @@ class StageCard(QFrame):
         """)
         self.v_monitor = QVBoxLayout(self.monitor_frame)
         self.v_monitor.setContentsMargins(10, 8, 10, 8)
-        self.v_monitor.setSpacing(5)
+        self.v_monitor.setSpacing(4)
 
+        # Compatibility hidden label
         self.lbl_mon_hw = QLabel()
-        self.lbl_mon_hw.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        self.v_monitor.addWidget(self.lbl_mon_hw)
+        self.lbl_mon_hw.hide()
 
         self.lbl_mon_state = QLabel()
         self.lbl_mon_state.setStyleSheet("color: #e2e8f0; font-size: 11px;")
@@ -381,18 +456,123 @@ class StageCard(QFrame):
         h_btn.addWidget(self.lbl_telemetry)
         layout.addLayout(h_btn)
 
+    def _get_node_configs(self) -> List[Tuple[str, str, str, str]]:
+        lang = getattr(I18n, "current_lang", "ru")
+        if self.stage_id == "stage_1":
+            if lang == "ru":
+                return [
+                    ("1", "Аудиозахват", "WASAPI Loopback", "Системный звук"),
+                    ("2", "Детектор речи", "Silero VAD", "In-Process CPU"),
+                    ("3", "Распознавание", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
+                    ("4", "Нейроперевод", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("5", "Субтитры", "Always-on-Top", "DirectX DWM"),
+                ]
+            elif lang == "zh":
+                return [
+                    ("1", "音频捕获", "WASAPI Loopback", "系统音频"),
+                    ("2", "语音检测", "Silero VAD", "In-Process CPU"),
+                    ("3", "语音识别", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
+                    ("4", "神经翻译", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("5", "字幕输出", "Always-on-Top", "DirectX DWM"),
+                ]
+            else:
+                return [
+                    ("1", "Audio Capture", "WASAPI Loopback", "System Audio"),
+                    ("2", "Voice Activity", "Silero VAD", "In-Process CPU"),
+                    ("3", "Speech-to-Text", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
+                    ("4", "Neural MT", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("5", "Subtitles", "Always-on-Top", "DirectX DWM"),
+                ]
+
+        elif self.stage_id == "stage_2":
+            if lang == "ru":
+                return [
+                    ("1", "Экранный захват", "Screen Grabber", "GDI / DirectX"),
+                    ("2", "Распознавание", "RapidOcrNet ONNX", "PP-OCRv6 (CPU)"),
+                    ("3", "Машинный перевод", "Microsoft MT", "Облачный API"),
+                    ("4", "Окно перевода", "OverTranslate UI", "WPF Desktop"),
+                ]
+            elif lang == "zh":
+                return [
+                    ("1", "屏幕截图", "Screen Grabber", "GDI / DirectX"),
+                    ("2", "文字识别", "RapidOcrNet ONNX", "PP-OCRv6 (CPU)"),
+                    ("3", "机器翻译", "Microsoft MT", "云端 API"),
+                    ("4", "翻译窗口", "OverTranslate UI", "WPF 桌面"),
+                ]
+            else:
+                return [
+                    ("1", "Screen Capture", "Screen Grabber", "GDI / DirectX"),
+                    ("2", "Optical OCR", "RapidOcrNet ONNX", "PP-OCRv6 (CPU)"),
+                    ("3", "Machine Trans", "Microsoft MT", "Cloud API"),
+                    ("4", "Window", "OverTranslate UI", "WPF Desktop"),
+                ]
+
+        elif self.stage_id == "stage_3":
+            if lang == "ru":
+                return [
+                    ("1", "Вход микрофона", "WASAPI Input", "Физический микрофон"),
+                    ("2", "Распознавание", "Sber GigaAM CTC", "PyTorch (CPU)"),
+                    ("3", "Машинный перевод", "Helsinki Opus-MT", "In-Process (CPU)"),
+                    ("4", "Нейросинтез", "Pocket-TTS 24kHz", "Клонирование тембра"),
+                    ("5", "Аудиовыход", "Topping Loopback", "Аппаратный (0 мс)"),
+                ]
+            elif lang == "zh":
+                return [
+                    ("1", "麦克风输入", "WASAPI Input", "物理麦克风"),
+                    ("2", "语音识别", "Sber GigaAM CTC", "PyTorch (CPU)"),
+                    ("3", "机器翻译", "Helsinki Opus-MT", "In-Process (CPU)"),
+                    ("4", "语音合成", "Pocket-TTS 24kHz", "声音克隆"),
+                    ("5", "音频输出", "Topping Loopback", "硬件回环 (0 ms)"),
+                ]
+            else:
+                return [
+                    ("1", "Mic Input", "WASAPI Input", "Physical Mic"),
+                    ("2", "Speech-to-Text", "Sber GigaAM CTC", "PyTorch (CPU)"),
+                    ("3", "Machine Trans", "Helsinki Opus-MT", "In-Process (CPU)"),
+                    ("4", "Voice Synth", "Pocket-TTS 24kHz", "Voice Cloning"),
+                    ("5", "Audio Output", "Topping Loopback", "Hardware Loopback (0 ms)"),
+                ]
+        return []
+
+    def _init_nodes(self):
+        while self.nodes_layout.count():
+            item = self.nodes_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.nodes = []
+
+        cfg = self._get_node_configs()
+        for idx, (step_num, cat, title, backend) in enumerate(cfg):
+            if idx > 0:
+                arrow = QLabel("➔")
+                arrow.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                arrow.setStyleSheet("color: #475569; font-size: 13px; font-weight: bold; padding: 0 1px;")
+                self.nodes_layout.addWidget(arrow, 0)
+            node = PipelineNodeWidget(step_num, cat, title, backend)
+            self.nodes.append(node)
+            self.nodes_layout.addWidget(node, 1)
+
+    def _retranslate_nodes(self):
+        cfg = self._get_node_configs()
+        for idx, (step_num, cat, title, backend) in enumerate(cfg):
+            if idx < len(self.nodes):
+                self.nodes[idx].lbl_cat.setText(f"{step_num}. {cat}".upper())
+                self.nodes[idx].update_node(title=title, backend=backend, active=False)
+
     def update_card_monitor(self, live_data: dict = None):
         """Update hardware context, signal path, and live inference metrics."""
         if self.stage_id == "stage_1":
             if self._is_running and live_data and live_data.get("has_session"):
-                audio_dev = live_data.get("audio_device") or "WASAPI Loopback (Default Output)"
+                audio_dev = live_data.get("audio_device") or "WASAPI Loopback"
                 req_dev = str(live_data.get("asr_device_requested", "cpu")).strip()
                 act_dev = str(live_data.get("asr_device_actual", "cpu")).strip()
                 mt_name = live_data.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
 
-                self.lbl_mon_hw.setText(
-                    f"🎛 <b>Сигнальный тракт:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice INT8 [<b>{act_dev.upper()} Execution Provider</b>] | 🧠 <b>MT:</b> {mt_name} [<b>CPU / GGUF</b>]"
-                )
+                if len(self.nodes) >= 5:
+                    self.nodes[0].update_node(backend=audio_dev)
+                    self.nodes[2].update_node(title="SenseVoice INT8", backend=f"{act_dev.upper()} ONNX")
+                    self.nodes[3].update_node(title=mt_name)
+
                 if live_data.get("last_original") and live_data.get("last_asr_ms") is not None:
                     asr_ms = live_data.get("last_asr_ms", 0)
                     tl_ms = live_data.get("last_tl_ms", 0)
@@ -403,10 +583,25 @@ class StageCard(QFrame):
                     trans = live_data.get("last_translation", "")
                     if len(trans) > 55:
                         trans = trans[:52] + "..."
+
+                    if len(self.nodes) >= 5:
+                        self.nodes[1].update_node(active=True, metric="Active")
+                        self.nodes[2].update_node(active=True, metric=f"{asr_ms} ms")
+                        self.nodes[3].update_node(active=True, metric=f"{tl_ms} ms")
+                        self.nodes[4].update_node(active=True, metric="Live")
+
                     self.lbl_mon_state.setText(
-                        f"⏱ <b>Инференс сегмента:</b> <span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ <span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ <span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | 💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
+                        f"⏱ <b>Инференс сегмента:</b> <span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ "
+                        f"<span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ "
+                        f"<span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | "
+                        f"💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
                     )
                 else:
+                    if len(self.nodes) >= 5:
+                        self.nodes[1].update_node(active=False, metric="Standby")
+                        self.nodes[2].update_node(active=False, metric=None)
+                        self.nodes[3].update_node(active=False, metric=None)
+                        self.nodes[4].update_node(active=False, metric=None)
                     self.lbl_mon_state.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Порог: 50%)")
 
                 if live_data.get("error_msg"):
@@ -420,23 +615,27 @@ class StageCard(QFrame):
                 else:
                     self.lbl_mon_alert.hide()
             else:
-                self.lbl_mon_hw.setText("🎛 <b>Конфигурация тракта:</b> WASAPI Loopback ➔ Silero VAD ➔ Sherpa-ONNX SenseVoice INT8 (CPU) ➔ Tencent HY-MT1.5 (In-Process CPU)")
+                self._retranslate_nodes()
                 self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Тракт готов к приёму системного аудиопотока")
                 self.lbl_mon_alert.hide()
 
         elif self.stage_id == "stage_2":
-            self.lbl_mon_hw.setText("🖼 <b>Оптический тракт:</b> Screen Grab (GDI/DirectX) ➔ RapidOcrNet ONNX (PP-OCRv6) ➔ Microsoft MT (Облачный API)")
             if self._is_running:
+                for n in self.nodes:
+                    n.update_node(active=True)
                 self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна в системном трее | Горячие клавиши: Ctrl + Alt + A (Область) | Ctrl + C + C (Буфер)")
             else:
+                self._retranslate_nodes()
                 self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Перехват экрана по комбинации Ctrl + Alt + A")
             self.lbl_mon_alert.hide()
 
         elif self.stage_id == "stage_3":
-            self.lbl_mon_hw.setText("🎙 <b>Речевой тракт:</b> WASAPI Input (Микрофон) ➔ GigaAM CTC ➔ Opus-MT ➔ Pocket-TTS 24kHz ➔ Loopback Out")
             if self._is_running:
+                for n in self.nodes:
+                    n.update_node(active=True)
                 self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна | Режим рации: Shift + Колесико мыши (Push-To-Talk) ➔ Голос синтезируется в выходной канал")
             else:
+                self._retranslate_nodes()
                 self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Акустический профиль my_pocket_voice.safetensors загружен")
             self.lbl_mon_alert.hide()
 
@@ -447,6 +646,7 @@ class StageCard(QFrame):
         self.btn_start.setText(I18n.t("btn_start"))
         self.btn_stop.setText(I18n.t("btn_stop"))
         self.btn_open.setText(I18n.t(self.open_label_key))
+        self._retranslate_nodes()
         self.update_card_monitor()
         self.set_running(self._is_running, force=True)
 
@@ -546,8 +746,8 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(1020, 820)
-        self.setMinimumSize(940, 720)
+        self.resize(1140, 890)
+        self.setMinimumSize(980, 750)
 
         self._active_routing_mode = "topping"
         self._last_settings_mtimes: Dict[str, float] = {}
@@ -582,6 +782,30 @@ class EcosystemHub(QMainWindow):
         self.card_stage1.update_card_monitor(m1)
         self.card_stage2.update_card_monitor()
         self.card_stage3.update_card_monitor()
+
+        # Update translation model name from LiveTranslate config if available
+        try:
+            s1_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
+            if s1_file.is_file() and hasattr(self, "card_stage1") and len(self.card_stage1.nodes) >= 5:
+                cfg = json.loads(s1_file.read_text(encoding="utf-8"))
+                models = cfg.get("models", [])
+                active_idx = cfg.get("active_model_index", 0)
+                if 0 <= active_idx < len(models):
+                    m_name = models[active_idx].get("name", "Tencent HY-MT1.5")
+                    clean_name = m_name.split("(")[0].strip()
+                    self.card_stage1.nodes[3].update_node(title=clean_name)
+        except Exception:
+            pass
+
+        # Update OCR translation provider from OverTranslate config if available
+        try:
+            s2_file = PROJECT_ROOT / "CONFIG" / "stage_2_screen" / "appsettings.json"
+            if s2_file.is_file() and hasattr(self, "card_stage2") and len(self.card_stage2.nodes) >= 4:
+                cfg = json.loads(s2_file.read_text(encoding="utf-8"))
+                prov = cfg.get("Provider", "Microsoft")
+                self.card_stage2.nodes[2].update_node(title=f"{prov} MT")
+        except Exception:
+            pass
 
     def _check_and_refresh_latencies_on_change(self):
         """Detect live changes in LiveTranslate or OverTranslate configs and hot-reload pipeline latency chips."""
@@ -620,6 +844,8 @@ class EcosystemHub(QMainWindow):
             self.btn_hub_topping.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 12px; border: 1px solid #60a5fa;")
             self.btn_hub_cable.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 12px; border: 1px solid #374151;")
             self.btn_install_cable.hide()
+            if hasattr(self, "card_stage3") and len(self.card_stage3.nodes) >= 5:
+                self.card_stage3.nodes[4].update_node(title="Topping Loopback", backend="Аппаратный (0 мс)")
         else:
             self.btn_hub_cable.setStyleSheet("background-color: #059669; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 12px; border: 1px solid #34d399;")
             self.btn_hub_topping.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 12px; border: 1px solid #374151;")
@@ -627,6 +853,8 @@ class EcosystemHub(QMainWindow):
                 self.btn_install_cable.show()
             else:
                 self.btn_install_cable.hide()
+            if hasattr(self, "card_stage3") and len(self.card_stage3.nodes) >= 5:
+                self.card_stage3.nodes[4].update_node(title="VB-Audio Cable", backend="Виртуальный драйвер (~15 мс)")
 
     def _on_hub_switch_profile(self, mode: str):
         if mode == "cable":
@@ -824,31 +1052,42 @@ class EcosystemHub(QMainWindow):
 
         # EMBED Stage 3 Specific Controls (Audio Hardware Selector & Voice Wizard)
         self.card_stage3.stage3_container.show()
-        h_stage3_hw = QHBoxLayout()
-        h_stage3_hw.setSpacing(8)
+
+        # Row 1: Output audio routing channel
+        h_row_hw = QHBoxLayout()
+        h_row_hw.setSpacing(8)
 
         self.lbl_hw_title = QLabel(f"<b>{I18n.t('hardware_title')}</b>")
-        self.lbl_hw_title.setStyleSheet("color: #e5e7eb; font-size: 11px;")
-        h_stage3_hw.addWidget(self.lbl_hw_title)
+        self.lbl_hw_title.setStyleSheet("color: #e2e8f0; font-size: 11px;")
+        h_row_hw.addWidget(self.lbl_hw_title)
 
         self.btn_hub_topping = QPushButton(I18n.t("hardware_topping"))
         self.btn_hub_topping.setFixedHeight(28)
         self.btn_hub_topping.clicked.connect(lambda: self._on_hub_switch_profile("topping"))
-        h_stage3_hw.addWidget(self.btn_hub_topping)
+        h_row_hw.addWidget(self.btn_hub_topping)
 
         self.btn_hub_cable = QPushButton(I18n.t("hardware_cable"))
         self.btn_hub_cable.setFixedHeight(28)
         self.btn_hub_cable.clicked.connect(lambda: self._on_hub_switch_profile("cable"))
-        h_stage3_hw.addWidget(self.btn_hub_cable)
+        h_row_hw.addWidget(self.btn_hub_cable)
 
         self.btn_install_cable = QPushButton(I18n.t("hardware_install_cable"))
         self.btn_install_cable.setFixedHeight(28)
         self.btn_install_cable.setStyleSheet("background-color: #0284c7; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; font-size: 11px;")
         self.btn_install_cable.clicked.connect(self._on_install_cable)
         self.btn_install_cable.hide()
-        h_stage3_hw.addWidget(self.btn_install_cable)
+        h_row_hw.addWidget(self.btn_install_cable)
 
-        h_stage3_hw.addSpacing(10)
+        h_row_hw.addStretch()
+        self.card_stage3.stage3_layout.addLayout(h_row_hw)
+
+        # Row 2: Voice Cloning Profile Wizard
+        h_row_wiz = QHBoxLayout()
+        h_row_wiz.setSpacing(8)
+
+        self.lbl_wiz_title = QLabel(f"<b>{I18n.t('wizard_title')}</b>")
+        self.lbl_wiz_title.setStyleSheet("color: #e2e8f0; font-size: 11px;")
+        h_row_wiz.addWidget(self.lbl_wiz_title)
 
         self.btn_launch_wizard = QPushButton(I18n.t("btn_wizard"))
         self.btn_launch_wizard.setFixedHeight(28)
@@ -860,14 +1099,19 @@ class EcosystemHub(QMainWindow):
                 font-size: 11px;
                 border-radius: 4px;
                 padding: 0 12px;
+                border: 1px solid #6366f1;
             }
             QPushButton:hover { background-color: #6366f1; }
         """)
         self.btn_launch_wizard.clicked.connect(self._on_open_voice_wizard)
-        h_stage3_hw.addWidget(self.btn_launch_wizard)
+        h_row_wiz.addWidget(self.btn_launch_wizard)
 
-        h_stage3_hw.addStretch()
-        self.card_stage3.stage3_layout.addLayout(h_stage3_hw)
+        self.lbl_wiz_desc = QLabel(I18n.t("wizard_desc"))
+        self.lbl_wiz_desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_row_wiz.addWidget(self.lbl_wiz_desc)
+
+        h_row_wiz.addStretch()
+        self.card_stage3.stage3_layout.addLayout(h_row_wiz)
 
         layout.addWidget(self.card_stage3)
         layout.addStretch()
@@ -1378,7 +1622,9 @@ class EcosystemHub(QMainWindow):
         self.btn_hub_topping.setText(I18n.t("hardware_topping"))
         self.btn_hub_cable.setText(I18n.t("hardware_cable"))
         self.btn_install_cable.setText(I18n.t("hardware_install_cable"))
+        self.lbl_wiz_title.setText(f"<b>{I18n.t('wizard_title')}</b>")
         self.btn_launch_wizard.setText(I18n.t("btn_wizard"))
+        self.lbl_wiz_desc.setText(I18n.t("wizard_desc"))
 
         self.lbl_patches_head.setText(f"<b>{I18n.t('patches_header')}</b>")
         self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh"))

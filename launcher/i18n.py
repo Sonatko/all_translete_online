@@ -39,7 +39,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_stop": "⏹ Остановить",
         "btn_open": "🗔 Открыть окно",
         "btn_studio": "🗔 Студия речи",
-        "btn_wizard": "🎙 Записать образец голоса (7 сек)",
+        "btn_wizard": "🎙 Запись голоса (7 сек)",
+        "wizard_title": "Персональный тембр:",
         "wizard_desc": "Обучить программу говорить вашим персональным тембром голоса за 7 секунд.",
 
         "status_running": "● Работает",
@@ -51,10 +52,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "latency_mode_cloud": "Облачный API",
 
         # Hardware audio selector
-        "hardware_title": "Канал вывода переведенного голоса:",
-        "hardware_topping": "🎛 Topping E2x2 (Аппаратный Loopback)",
-        "hardware_cable": "🔌 Виртуальный кабель (VB-Audio Cable)",
-        "hardware_install_cable": "📥 Установить VB-Cable (1 клик)",
+        "hardware_title": "Выходной аудиоканал:",
+        "hardware_topping": "🎛 Topping Loopback",
+        "hardware_cable": "🔌 VB-Cable",
+        "hardware_install_cable": "📥 Установить VB-Cable",
         "btn_open_folder": "📂 Защищенные настройки (CONFIG/)",
 
         # Audio profile switch feedback
@@ -116,7 +117,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_stop": "⏹ Stop",
         "btn_open": "🗔 Open Window",
         "btn_studio": "🗔 Voice Studio",
-        "btn_wizard": "🎙 Record Voice Sample (7 sec)",
+        "btn_wizard": "🎙 Voice Cloning (7s)",
+        "wizard_title": "Voice Profile:",
         "wizard_desc": "Train the neural model to speak with your unique voice timbre in 7 seconds.",
 
         "status_running": "● Running",
@@ -128,10 +130,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "latency_mode_cloud": "Cloud API",
 
         # Hardware audio selector
-        "hardware_title": "Translated voice output audio channel:",
-        "hardware_topping": "🎛 Topping E2x2 (Hardware Loopback)",
-        "hardware_cable": "🔌 Virtual Cable (VB-Audio Cable)",
-        "hardware_install_cable": "📥 Install VB-Cable (1 Click)",
+        "hardware_title": "Output Audio Channel:",
+        "hardware_topping": "🎛 Topping Loopback",
+        "hardware_cable": "🔌 VB-Cable",
+        "hardware_install_cable": "📥 Install VB-Cable",
         "btn_open_folder": "📂 Protected Settings (CONFIG/)",
 
         # Audio profile switch feedback
@@ -194,6 +196,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_open": "🗔 打开窗口",
         "btn_studio": "🗔 声音控制台",
         "btn_wizard": "🎙 录制专属声音 (7秒)",
+        "wizard_title": "专属音色:",
         "wizard_desc": "仅需7秒录音即可让AI克隆您的声线.",
 
         "status_running": "● 运行中",

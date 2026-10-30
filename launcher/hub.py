@@ -1823,22 +1823,6 @@ class EcosystemHub(QMainWindow):
 
 
 def main():
-    # Terminate any stale prior Hub instances to guarantee fresh code and single-window UX
-    current_pid = os.getpid()
-    for p in psutil.process_iter(["name"]):
-        try:
-            if p.pid == current_pid:
-                continue
-            if "python" in (p.info.get("name") or "").lower():
-                cmdline = " ".join(p.cmdline() or []).lower()
-                if "hub.py" in cmdline:
-                    try:
-                        p.terminate()
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-
     app = QApplication(sys.argv)
     app.setApplicationName("Translation Ecosystem Hub")
     hub = EcosystemHub()

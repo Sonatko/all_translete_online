@@ -344,25 +344,51 @@ class StudioWindow(QMainWindow):
         layout.setSpacing(12)
 
         # 1-Click Hardware Profiles Selector Banner
-        grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик (1-Click Hardware Profiles)")
-        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
+        grp_profiles = QGroupBox("Шаг 1: Какая у вас звуковая карта? (1 клик)")
+        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; font-size: 13px; }")
         h_prof = QHBoxLayout(grp_profiles)
         h_prof.setSpacing(10)
 
-        self.btn_prof_topping = QPushButton("🎛 Режим: Звуковая карта Topping (Аппаратный 0 ms)")
+        self.btn_prof_topping = QPushButton("🎛 У меня Topping E2x2 (Аппаратный звук 0 ms)")
         self.btn_prof_topping.setFixedHeight(38)
         self.btn_prof_topping.clicked.connect(lambda: self._on_switch_profile("topping"))
         h_prof.addWidget(self.btn_prof_topping, stretch=1)
 
-        self.btn_prof_cable = QPushButton("🔌 Режим: Виртуальный Кабель (Для обычных ПК без Topping)")
+        self.btn_prof_cable = QPushButton("🔌 У меня обычный ПК / Ноутбук (Виртуальный Кабель)")
         self.btn_prof_cable.setFixedHeight(38)
         self.btn_prof_cable.clicked.connect(lambda: self._on_switch_profile("cable"))
         h_prof.addWidget(self.btn_prof_cable, stretch=1)
 
         layout.addWidget(grp_profiles)
 
+        # How to Use In-Game Guide Card
+        guide_box = QFrame()
+        guide_box.setStyleSheet("""
+            QFrame {
+                background-color: #064e3b;
+                border: 2px solid #10b981;
+                border-radius: 8px;
+                padding: 12px 14px;
+            }
+        """)
+        v_guide = QVBoxLayout(guide_box)
+        v_guide.setSpacing(4)
+        lbl_g_title = QLabel("🎮 <b>КАК ГОВОРИТЬ С ПЕРЕВОДОМ В ИГРЕ И DISCORD:</b>")
+        lbl_g_title.setStyleSheet("color: #a7f3d0; font-size: 14px; font-weight: bold;")
+        v_guide.addWidget(lbl_g_title)
+
+        lbl_g_desc = QLabel(
+            "1. В игре (CS2) или Discord в качестве микрофона выберите <b>Loopback 1/2</b> (или <b>По умолчанию</b>).<br>"
+            "2. В любой момент игры зажмите <b>Shift + Колесико мыши (нажать на колесо)</b>.<br>"
+            "3. Скажите фразу на русском языке и <b>отпустите колесико</b>.<br>"
+            "4. Нейросеть мгновенно скажет эту фразу на английском языке <b>вашим собственным голосом</b> прямо тиммейтам!"
+        )
+        lbl_g_desc.setStyleSheet("color: #ecfdf5; font-size: 12px; line-height: 1.5;")
+        v_guide.addWidget(lbl_g_desc)
+        layout.addWidget(guide_box)
+
         # Device Selection Grid
-        grp_devs = QGroupBox("Аудиоустройства и интеграция")
+        grp_devs = QGroupBox("Шаг 2: Проверка звуковых каналов (настроено автоматически)")
         grid = QGridLayout(grp_devs)
         grid.setSpacing(10)
 
@@ -555,45 +581,46 @@ class StudioWindow(QMainWindow):
         models_grid.setSpacing(10)
 
         # STT Card
-        stt_box = QGroupBox("1. Распознавание речи (STT / ASR)")
+        stt_box = QGroupBox("1. Слушатель речи (Русский язык)")
         v_stt = QVBoxLayout(stt_box)
-        v_stt.addWidget(QLabel("<b>Sber GigaAM v3 Conformer CTC</b>"))
-        v_stt.addWidget(QLabel("Движок: Sherpa-ONNX INT8 | Потоков: 2 (Zen 4)"))
-        self.lbl_stt_state = QLabel("Статус: Загружен (~140 MB)")
-        self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold;")
+        v_stt.addWidget(QLabel("<b>Распознавание русской речи (GigaAM AI)</b>"))
+        v_stt.addWidget(QLabel("Слушает ваш голос с микрофона и переводит в текст"))
+        self.lbl_stt_state = QLabel("Статус: Проверка...")
+        self.lbl_stt_state.setStyleSheet("font-weight: bold; font-size: 12px;")
         v_stt.addWidget(self.lbl_stt_state)
         h_stt_btn = QHBoxLayout()
-        btn_stt_load = QPushButton("Загрузить")
-        btn_stt_load.clicked.connect(lambda: self.mm.load_stt())
-        btn_stt_unload = QPushButton("Выгрузить")
-        btn_stt_unload.clicked.connect(lambda: self.mm.unload_stt())
-        h_stt_btn.addWidget(btn_stt_load)
-        h_stt_btn.addWidget(btn_stt_unload)
+        self.btn_stt_load = QPushButton("📥 Загрузить")
+        self.btn_stt_load.clicked.connect(lambda: self.mm.load_stt())
+        self.btn_stt_unload = QPushButton("🗑 Выгрузить")
+        self.btn_stt_unload.clicked.connect(lambda: self.mm.unload_stt())
+        h_stt_btn.addWidget(self.btn_stt_load)
+        h_stt_btn.addWidget(self.btn_stt_unload)
         v_stt.addLayout(h_stt_btn)
         models_grid.addWidget(stt_box, 0, 0)
 
         # MT Card
-        mt_box = QGroupBox("2. Машинный перевод (MT)")
+        mt_box = QGroupBox("2. Переводчик (RU ➔ EN)")
         v_mt = QVBoxLayout(mt_box)
-        v_mt.addWidget(QLabel("<b>Helsinki Opus-MT RU ➔ EN</b>"))
-        v_mt.addWidget(QLabel("Движок: CTranslate2 INT8 | Потоков: 2"))
-        self.lbl_mt_state = QLabel("Статус: Загружен (~75 MB)")
-        self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold;")
+        v_mt.addWidget(QLabel("<b>Молниеносный перевод (Opus-MT)</b>"))
+        v_mt.addWidget(QLabel("Переводит русскую фразу на английский за 40 мс"))
+        self.lbl_mt_state = QLabel("Статус: Проверка...")
+        self.lbl_mt_state.setStyleSheet("font-weight: bold; font-size: 12px;")
         v_mt.addWidget(self.lbl_mt_state)
         h_mt_btn = QHBoxLayout()
-        btn_mt_load = QPushButton("Загрузить")
-        btn_mt_load.clicked.connect(lambda: self.mm.load_mt())
-        btn_mt_unload = QPushButton("Выгрузить")
-        btn_mt_unload.clicked.connect(lambda: self.mm.unload_mt())
-        h_mt_btn.addWidget(btn_mt_load)
-        h_mt_btn.addWidget(btn_mt_unload)
+        self.btn_mt_load = QPushButton("📥 Загрузить")
+        self.btn_mt_load.clicked.connect(lambda: self.mm.load_mt())
+        self.btn_mt_unload = QPushButton("🗑 Выгрузить")
+        self.btn_mt_unload.clicked.connect(lambda: self.mm.unload_mt())
+        h_mt_btn.addWidget(self.btn_mt_load)
+        h_mt_btn.addWidget(self.btn_mt_unload)
         v_mt.addLayout(h_mt_btn)
         models_grid.addWidget(mt_box, 0, 1)
 
         # TTS Card
-        tts_box = QGroupBox("3. Синтез и клонирование голоса (TTS)")
+        tts_box = QGroupBox("3. Озвучка вашим голосом (Английский язык)")
         v_tts = QVBoxLayout(tts_box)
-        v_tts.addWidget(QLabel("<b>Kyutai Pocket-TTS (Mimi Codec)</b>"))
+        v_tts.addWidget(QLabel("<b>Клонирование и синтез речи (Pocket-TTS)</b>"))
+        v_tts.addWidget(QLabel("Озвучивает английский перевод вашим клонированным голосом"))
         self.combo_voices = QComboBox()
         self.combo_voices.addItem("⭐ Мой клонированный голос (my_pocket_voice)", "my_pocket_voice")
         self.combo_voices.addItem("Juergen (Мужской, уверенный)", "juergen")
@@ -603,13 +630,13 @@ class StudioWindow(QMainWindow):
         self.combo_voices.currentIndexChanged.connect(self._on_voice_changed)
         v_tts.addWidget(self.combo_voices)
 
-        self.lbl_tts_state = QLabel("Статус: Загружен (~320 MB)")
-        self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold;")
+        self.lbl_tts_state = QLabel("Статус: Проверка...")
+        self.lbl_tts_state.setStyleSheet("font-weight: bold; font-size: 12px;")
         v_tts.addWidget(self.lbl_tts_state)
 
         # Speech Speed Slider
         h_speed = QHBoxLayout()
-        h_speed.addWidget(QLabel("Скорость речи диктора:"))
+        h_speed.addWidget(QLabel("Темп речи диктора (спокойно / быстро):"))
         self.slider_speed = QSlider(Qt.Orientation.Horizontal)
         self.slider_speed.setRange(60, 130)
         cur_spd = int(self.cfg.get("models", {}).get("tts_speed", 0.85) * 100)
@@ -621,12 +648,12 @@ class StudioWindow(QMainWindow):
         v_tts.addLayout(h_speed)
 
         h_tts_btn = QHBoxLayout()
-        btn_tts_load = QPushButton("Загрузить")
-        btn_tts_load.clicked.connect(lambda: self.mm.load_tts(self.combo_voices.currentData()))
-        btn_tts_unload = QPushButton("Выгрузить")
-        btn_tts_unload.clicked.connect(lambda: self.mm.unload_tts())
-        h_tts_btn.addWidget(btn_tts_load)
-        h_tts_btn.addWidget(btn_tts_unload)
+        self.btn_tts_load = QPushButton("📥 Загрузить")
+        self.btn_tts_load.clicked.connect(lambda: self.mm.load_tts(self.combo_voices.currentData()))
+        self.btn_tts_unload = QPushButton("🗑 Выгрузить")
+        self.btn_tts_unload.clicked.connect(lambda: self.mm.unload_tts())
+        h_tts_btn.addWidget(self.btn_tts_load)
+        h_tts_btn.addWidget(self.btn_tts_unload)
         v_tts.addLayout(h_tts_btn)
         models_grid.addWidget(tts_box, 1, 0, 1, 2)
 
@@ -727,6 +754,57 @@ class StudioWindow(QMainWindow):
         # 4. RAM Telemetry
         ram_mb = self.mm.get_process_ram_mb()
         self.lbl_ram_telemetry.setText(f"RAM процесса: {ram_mb:.0f} MB | VRAM: 0 MB (Strict CPU)")
+
+        # 5. Model Buttons & Badges State Machine (Prevents duplicate loading & confusing states)
+        self._sync_model_state(
+            stt_status, self.lbl_stt_state, self.btn_stt_load, self.btn_stt_unload, "~140 MB"
+        )
+        self._sync_model_state(
+            mt_status, self.lbl_mt_state, self.btn_mt_load, self.btn_mt_unload, "~75 MB"
+        )
+        self._sync_model_state(
+            tts_status, self.lbl_tts_state, self.btn_tts_load, self.btn_tts_unload, "~320 MB"
+        )
+
+        all_ready = (stt_status == "ready" and mt_status == "ready" and tts_status == "ready")
+        if all_ready:
+            self.btn_load_all.setEnabled(False)
+            self.btn_load_all.setText("✔ ВСЕ 3 НЕЙРОСЕТИ ЗАГРУЖЕНЫ И ГОТОВЫ К ИГРЕ")
+            self.btn_load_all.setStyleSheet("background-color: #065f46; color: #a7f3d0; font-weight: bold; padding: 8px 14px; border-radius: 5px;")
+            self.btn_unload_all.setEnabled(True)
+        else:
+            self.btn_load_all.setEnabled(True)
+            self.btn_load_all.setText("📥 Загрузить ВСЕ модели в ОЗУ (1 клик)")
+            self.btn_load_all.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; padding: 8px 14px; border-radius: 5px;")
+            any_loaded = (stt_status == "ready" or mt_status == "ready" or tts_status == "ready")
+            self.btn_unload_all.setEnabled(any_loaded)
+
+    def _sync_model_state(self, status: str, lbl: QLabel, btn_load: QPushButton, btn_unload: QPushButton, size_hint: str):
+        """Helper to synchronize button availability and labels with real engine state."""
+        if status == "ready":
+            lbl.setText(f"🟢 Готова к работе ({size_hint})")
+            lbl.setStyleSheet("color: #10b981; font-weight: bold;")
+            btn_load.setEnabled(False)
+            btn_load.setText("✔ Уже в памяти")
+            btn_load.setStyleSheet("background-color: #1f2937; color: #9ca3af; border: 1px solid #374151; border-radius: 4px; padding: 4px 10px;")
+            btn_unload.setEnabled(True)
+            btn_unload.setText("🗑 Выгрузить")
+            btn_unload.setStyleSheet("background-color: #991b1b; color: #ffffff; font-weight: bold; border-radius: 4px; padding: 4px 10px;")
+        elif status == "loading":
+            lbl.setText("⏳ Загрузка в память...")
+            lbl.setStyleSheet("color: #f59e0b; font-weight: bold;")
+            btn_load.setEnabled(False)
+            btn_load.setText("Загрузка...")
+            btn_unload.setEnabled(False)
+        else:
+            lbl.setText("⚪ Выгружена (ОЗУ свободно)")
+            lbl.setStyleSheet("color: #9ca3af; font-weight: normal;")
+            btn_load.setEnabled(True)
+            btn_load.setText("📥 Загрузить")
+            btn_load.setStyleSheet("background-color: #2563eb; color: #ffffff; font-weight: bold; border-radius: 4px; padding: 4px 10px;")
+            btn_unload.setEnabled(False)
+            btn_unload.setText("Выгружена")
+            btn_unload.setStyleSheet("background-color: #1f2937; color: #6b7280; border: 1px solid #374151; border-radius: 4px; padding: 4px 10px;")
 
     # =========================================================================
     # Callbacks & Handlers

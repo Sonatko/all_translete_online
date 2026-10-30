@@ -24,121 +24,12 @@ DEFAULT_SR = 48000
 BLOCK_SIZE = 480  # 10ms at 48kHz for responsive VU meters and minimal latency
 
 
-def _time_stretch(x: np.ndarray, speed: float = 1.0, window_size: int = 1024) -> np.ndarray:
-    """Pitch-preserving time stretch via Overlap-Add (OLA)."""
-    if abs(speed - 1.0) < 0.02 or len(x) <= window_size * 2:
-        return x
-    hop_in = int(window_size / 2)
-    hop_out = int(hop_in / speed)
-    window = np.hanning(window_size).astype(np.float32)
-    num_frames = (len(x) - window_size) // hop_in
-    if num_frames <= 0:
-        return x
-    out_len = num_frames * hop_out + window_size
-    output = np.zeros(out_len, dtype=np.float32)
-    norm = np.zeros(out_len, dtype=np.float32)
-    for i in range(num_frames):
-        in_pos = i * hop_in
-        out_pos = i * hop_out
-        output[out_pos:out_pos + window_size] += x[in_pos:in_pos + window_size] * window
-        norm[out_pos:out_pos + window_size] += window
-    nonzero = norm > 1e-3
-    output[nonzero] /= norm[nonzero]
-    return output
-
-
-# =========================================================================
-# Conversational Punctuation & Micro-Breathing Formatter (Human Cadence)
-# =========================================================================
-import re
-
-QUESTION_STARTERS = {
-    'кто', 'что', 'где', 'куда', 'откуда', 'когда', 'почему', 'зачем', 'как',
-    'сколько', 'чей', 'чья', 'чье', 'чьи', 'какой', 'какая', 'какое', 'какие'
-}
-QUESTION_PATTERNS = [
-    r'\bты (где|тут|здесь|готов|слышишь|пойдешь|можешь|видишь)\b',
-    r'\bвы (где|тут|здесь|готовы|слышите|пойдете|можете|видите)\b',
-    r'\b(есть ли|слышно ли|видно ли|можно ли)\b',
-    r'\bли\b',
-    r'\bкак дела\b'
-]
-URGENT_WORDS = {
-    'осторожно', 'внимание', 'назад', 'беги', 'быстрее', 'быстро',
-    'граната', 'флешка', 'помогите', 'помоги', 'спасите', 'раш',
-    'пуш', 'пушим', 'хорош', 'красава', 'красавчик', 'минус'
-}
-INTRO_WORDS = {
-    'привет', 'здравствуйте', 'парни', 'ребята', 'мужики', 'слушай',
-    'смотри', 'осторожно', 'внимание', 'пожалуйста', 'кстати', 'короче'
-}
-
-
-def _restore_punctuation(text: str) -> str:
-    """Format raw ASR text with capital letter, clause commas, and terminal marks."""
-    text = text.strip()
-    if not text:
-        return ""
-    words = text.lower().split()
-    first_word = words[0] if words else ""
-
-    # 1. Comma after introductory/alert word at start
-    if first_word in INTRO_WORDS and len(words) > 1:
-        text = words[0] + ", " + " ".join(words[1:])
-
-    # 2. Comma before coordination conjunctions for natural breathing pauses
-    text = re.sub(r'\s+(а|но|чтобы|если|потому что|хотя)\s+', r', \1 ', text)
-
-    # 3. Capitalize first letter
-    text = text[0].upper() + text[1:]
-
-    # 4. Determine terminal question or exclamation mark
-    is_question = first_word in QUESTION_STARTERS or any(re.search(pat, text.lower()) for pat in QUESTION_PATTERNS)
-    is_urgent = any(w in URGENT_WORDS for w in words)
-
-    if is_question:
-        term = "?"
-    elif is_urgent:
-        term = "!"
-    else:
-        term = "."
-
-    if text and text[-1] not in ".!?":
-        text += term
-    return text
-
-
-def _ensure_english_punctuation(en_text: str, ru_source: str) -> str:
-    """Ensure translated English text preserves proper question/urgency marks and pauses."""
-    en_text = en_text.strip()
-    if not en_text:
-        return ""
-    # Capitalize
-    en_text = en_text[0].upper() + en_text[1:]
-
-    # Match terminal punctuation from Russian if English missed it
-    if ru_source.endswith("?") and not en_text.endswith("?"):
-        en_text = en_text.rstrip(".!?,") + "?"
-    elif ru_source.endswith("!") and not en_text.endswith("!"):
-        en_text = en_text.rstrip(".!?,") + "!"
-    elif not en_text.endswith((".", "!", "?")):
-        en_text = en_text.rstrip(",") + "."
-
-    return en_text
-
-
 class AudioEngine:
     """Core low-latency audio processing coordinator."""
 
     def __init__(self, model_manager: ModelManager, config: Dict):
         self.mm = model_manager
         self.config = config
-
-        # Configure TTS temperature and decode steps on startup
-        tts_temp = float(self.config.get("models", {}).get("tts_temperature", 0.48))
-        self.mm.set_tts_temperature(tts_temp)
-        tts_steps = int(self.config.get("models", {}).get("tts_decode_steps", 1))
-        self.mm.set_tts_decode_steps(tts_steps)
 
         # Audio streams
         self._in_stream: Optional[sd.InputStream] = None
@@ -564,30 +455,28 @@ class AudioEngine:
                 audio_16k = signal.resample(audio_48k, num_samples_16k).astype(np.float32)
 
                 # Step 1: STT Transcription
-                raw_ru, stt_ms = self.mm.transcribe(audio_16k)
+                ru_text, stt_ms = self.mm.transcribe(audio_16k)
                 self.last_stt_ms = round(stt_ms, 1)
+                self.last_ru_text = ru_text
 
-                if not raw_ru.strip():
+                if not ru_text.strip():
                     log.info("STT returned empty transcript (silence/noise).")
                     self.engine_state = "IDLE"
                     continue
 
-                ru_text = _restore_punctuation(raw_ru)
-                self.last_ru_text = ru_text
-                log.info("STT [%.1f ms]: %s -> Punctuated: %s", stt_ms, raw_ru, ru_text)
+                log.info("STT [%.1f ms]: %s", stt_ms, ru_text)
 
                 # Step 2: MT Translation (Russian -> English)
-                raw_en, mt_ms = self.mm.translate(ru_text)
+                en_text, mt_ms = self.mm.translate(ru_text)
                 self.last_mt_ms = round(mt_ms, 1)
+                self.last_en_text = en_text
 
-                if not raw_en.strip():
+                if not en_text.strip():
                     log.info("MT returned empty translation.")
                     self.engine_state = "IDLE"
                     continue
 
-                en_text = _ensure_english_punctuation(raw_en, ru_text)
-                self.last_en_text = en_text
-                log.info("MT  [%.1f ms]: %s -> Punctuated: %s", mt_ms, raw_en, en_text)
+                log.info("MT  [%.1f ms]: %s", mt_ms, en_text)
 
                 # Step 3: TTS Synthesis (Pocket-TTS Cloned Voice)
                 self.engine_state = "SPEAKING"
@@ -600,12 +489,8 @@ class AudioEngine:
 
                 # Step 4: Resample synthesized 24kHz audio to 48kHz and enqueue to streams
                 if tts_audio_24k is not None and len(tts_audio_24k) > 0:
-                    # Apply speech speed adjustment (default 0.85x for natural speech pacing)
-                    speed = float(self.config.get("models", {}).get("tts_speed", 0.85))
-                    stretched_audio = _time_stretch(tts_audio_24k, speed=speed)
-
-                    num_samples_48k = int(len(stretched_audio) * DEFAULT_SR / tts_sr)
-                    out_48k = signal.resample(stretched_audio, num_samples_48k).astype(np.float32)
+                    num_samples_48k = int(len(tts_audio_24k) * DEFAULT_SR / tts_sr)
+                    out_48k = signal.resample(tts_audio_24k, num_samples_48k).astype(np.float32)
 
                     # Chunk and dispatch to Playback 3/4 (Game)
                     chunk_size = BLOCK_SIZE

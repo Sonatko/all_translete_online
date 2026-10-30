@@ -45,3 +45,5 @@ all_translete_online_release.zip
 # Explicitly track CONFIG directory
 !CONFIG/
 !CONFIG/**
+
+.idea/

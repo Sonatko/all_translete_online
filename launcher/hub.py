@@ -538,6 +538,7 @@ class EcosystemHub(QMainWindow):
         self.setMinimumSize(940, 720)
 
         self._active_routing_mode = "topping"
+        self._last_settings_mtimes: Dict[str, float] = {}
         self._apply_theme()
         self._init_ui()
         self._retranslate_ui(is_initial=True)
@@ -567,6 +568,25 @@ class EcosystemHub(QMainWindow):
 
         lat3 = LatencyEstimator.get_stage3_latency(self._active_routing_mode)
         self.card_stage3.update_latency_display(lat3)
+
+    def _check_and_refresh_latencies_on_change(self):
+        """Detect live changes in LiveTranslate or OverTranslate configs and hot-reload pipeline latency chips."""
+        s1_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
+        s2_file = PROJECT_ROOT / "CONFIG" / "stage_2_screen" / "appsettings.json"
+
+        changed = False
+        for f in (s1_file, s2_file):
+            if f.is_file():
+                try:
+                    mtime = f.stat().st_mtime
+                    if self._last_settings_mtimes.get(str(f)) != mtime:
+                        self._last_settings_mtimes[str(f)] = mtime
+                        changed = True
+                except OSError:
+                    pass
+
+        if changed:
+            self._refresh_all_latencies()
 
     def _update_hub_profile_styles(self):
         try:
@@ -1357,6 +1377,9 @@ class EcosystemHub(QMainWindow):
             self._poll_process_status()
 
     def _poll_process_status(self):
+        # 1. Hot-reload pipeline latency chips if user altered models or settings in any program
+        self._check_and_refresh_latencies_on_change()
+
         status = EcosystemProcessManager.get_stage_status()
         self.card_stage1.update_telemetry(status["stage_1"])
         self.card_stage2.update_telemetry(status["stage_2"])

@@ -221,15 +221,15 @@ def test_patch_integrity_checker():
     audit = PatchIntegrityChecker.audit_all()
     assert isinstance(audit, dict), "Audit result is not a dictionary"
     assert audit["all_passed"] is True, f"Integrity check failed: {audit}"
-    assert audit["patches_ok"] is True, "The 5 golden patches are not all active"
-    assert audit["total_patches_count"] == 5, f"Expected 5 patches, got {audit['total_patches_count']}"
+    assert audit["patches_ok"] is True, "The engineering patches are not all active"
+    assert audit["total_patches_count"] >= 8, f"Expected at least 8 patches, got {audit['total_patches_count']}"
     assert audit["passed_count"] == audit["total_count"], f"Mismatch: {audit['passed_count']}/{audit['total_count']}"
-    assert len(audit["items"]) >= 8, f"Insufficient audit items: {len(audit['items'])}"
+    assert len(audit["items"]) >= 10, f"Insufficient audit items: {len(audit['items'])}"
     
     # 2. Test self-healing restore logic
     restore_res = PatchIntegrityChecker.restore_all_patches()
     assert restore_res["success"] is True, f"Patch restore failed: {restore_res}"
-    assert len(restore_res["restored_files"]) >= 5, f"Unexpected restored count: {restore_res}"
+    assert len(restore_res["restored_files"]) >= 8, f"Unexpected restored count: {restore_res}"
     
     # 3. Post-restore verification
     post_audit = PatchIntegrityChecker.audit_all()
@@ -238,7 +238,7 @@ def test_patch_integrity_checker():
     log_test(
         "Patch & Health Integrity Auditor & Self-Healing",
         True,
-        f"All 5 Golden Patches active across modules | Modular vault validated ({audit['passed_count']}/{audit['total_count']} items) | Self-healing restored {len(restore_res['restored_files'])} files"
+        f"All {audit['total_patches_count']} Engineering Patches active across modules | Modular vault validated ({audit['passed_count']}/{audit['total_count']} items) | Self-healing restored {len(restore_res['restored_files'])} files"
     )
 
 if __name__ == "__main__":

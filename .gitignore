@@ -31,6 +31,9 @@ stage_3_voice/models/
 stage_3_voice/Dizcord/models/
 stage_3_voice/scratch/
 stage_2_screen/OverTranslate/current/
+stage_2_screen/OverTranslate/*.dll
+stage_2_screen/OverTranslate/*.json
+hub_*_preview.png
 bin/
 *.exe
 *.msi

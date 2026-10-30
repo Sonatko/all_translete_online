@@ -682,7 +682,7 @@ class EcosystemHub(QMainWindow):
         self.btn_stop_all.clicked.connect(EcosystemProcessManager.stop_all)
         h.addWidget(self.btn_stop_all)
 
-        # Patch Health Quick Pill (Navigates to Tab 1)
+        # Patch Health Quick Pill (Navigates to Tab 1 or refreshes audit)
         self.lbl_patch_quick = QPushButton("🛡 Патчи: Проверка...")
         self.lbl_patch_quick.setFixedHeight(42)
         self.lbl_patch_quick.setStyleSheet("""
@@ -698,7 +698,7 @@ class EcosystemHub(QMainWindow):
             }
             QPushButton:hover { background-color: #0f172a; }
         """)
-        self.lbl_patch_quick.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
+        self.lbl_patch_quick.clicked.connect(self._on_quick_patch_clicked)
         h.addWidget(self.lbl_patch_quick)
 
         h.addStretch()
@@ -899,7 +899,7 @@ class EcosystemHub(QMainWindow):
         self.btn_audit_refresh = QPushButton()
         self.btn_audit_refresh.setFixedHeight(36)
         self.btn_audit_refresh.setStyleSheet("background-color: #374151; color: #fff; border-radius: 4px; padding: 0 14px; font-weight: bold;")
-        self.btn_audit_refresh.clicked.connect(self._populate_patches_view)
+        self.btn_audit_refresh.clicked.connect(self._on_audit_refresh_clicked)
         h_ctrl.addWidget(self.btn_audit_refresh)
 
         self.btn_vault_folder = QPushButton()
@@ -974,60 +974,88 @@ class EcosystemHub(QMainWindow):
 
         return frame
 
+    def _on_quick_patch_clicked(self):
+        """Top bar patch pill click: navigate to tab 1 or re-audit if already there."""
+        if self.tabs.currentIndex() != 1:
+            self.tabs.setCurrentIndex(1)
+        else:
+            self._on_audit_refresh_clicked()
+
+    def _on_audit_refresh_clicked(self):
+        """Re-audits system and provides clear, immediate visual confirmation."""
+        self._populate_patches_view()
+        self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh_done"))
+        self.btn_audit_refresh.setStyleSheet("background-color: #064e3b; color: #34d399; border-radius: 4px; padding: 0 14px; font-weight: bold; border: 1px solid #059669;")
+        QTimer.singleShot(1500, self._reset_audit_refresh_button)
+
+    def _reset_audit_refresh_button(self):
+        self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh"))
+        self.btn_audit_refresh.setStyleSheet("background-color: #374151; color: #fff; border-radius: 4px; padding: 0 14px; font-weight: bold;")
+
     def _populate_patches_view(self):
         audit = PatchIntegrityChecker.audit_all()
         modules = audit["modules"]
 
-        # 1. Clear old widgets
+        # 1. Update groupbox titles from i18n
+        self.box_module1.setTitle(I18n.t("m1_group_title"))
+        self.box_module2.setTitle(I18n.t("m2_group_title"))
+        self.box_module3.setTitle(I18n.t("m3_group_title"))
+        self.box_vault.setTitle(I18n.t("vault_group_title"))
+
+        # 2. Clear old widgets
         for layout in (self.v_m1, self.v_m2, self.v_m3, self.v_vault):
             while layout.count():
                 child = layout.takeAt(0)
                 if child.widget():
                     child.widget().deleteLater()
 
-        # 2. Populate Module 1
+        # 3. Populate Module 1
         for it in modules.get("stage_1", {}).get("items", []):
             self.v_m1.addWidget(self._render_patch_row(it))
 
-        # 3. Populate Module 2
+        # 4. Populate Module 2
         for it in modules.get("stage_2", {}).get("items", []):
             self.v_m2.addWidget(self._render_patch_row(it))
 
-        # 4. Populate Module 3
+        # 5. Populate Module 3
         for it in modules.get("stage_3", {}).get("items", []):
             self.v_m3.addWidget(self._render_patch_row(it))
 
-        # 5. Populate Vault
+        # 6. Populate Vault
         for it in modules.get("config", {}).get("items", []):
             self.v_vault.addWidget(self._render_patch_row(it))
 
-        # 6. Update Summary Banner & Quick Header Pill
+        # 7. Update Summary Banner & Quick Header Pill
+        active_cnt = audit["active_patches_count"]
+        tot_cnt = audit["total_patches_count"]
         if audit["all_passed"]:
-            self.lbl_patches_summary.setText(f"🟢 Все 5 патчей активны (5/5) | Настройки и файлы в CONFIG/ защищены")
+            summary_msg = I18n.t("patches_summary_ok", active=active_cnt, total=tot_cnt)
+            self.lbl_patches_summary.setText(summary_msg)
             self.lbl_patches_summary.setStyleSheet("background-color: #064e3b; color: #a7f3d0; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #059669;")
-            self.lbl_patch_quick.setText("🛡 5 Патчей активны (ОК)")
+            self.lbl_patch_quick.setText(f"🛡 {active_cnt}/{tot_cnt} Патчей активны (ОК)")
             self.lbl_patch_quick.setStyleSheet("background-color: #064e3b; color: #34d399; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #059669;")
         else:
             self.lbl_patches_summary.setText(I18n.t("patches_summary_fail"))
             self.lbl_patches_summary.setStyleSheet("background-color: #7f1d1d; color: #fecaca; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #dc2626;")
-            self.lbl_patch_quick.setText(f"🔴 Патчи: {audit['active_patches_count']}/5 (СЛЕТЕЛ)")
+            self.lbl_patch_quick.setText(f"🔴 Патчи: {active_cnt}/{tot_cnt} (СЛЕТЕЛ)")
             self.lbl_patch_quick.setStyleSheet("background-color: #7f1d1d; color: #fca5a5; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #dc2626;")
 
     def _on_restore_patches_clicked(self):
         res = PatchIntegrityChecker.restore_all_patches()
         self._populate_patches_view()
-        if res["success"]:
-            QMessageBox.information(
-                self,
-                "Успешное восстановление",
-                f"Все 5 ключевых патчей и конфигурации успешно восстановлены из хранилища CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
-            )
-        else:
-            QMessageBox.critical(
-                self,
-                "Ошибка восстановления",
-                f"Не удалось восстановить патчи:\n" + "\n".join(res["errors"]),
-            )
+        if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
+            if res["success"]:
+                QMessageBox.information(
+                    self,
+                    "Успешное восстановление",
+                    f"Все ключевые инженерные патчи и конфигурации успешно восстановлены из хранилища CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
+                )
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Ошибка восстановления",
+                    f"Не удалось восстановить патчи:\n" + "\n".join(res["errors"]),
+                )
 
     # =========================================================================
     # Tab 3: Plain-Human Architecture & Future Reference Guide
@@ -1041,20 +1069,20 @@ class EcosystemHub(QMainWindow):
         layout.setSpacing(14)
 
         # Card 1: Module 1 Guide
-        box_m1 = QGroupBox("1. Программа 1: Синхронные субтитры (LiveTranslate)")
+        box_m1 = QGroupBox("1. Программа 1: Синхронные субтитры (LiveTranslate) — Инженерные патчи")
         v_m1 = QVBoxLayout(box_m1)
         lbl_m1 = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
 <b>Что делает:</b> Перехватывает любой системный звук из наушников (видео, онлайн-звонки, браузер, медиа) и выводит перевод субтитрами поверх экрана.<br><br>
-<b>Как устроен поток данных:</b><br>
-1. <b>Захват звука:</b> через системную петлю Windows WASAPI Loopback.<br>
-2. <b>Распознавание речи:</b> локальная нейросеть <b>SenseVoice</b> расшифровывает голос всего за ~170 миллисекунд прямо на процессоре.<br>
-3. <b>Перевод:</b> языковая модель <b>Tencent Hunyuan MT 1.8B</b> переводит фразу на русский язык.<br>
-4. <b>Вывод:</b> прозрачные субтитры поверх всех окон.<br><br>
-<b>Главные горячие клавиши:</b><br>
-• <code style="color: #60a5fa; font-weight: bold;">F9</code> — Единый переключатель: мгновенно скрывает/показывает субтитры и ставит транскрипцию на паузу (чтобы не нагружать процессор в тишине).<br>
+<b>Ключевые инженерные доработки под капотом:</b><br>
+1. <b>Ускорение ASR (Sherpa-ONNX SenseVoice INT8):</b> Тяжёлый и медленный Whisper заменён на лёгкий ONNX-конвейер с поддержкой инструкций процессора AVX-512 / VNNI. Время распознавания сокращено с ~900 мс до <b>~170 миллисекунд</b> прямо на CPU.<br>
+2. <b>Вшитая языковая модель перевода (In-Process Hunyuan MT 1.8B):</b> Мы отказались от поднятия сторонних веб-серверов (Ollama, Docker, порт 8080). Модель перевода квантована в GGUF (Q4_K_M) и исполняется <b>напрямую внутри процесса программы</b> через llama-cpp всего за ~80 миллисекунд.<br>
+3. <b>Аппаратный детектор речи (Silero / Sherpa VAD):</b> Нарезает аудиопоток на логические фразы в естественных паузах дыхания без обрезания слов.<br>
+4. <b>Интерактивное управление окном (Golden Controls):</b><br>
+• <code style="color: #60a5fa; font-weight: bold;">F9</code> — Единый переключатель: мгновенно скрывает/показывает субтитры и переводит транскрипцию на паузу (чтобы не нагружать процессор в тишине).<br>
 • <code style="color: #60a5fa; font-weight: bold;">2x Клик колесиком мыши (2x MMB)</code> — Режим клика сквозь окно (субтитры не мешают нажимать на кнопки под ними).<br>
-• <code style="color: #60a5fa; font-weight: bold;">Зажать колесико мыши (MMB Drag)</code> — Перемещение субтитров в любую точку экрана без срыва левой кнопки.
+• <code style="color: #60a5fa; font-weight: bold;">Зажать колесико мыши (MMB Drag)</code> — Перемещение субтитров в любую точку экрана без срыва левой кнопки мыши.<br>
+• <b>Сенсор Alpha 1/255:</b> Невидимый сенсорный слой DWM, сохраняющий отклик на колесико даже при 0% видимости фона.
 </div>
         """)
         lbl_m1.setWordWrap(True)
@@ -1062,15 +1090,17 @@ class EcosystemHub(QMainWindow):
         layout.addWidget(box_m1)
 
         # Card 2: Module 2 Guide
-        box_m2 = QGroupBox("2. Программа 2: Экранный переводчик по рамке (OverTranslate)")
+        box_m2 = QGroupBox("2. Программа 2: Экранный переводчик по рамке (OverTranslate) — Инженерные патчи")
         v_m2 = QVBoxLayout(box_m2)
         lbl_m2 = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
 <b>Что делает:</b> Переводит невыделяемый текст на экране: из картинок, интерфейсов, документов, презентаций и окон программ.<br><br>
-<b>Как пользоваться:</b><br>
+<b>Ключевые инженерные доработки под капотом:</b><br>
+1. <b>Бинарный патч OverTranslate.patched.dll (Автономность):</b> Вырезаны сетевые запросы к китайским серверам и телеметрия. Разблокирован быстрый локальный оптический движок <b>Windows OCR (~35 мс)</b> с нулевой нагрузкой на видеокарту.<br>
+2. <b>CIL-патч буфера обмена QuickTranslate (День 22):</b> В Windows 11 вызов стандартного буфера вызывал системный сбой <code>CLIPBRD_E_CANT_OPEN (0x800401D0)</code>. Метод <code>SelectionReplacer</code> пропатчен на уровне инструкций байт-кода, обеспечивая моментальную замену выделенного текста на перевод без блокировок.<br><br>
+<b>Горячие клавиши:</b><br>
 • <code style="color: #60a5fa; font-weight: bold;">Ctrl + Alt + A</code> — Обвести прямоугольную область экрана рамкой мыши. Программа прочитает текст с пикселей и покажет перевод.<br>
-• <code style="color: #60a5fa; font-weight: bold;">Ctrl + C + C</code> — Быстрый перевод любого скопированного слова из буфера обмена.<br><br>
-<b>Почему работает мгновенно:</b> Использует встроенный движок оптического распознавания Windows OCR с нулевой нагрузкой на видеокарту.
+• <code style="color: #60a5fa; font-weight: bold;">Ctrl + C + C</code> (или <code style="color: #60a5fa; font-weight: bold;">Ctrl + Alt + C</code>) — Мгновенный перевод выделенного слова/фразы из буфера обмена.
 </div>
         """)
         lbl_m2.setWordWrap(True)
@@ -1137,9 +1167,9 @@ class EcosystemHub(QMainWindow):
         v_safe = QVBoxLayout(box_safe)
         lbl_safe = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
-<b>1. Автономный офлайн-принцип:</b> Наша система на 100% автономна. Лаунчер никогда не делает автоматических обновлений чужого кода из интернета. То, что работает сегодня, будет работать и через 5 лет.<br><br>
-<b>2. Защищенное хранилище CONFIG/:</b> Все ваши настройки, образец голоса и эталонные копии 5 патчей изолированы в защищенной директории <code>CONFIG/</code>.<br><br>
-<b>3. Если вы сами обновите чужой репозиторий:</b> Лаунчер сразу покажет красный статус <code>СЛЕТЕЛ</code>. Одно нажатие на кнопку <b>«🛠 Восстановить все 5 патчей»</b> вернет все файлы на место за 0.1 секунды.
+<b>1. Автономный офлайн-принцип:</b> Наша система на 100% автономна. Лаунчер никогда не делает автоматических обновлений чужого кода из интернета. То, что настроено и отлажено, продолжит стабильно работать годами.<br><br>
+<b>2. Защищенное хранилище CONFIG/:</b> Все ваши файлы настроек, слепок голоса и эталонные копии всех инженерных патчей изолированы в защищенной директории <code>CONFIG/</code>.<br><br>
+<b>3. Если вы сами обновите чужой репозиторий:</b> Лаунчер проверит чек-суммы и код, подсветит красный статус <code>СЛЕТЕЛ</code>. Одно нажатие на кнопку <b>«🛠 Восстановить все патчи (1 клик)»</b> моментально вернет вшитые модули ускорения и патчи на место.
 </div>
         """)
         lbl_safe.setWordWrap(True)

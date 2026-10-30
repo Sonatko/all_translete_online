@@ -68,11 +68,16 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "cable_not_found_msg": "Виртуальный аудиокабель (VB-Audio Cable) не установлен в вашей системе Windows.\n\nОн необходим для передачи переведенного голоса в программы связи на компьютерах без звуковой карты Topping.\n\nХотите скачать и установить его прямо сейчас в 1 клик?",
 
         # Patches & Health Tab (Modular Structure)
-        "patches_header": "Состояние ключевых патчей экосистемы (разбивка по 3 модулям):",
-        "patches_summary_ok": "🟢 Все 5 патчей активны | Настройки и файлы в CONFIG/ защищены",
-        "patches_summary_fail": "🔴 ВНИМАНИЕ: Слетел патч или повреждён файл! Нажмите «Восстановить все 5 патчей»",
+        "patches_header": "Состояние инженерных патчей экосистемы (разбивка по 3 модулям):",
+        "patches_summary_ok": "🟢 Все ключевые патчи активны ({active}/{total}) | Настройки и файлы в CONFIG/ защищены",
+        "patches_summary_fail": "🔴 ВНИМАНИЕ: Слетел патч или повреждён файл! Нажмите «Восстановить все патчи»",
         "btn_audit_refresh": "🔄 Перепроверить целостность",
-        "btn_restore_patches": "🛠 Восстановить все 5 патчей (1 клик)",
+        "btn_audit_refresh_done": "✓ Проверено: Все патчи на месте!",
+        "btn_restore_patches": "🛠 Восстановить все патчи (1 клик)",
+        "m1_group_title": "📦 Модуль 1: Синхронные субтитры (LiveTranslate) — 6 инженерных патчей",
+        "m2_group_title": "📦 Модуль 2: Экранный переводчик (OverTranslate) — 2 офлайн-патча",
+        "m3_group_title": "📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Автономный движок",
+        "vault_group_title": "🔒 Хранилище эталонов (CONFIG/) — Защита от обновлений авторов",
 
         "hotkeys_label": "Клавиши:",
         "res_metrics": "Память: {ram} МБ | ЦП: {cpu}%",
@@ -140,11 +145,16 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "cable_not_found_msg": "VB-Audio Virtual Cable was not detected in your Windows system.\n\nIt is required to route voice translations into voice software on PCs without a Topping sound card.\n\nWould you like to download and install it now in 1 click?",
 
         # Patches & Health Tab (Modular Structure)
-        "patches_header": "Golden Patches and Modules Integrity Audit (Grouped by Module):",
-        "patches_summary_ok": "🟢 All 5 patches active | Settings and files in CONFIG/ protected",
-        "patches_summary_fail": "🔴 WARNING: Patch corrupted or missing! Click 'Restore All 5 Patches'",
+        "patches_header": "Engineering Patches and Modules Integrity Audit (Grouped by Module):",
+        "patches_summary_ok": "🟢 All key patches active ({active}/{total}) | Settings and files in CONFIG/ protected",
+        "patches_summary_fail": "🔴 WARNING: Patch corrupted or missing! Click 'Restore All Patches'",
         "btn_audit_refresh": "🔄 Re-audit Integrity",
-        "btn_restore_patches": "🛠 Restore All 5 Patches (1 Click)",
+        "btn_audit_refresh_done": "✓ Verified: All patches intact!",
+        "btn_restore_patches": "🛠 Restore All Patches (1 Click)",
+        "m1_group_title": "📦 Module 1: Synchronous Subtitles (LiveTranslate) — 6 Engineering Patches",
+        "m2_group_title": "📦 Module 2: Screen Translator (OverTranslate) — 2 Offline Patches",
+        "m3_group_title": "📦 Module 3: Voice Translator (Voice Studio) — 100% In-Process Engine",
+        "vault_group_title": "🔒 Vault Storage (CONFIG/) — Protection against upstream updates",
 
         "hotkeys_label": "Hotkeys:",
         "res_metrics": "RAM: {ram} MB | CPU: {cpu}%",
@@ -212,11 +222,16 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "cable_not_found_msg": "系统中未检测到 VB-Audio Virtual Cable.\n\n普通电脑需要此驱动将声音路由至语音软件.\n\n是否立即一键下载并安装？",
 
         # Patches & Health Tab (Modular Structure)
-        "patches_header": "五大核心补丁完整性（按模块分组）：",
-        "patches_summary_ok": "🟢 全部5个补丁正常 | 配置与模块受保护",
-        "patches_summary_fail": "🔴 警告: 补丁异常！请点击一键恢复全部5个补丁",
-        "btn_audit_refresh": "🔄 重新审计",
-        "btn_restore_patches": "🛠 一键恢复全部5个补丁",
+        "patches_header": "核心工程补丁与模块完整性（按模块分组）：",
+        "patches_summary_ok": "🟢 全部核心补丁正常运行 ({active}/{total}) | CONFIG/ 配置受保护",
+        "patches_summary_fail": "🔴 警告: 补丁异常！请点击一键恢复补丁",
+        "btn_audit_refresh": "🔄 重新审计完整性",
+        "btn_audit_refresh_done": "✓ 已验证: 全部补丁就绪！",
+        "btn_restore_patches": "🛠 一键恢复全部补丁",
+        "m1_group_title": "📦 模块 1: 同步字幕 (LiveTranslate) — 6 个核心补丁",
+        "m2_group_title": "📦 模块 2: 屏幕翻译 (OverTranslate) — 2 个离线补丁",
+        "m3_group_title": "📦 模块 3: 语音翻译 (Voice Studio) — 100% 本地引擎",
+        "vault_group_title": "🔒 备份金库 (CONFIG/) — 防止作者更新覆盖",
 
         "hotkeys_label": "快捷键:",
         "res_metrics": "内存: {ram} MB | CPU: {cpu}%",

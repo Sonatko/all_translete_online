@@ -282,7 +282,8 @@ class StageCard(QFrame):
         title_key: str,
         flow_key: str,
         desc_key: str,
-        on_start,
+        hotkeys_key: str = "",
+        on_start=None,
         on_stop=None,
         on_open=None,
         open_label_key="btn_open",
@@ -293,6 +294,7 @@ class StageCard(QFrame):
         self.title_key = title_key
         self.flow_key = flow_key
         self.desc_key = desc_key
+        self.hotkeys_key = hotkeys_key
         self.on_start = on_start
         self.on_stop = on_stop
         self.on_open = on_open
@@ -354,7 +356,26 @@ class StageCard(QFrame):
         self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
         layout.addWidget(self.lbl_desc)
 
-        # 4. Professional Hardware & Inference Telemetry Monitor (Clean, strict, real-time)
+        # 4. Authoritative Hotkeys & Control Scheme Banner
+        self.lbl_hotkeys = QLabel()
+        self.lbl_hotkeys.setStyleSheet("""
+            QLabel {
+                background-color: #0b1329;
+                color: #38bdf8;
+                font-size: 11px;
+                padding: 5px 10px;
+                border-radius: 4px;
+                border: 1px solid #1e3a8a;
+            }
+        """)
+        self.lbl_hotkeys.setWordWrap(True)
+        if self.hotkeys_key:
+            self.lbl_hotkeys.setText(f"⌨ <b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
+        else:
+            self.lbl_hotkeys.hide()
+        layout.addWidget(self.lbl_hotkeys)
+
+        # 5. Professional Hardware & Inference Telemetry Monitor (Clean, strict, real-time)
         self.monitor_frame = QFrame()
         self.monitor_frame.setStyleSheet("""
             QFrame {
@@ -627,17 +648,17 @@ class StageCard(QFrame):
             if self._is_running:
                 for n in self.nodes:
                     n.update_node(active=True)
-                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна в системном трее | Горячие клавиши: Ctrl + Alt + A (Область) | Ctrl + C + C (Буфер)")
+                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна в системном трее | Перевод текста с экрана и буфера готов")
             else:
                 self._retranslate_nodes()
-                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Перехват экрана по комбинации Ctrl + Alt + A")
+                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Служба готова к запуску")
             self.lbl_mon_alert.hide()
 
         elif self.stage_id == "stage_3":
             if self._is_running:
                 for n in self.nodes:
                     n.update_node(active=True)
-                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна | Режим рации: Shift + Колесико мыши (Push-To-Talk) ➔ Голос синтезируется в выходной канал")
+                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна | Перевод речи в микрофонный канал готов")
             else:
                 self._retranslate_nodes()
                 self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Акустический профиль my_pocket_voice.safetensors загружен")
@@ -647,6 +668,11 @@ class StageCard(QFrame):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_flow.setText(I18n.t(self.flow_key))
         self.lbl_desc.setText(I18n.t(self.desc_key))
+        if self.hotkeys_key:
+            self.lbl_hotkeys.setText(f"⌨ <b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
+            self.lbl_hotkeys.show()
+        else:
+            self.lbl_hotkeys.hide()
         self.btn_start.setText(I18n.t("btn_start"))
         self.btn_stop.setText(I18n.t("btn_stop"))
         self.btn_open.setText(I18n.t(self.open_label_key))
@@ -1057,7 +1083,7 @@ class EcosystemHub(QMainWindow):
         # 1. Module 1: LiveTranslate (Audio to Subtitles)
         self.card_stage1 = StageCard(
             "stage_1",
-            "stage1_title", "stage1_flow", "stage1_desc",
+            "stage1_title", "stage1_flow", "stage1_desc", "stage1_hotkeys",
             on_start=EcosystemProcessManager.start_stage_1,
             on_stop=EcosystemProcessManager.stop_stage_1,
         )
@@ -1066,7 +1092,7 @@ class EcosystemHub(QMainWindow):
         # 2. Module 2: OverTranslate (Screen OCR)
         self.card_stage2 = StageCard(
             "stage_2",
-            "stage2_title", "stage2_flow", "stage2_desc",
+            "stage2_title", "stage2_flow", "stage2_desc", "stage2_hotkeys",
             on_start=EcosystemProcessManager.start_stage_2,
             on_stop=EcosystemProcessManager.stop_stage_2,
         )
@@ -1075,7 +1101,7 @@ class EcosystemHub(QMainWindow):
         # 3. Module 3: Voice Studio (Outgoing Mic Speech)
         self.card_stage3 = StageCard(
             "stage_3",
-            "stage3_title", "stage3_flow", "stage3_desc",
+            "stage3_title", "stage3_flow", "stage3_desc", "stage3_hotkeys",
             on_start=EcosystemProcessManager.start_stage_3,
             on_stop=EcosystemProcessManager.stop_stage_3,
         )

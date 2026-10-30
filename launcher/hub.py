@@ -768,8 +768,6 @@ class EcosystemHub(QMainWindow):
             "stage1_title", "stage1_flow", "stage1_desc",
             on_start=EcosystemProcessManager.start_stage_1,
             on_stop=EcosystemProcessManager.stop_stage_1,
-            on_open=EcosystemProcessManager.start_stage_1,
-            open_label_key="btn_open",
         )
         layout.addWidget(self.card_stage1)
 
@@ -779,8 +777,6 @@ class EcosystemHub(QMainWindow):
             "stage2_title", "stage2_flow", "stage2_desc",
             on_start=EcosystemProcessManager.start_stage_2,
             on_stop=EcosystemProcessManager.stop_stage_2,
-            on_open=EcosystemProcessManager.start_stage_2,
-            open_label_key="btn_open",
         )
         layout.addWidget(self.card_stage2)
 
@@ -790,8 +786,6 @@ class EcosystemHub(QMainWindow):
             "stage3_title", "stage3_flow", "stage3_desc",
             on_start=EcosystemProcessManager.start_stage_3,
             on_stop=EcosystemProcessManager.stop_stage_3,
-            on_open=EcosystemProcessManager.start_stage_3,
-            open_label_key="btn_studio",
         )
 
         # EMBED Stage 3 Specific Controls (Audio Hardware Selector & Voice Wizard)

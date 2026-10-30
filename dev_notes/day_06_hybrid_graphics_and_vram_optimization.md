@@ -41,9 +41,9 @@ Modern Windows 11 systems with an AMD Ryzen 7 7800X3D (RDNA 2 integrated graphic
      - `Antigravity IDE.exe` (Development IDE, dropped from 350 MB to 81 MB)
      - `obs64.exe` (OBS Studio Virtual Camera & Recording)
    - Created 1-Click Toggle Batch Scripts in project root:
-     - [SET_OBS_GPU_AMD.bat](file:///c:/Users/SONATO/Dev/active/all_translete_online/SET_OBS_GPU_AMD.bat): switches OBS to AMD iGPU (frees ~360 MB VRAM)
-     - [SET_OBS_GPU_NVIDIA.bat](file:///c:/Users/SONATO/Dev/active/all_translete_online/SET_OBS_GPU_NVIDIA.bat): switches OBS back to RTX 5070 (for 2K/4K 144Hz heavy gaming)
-     - [FLUSH_DWM_ADMIN.bat](file:///c:/Users/SONATO/Dev/active/all_translete_online/FLUSH_DWM_ADMIN.bat): flushes DWM texture cache via Windows UAC elevation
+     - [SET_OBS_GPU_AMD.bat](../SET_OBS_GPU_AMD.bat): switches OBS to AMD iGPU (frees ~360 MB VRAM)
+     - [SET_OBS_GPU_NVIDIA.bat](../SET_OBS_GPU_NVIDIA.bat): switches OBS back to RTX 5070 (for 2K/4K 144Hz heavy gaming)
+     - [FLUSH_DWM_ADMIN.bat](../FLUSH_DWM_ADMIN.bat): flushes DWM texture cache via Windows UAC elevation
 
 3. **Step 3 (Multi-Monitor Topology & Physical Display Partitioning)**:
    - Discovered multi-display overhead: 3 displays active (2K Primary, 1080p, 2K N140 portable = 8.87M pixels).

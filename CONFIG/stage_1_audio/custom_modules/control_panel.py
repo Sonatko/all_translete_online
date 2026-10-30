@@ -1143,6 +1143,19 @@ class ControlPanel(QWidget):
             self._sensevoice_pad_seconds.setVisible(show_funasr_pad)
         if hasattr(self, "_remote_group"):
             self._remote_group.setVisible(index == 3)
+        if hasattr(self, "_asr_device"):
+            is_sherpa = index in (4, 5)
+            if is_sherpa:
+                cpu_idx = self._asr_device.findText("cpu")
+                if cpu_idx >= 0:
+                    self._asr_device.blockSignals(True)
+                    self._asr_device.setCurrentIndex(cpu_idx)
+                    self._asr_device.blockSignals(False)
+                self._asr_device.setEnabled(False)
+                self._asr_device.setToolTip("Sherpa-ONNX (SenseVoice / Parakeet) скомпилирован под C++ AVX2 на CPU")
+            else:
+                self._asr_device.setEnabled(True)
+                self._asr_device.setToolTip("")
         # Resize window to fit content after whisper group visibility change
         QTimer.singleShot(0, self._fit_height)
 
@@ -1519,8 +1532,11 @@ class ControlPanel(QWidget):
         self._current_settings["whisper_model_size"] = (
             self._selected_whisper_model()
         )
-        dev_text = self._asr_device.currentText()
-        self._current_settings["asr_device"] = dev_text.split(" (")[0]
+        if self._asr_engine.currentIndex() in (4, 5):
+            self._current_settings["asr_device"] = "cpu"
+        else:
+            dev_text = self._asr_device.currentText()
+            self._current_settings["asr_device"] = dev_text.split(" (")[0]
         audio_idx = self._audio_device.currentIndex()
         if audio_idx == 0:
             self._current_settings["audio_device"] = "__disabled__"

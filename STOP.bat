@@ -1,5 +1,6 @@
 @echo off
-chcp 65001 >nul
+setlocal
+cd /d "%~dp0"
 title Stopping Translation Ecosystem...
 
 echo ======================================================================
@@ -7,13 +8,10 @@ echo  STOPPING TRANSLATION ECOSYSTEM PROCESSES
 echo ======================================================================
 echo.
 
-echo [1/2] Terminating Screen Translation (OverTranslate)...
-taskkill /F /IM OverTranslate.exe >nul 2>&1
-
-echo [2/2] Terminating Audio Translation (LiveTranslate)...
-powershell -NoProfile -Command "Get-Process python, pythonw -ErrorAction SilentlyContinue | Stop-Process -Force" >nul 2>&1
+echo [*] Terminating OverTranslate, Audio Translation, Studio and Hub...
+taskkill /F /T /IM OverTranslate.exe >nul 2>&1
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'stage_1_audio|LiveTranslate|stage_3_voice|studio|hub\.py' } | Stop-Process -Force" >nul 2>&1
 
 echo.
-echo All ecosystem processes stopped cleanly and safely!
-ping 127.0.0.1 -n 2 >nul
+echo [OK] All translation ecosystem processes stopped cleanly!
 exit /b 0

@@ -66,7 +66,7 @@
     "window_opacity": 95
   },
   "subtitle_mode": {
-    "enabled": false,
+    "enabled": true,
     "sentences": 1,
     "window_width": 1000,
     "line_spacing": 7,
@@ -117,8 +117,8 @@
         "type": "translation"
       }
     ],
-    "window_x": 420,
-    "window_y": 926
+    "window_x": 684,
+    "window_y": 28
   },
   "overlay_x": 160,
   "overlay_y": 389,

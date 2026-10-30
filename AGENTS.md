@@ -45,26 +45,35 @@ The goal of this project is to curate, configure, and integrate battle-tested, r
   - **Language Selection Authority**: The `Target Language` combo on the main panel is the authoritative target selector. When `target_lang == source_lang`, the subtitle banner shows pure original text with 0ms translation delay and no LLM calls.
   - **Alpha Hit-Testing Surface**: Invisible `Alpha = 1/255` background fill in `paintEvent` to ensure Windows DWM hit-testing works seamlessly across the entire banner even at 0% background opacity.
 
-### 6. Mandatory Git Tracking & Configuration Preservation Rule (The Zero-Loss Invariant)
-- **Mandatory Git Tracking on Every File Edit**:
-  - Whenever ANY configuration file, launcher script, application engine code, or template is modified or created, it MUST be staged and committed to Git immediately.
-  - NEVER leave working configs, tuned parameters, or engine fixes as untracked files or ignored in `.gitignore`.
-  - All critical runtime configurations MUST have an authoritative, version-controlled copy in the dedicated `CONFIG/` directory (`CONFIG/stage_1_audio/`, `CONFIG/stage_2_screen/`).
-- **Pre-Clean & Refactoring Safety Gate**:
-  - NEVER reorganize directories, archive folders, or delete files without first running `git status` and verifying that all active configurations, custom UI styles, and model tuning parameters are safely committed and mirrored in `CONFIG/`.
-  - If any file is excluded by `.gitignore` in upstream submodules (e.g., `user_settings.json`), it must either be explicitly un-ignored or tracked via `CONFIG/` so that no user settings can ever be lost during cleanups.
+### 6. Absolute User Sovereignty Over Git (Strictly No Auto-Commit / No Auto-Push)
+- **Sole Decision Maker (User Authority)**:
+  - ONLY the user decides when to create a Git commit (`git commit`) and when to push (`git push`).
+  - NEVER automatically stage, commit, or push code after file modifications, bugfixes, or test runs.
+  - The agent works directly in the active topic branch working tree without creating Git commits.
+- **No Commits Without 100% Perfection & Testing**:
+  - NO commits are permitted while features are being developed, refined, or debugged.
+  - A commit is executed ONLY after the code is fully implemented, passes all verification test gates (`scripts/run_all_tests.bat`), is brought to absolute perfection, and the user explicitly orders: "зафиксируй", "сохрани в коммит", or "коммить".
+- **Strictly No Auto-Push**:
+  - NEVER run `git push` on any branch (especially protected `main`) unless explicitly instructed by the user.
+- **Configuration Safety**:
+  - Keep runtime configurations synchronized with `CONFIG/` so settings are preserved on disk, but leave Git commits strictly to the user's explicit command.
 
 ### 7. Professional Git Flow, Branching Protocol & Test-Driven Verification Gate
-- **Strict Branching Strategy**:
+- **Strict Branching Strategy (Anti-Merge-Hell Standard)**:
   - `main`: Protected, production-ready release branch. Never code experimental features directly on `main`.
-  - `feature/<stage>-<name>`: Isolated branches for discrete improvements (e.g., `feature/stage1-asr-optimization`, `feature/stage1-mt-speedup`).
-  - `refactor/<name>`: Architectural cleanups and technical debt elimination.
+  - `feature/<stage>-<name>`: Isolated umbrella/feature branches for discrete milestones.
+  - `spike/<name>`: Short-lived exploration branches (hours to 1-2 days) for unverified open-source repos and rapid prototyping. Delete with `git branch -D` if discarded to prevent repo clutter.
+  - `fix/<name>`: Discrete, atomic micro-fix branches. Never bundle bugfixes with in-progress feature development.
   - `test/<name>`: Benchmarking suites and diagnostic testbeds.
+  - `refactor/<name>`: Architectural cleanups and technical debt elimination.
+- **Short-Lived Topic Branches & Milestone Tags**:
+  - Never maintain long-lived branches that linger for weeks and drift away from the base.
+  - Tag successful verification checkpoints (`git tag ...`) for instant, risk-free rollbacks.
 - **The Test-Driven Verification Gate (Evidence Before Claims)**:
   - No task or checklist item may be marked complete simply with a checkbox.
   - Completion requires tangible, reproducible instrumental output (Inference Latency in ms, RAM/VRAM in MB, Word/Character Error Rate, CPU Load %) captured via test scripts and logged in `dev_notes/`.
   - A feature branch is merged into `main` ONLY after passing the end-to-end regression check:
-    1. Automated smoke gate (`stage_1_audio\.venv\Scripts\python.exe tests\test_stage1_smoke.py` passes all checks).
+    1. Automated smoke gate passes all checks.
     2. Clean process lifecycle (START.bat & STOP.bat).
     3. Golden Control Scheme verification (`F9` Master Toggle, `2x MMB` Click-through, `MMB Drag`).
     4. Performance budget compliance (<200–350 ms latency, 0 MB game stutter).

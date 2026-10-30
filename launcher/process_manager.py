@@ -51,8 +51,25 @@ class EcosystemProcessManager:
                             matched = "stage_3"
 
                     if matched and not status[matched]["running"]:
-                        mem_mb = round(p.memory_info().rss / (1024.0 * 1024.0), 1)
-                        cpu = round(p.cpu_percent(interval=None), 1)
+                        # Collect full process tree telemetry (parent wrapper + spawned worker/inference processes)
+                        tree = [p]
+                        try:
+                            tree.extend(p.children(recursive=True))
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
+
+                        total_mem_bytes = 0
+                        total_cpu_val = 0.0
+                        for proc in tree:
+                            try:
+                                total_mem_bytes += proc.memory_info().rss
+                                total_cpu_val += proc.cpu_percent(interval=None)
+                            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                pass
+
+                        mem_mb = round(total_mem_bytes / (1024.0 * 1024.0), 1)
+                        cpu = round(total_cpu_val, 1)
+
                         status[matched]["running"] = True
                         status[matched]["pid"] = p.pid
                         status[matched]["ram_mb"] = mem_mb
@@ -122,6 +139,11 @@ class EcosystemProcessManager:
                     if "hub.py" in cmdline:
                         continue
                     if "stage_1_audio" in cmdline or "livetranslate" in cmdline:
+                        try:
+                            for child in p.children(recursive=True):
+                                child.kill()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                         p.terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -151,6 +173,11 @@ class EcosystemProcessManager:
                     if "hub.py" in cmdline:
                         continue
                     if "stage_3_voice" in cmdline or "studio" in cmdline:
+                        try:
+                            for child in p.children(recursive=True):
+                                child.kill()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                         p.terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -180,6 +207,11 @@ class EcosystemProcessManager:
                     if "hub.py" in cmdline:
                         continue
                     if "stage_1_audio" in cmdline or "livetranslate" in cmdline or "stage_3_voice" in cmdline or "studio" in cmdline:
+                        try:
+                            for child in p.children(recursive=True):
+                                child.kill()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                         p.terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue

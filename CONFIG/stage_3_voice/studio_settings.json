@@ -23,7 +23,8 @@
     "tts_provider": "pocket_tts",
     "tts_voice": "my_pocket_voice",
     "tts_temperature": 0.3,
-    "auto_load_on_startup": true
+    "auto_load_on_startup": true,
+    "tts_speed": 0.85
   },
   "ui": {
     "dark_theme": true,

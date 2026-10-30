@@ -24,6 +24,29 @@ DEFAULT_SR = 48000
 BLOCK_SIZE = 480  # 10ms at 48kHz for responsive VU meters and minimal latency
 
 
+def _time_stretch(x: np.ndarray, speed: float = 1.0, window_size: int = 1024) -> np.ndarray:
+    """Pitch-preserving time stretch via Overlap-Add (OLA)."""
+    if abs(speed - 1.0) < 0.02 or len(x) <= window_size * 2:
+        return x
+    hop_in = int(window_size / 2)
+    hop_out = int(hop_in / speed)
+    window = np.hanning(window_size).astype(np.float32)
+    num_frames = (len(x) - window_size) // hop_in
+    if num_frames <= 0:
+        return x
+    out_len = num_frames * hop_out + window_size
+    output = np.zeros(out_len, dtype=np.float32)
+    norm = np.zeros(out_len, dtype=np.float32)
+    for i in range(num_frames):
+        in_pos = i * hop_in
+        out_pos = i * hop_out
+        output[out_pos:out_pos + window_size] += x[in_pos:in_pos + window_size] * window
+        norm[out_pos:out_pos + window_size] += window
+    nonzero = norm > 1e-3
+    output[nonzero] /= norm[nonzero]
+    return output
+
+
 class AudioEngine:
     """Core low-latency audio processing coordinator."""
 
@@ -489,8 +512,12 @@ class AudioEngine:
 
                 # Step 4: Resample synthesized 24kHz audio to 48kHz and enqueue to streams
                 if tts_audio_24k is not None and len(tts_audio_24k) > 0:
-                    num_samples_48k = int(len(tts_audio_24k) * DEFAULT_SR / tts_sr)
-                    out_48k = signal.resample(tts_audio_24k, num_samples_48k).astype(np.float32)
+                    # Apply speech speed adjustment (default 0.85x for natural speech pacing)
+                    speed = float(self.config.get("models", {}).get("tts_speed", 0.85))
+                    stretched_audio = _time_stretch(tts_audio_24k, speed=speed)
+
+                    num_samples_48k = int(len(stretched_audio) * DEFAULT_SR / tts_sr)
+                    out_48k = signal.resample(stretched_audio, num_samples_48k).astype(np.float32)
 
                     # Chunk and dispatch to Playback 3/4 (Game)
                     chunk_size = BLOCK_SIZE

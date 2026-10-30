@@ -607,6 +607,19 @@ class StudioWindow(QMainWindow):
         self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold;")
         v_tts.addWidget(self.lbl_tts_state)
 
+        # Speech Speed Slider
+        h_speed = QHBoxLayout()
+        h_speed.addWidget(QLabel("Скорость речи диктора:"))
+        self.slider_speed = QSlider(Qt.Orientation.Horizontal)
+        self.slider_speed.setRange(60, 130)
+        cur_spd = int(self.cfg.get("models", {}).get("tts_speed", 0.85) * 100)
+        self.slider_speed.setValue(cur_spd)
+        self.lbl_speed_val = QLabel(f"{cur_spd / 100.0:.2f}x")
+        self.slider_speed.valueChanged.connect(self._on_speed_slider)
+        h_speed.addWidget(self.slider_speed)
+        h_speed.addWidget(self.lbl_speed_val)
+        v_tts.addLayout(h_speed)
+
         h_tts_btn = QHBoxLayout()
         btn_tts_load = QPushButton("Загрузить")
         btn_tts_load.clicked.connect(lambda: self.mm.load_tts(self.combo_voices.currentData()))
@@ -743,6 +756,15 @@ class StudioWindow(QMainWindow):
 
         save_settings(self.cfg)
         self.engine.restart_streams()
+
+    def _on_speed_slider(self, val: int):
+        speed_factor = round(val / 100.0, 2)
+        self.lbl_speed_val.setText(f"{speed_factor:.2f}x")
+        if "models" not in self.cfg:
+            self.cfg["models"] = {}
+        self.cfg["models"]["tts_speed"] = speed_factor
+        self.engine.config["models"]["tts_speed"] = speed_factor
+        save_settings(self.cfg)
 
     def _on_passthrough_toggle(self, checked: bool):
         self.cfg["audio"]["passthrough_enabled"] = checked

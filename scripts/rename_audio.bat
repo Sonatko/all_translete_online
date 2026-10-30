@@ -1,11 +1,11 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title Renaming Topping Audio Endpoints...
+title Renaming Audio Devices...
 
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    powershell.exe -NoProfile -Command "Start-Process powershell.exe -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File """"%~dp0rename_audio.ps1""""'"
+    powershell.exe -NoProfile -Command "Start-Process '%~f0' -Verb RunAs"
     exit /b 0
 )
 

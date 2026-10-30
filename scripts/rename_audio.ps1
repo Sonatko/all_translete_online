@@ -1,4 +1,4 @@
-﻿# Script to rename Topping E2x2 audio endpoints to short, clean names
+# Script to rename Topping E2x2 audio endpoints to short, clean names
 $ErrorActionPreference = 'Stop'
 
 $capturePath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Capture'

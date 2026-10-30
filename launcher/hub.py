@@ -289,6 +289,37 @@ class StageCard(QFrame):
         self.h_latency.setSpacing(6)
         layout.addWidget(self.latency_frame)
 
+        # 4b. Live Telemetry & Error Diagnostic Monitor Box (Real Hardware & Inference)
+        self.live_diag_frame = QFrame()
+        self.live_diag_frame.setStyleSheet("""
+            QFrame {
+                background-color: #0b1120;
+                border-radius: 6px;
+                border: 1px solid #1e293b;
+            }
+        """)
+        self.v_diag = QVBoxLayout(self.live_diag_frame)
+        self.v_diag.setContentsMargins(10, 6, 10, 6)
+        self.v_diag.setSpacing(5)
+
+        self.lbl_diag_hw = QLabel()
+        self.lbl_diag_hw.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        self.v_diag.addWidget(self.lbl_diag_hw)
+
+        self.lbl_diag_live = QLabel()
+        self.lbl_diag_live.setStyleSheet("color: #e2e8f0; font-size: 11px;")
+        self.lbl_diag_live.setWordWrap(True)
+        self.v_diag.addWidget(self.lbl_diag_live)
+
+        self.lbl_diag_alert = QLabel()
+        self.lbl_diag_alert.setStyleSheet("font-size: 11px; padding: 3px 8px; border-radius: 4px;")
+        self.lbl_diag_alert.setWordWrap(True)
+        self.lbl_diag_alert.hide()
+        self.v_diag.addWidget(self.lbl_diag_alert)
+
+        self.live_diag_frame.hide()
+        layout.addWidget(self.live_diag_frame)
+
         # 5. Embedded Stage 3 Controls Container (if stage_3)
         self.stage3_container = QWidget()
         self.stage3_layout = QVBoxLayout(self.stage3_container)
@@ -468,6 +499,58 @@ class StageCard(QFrame):
                 border: 1px solid #374151;
             """)
 
+    def update_stage1_live_telemetry(self, m: dict):
+        """Display real physical inference latency, hardware fallback alerts, and live audio capture."""
+        if not self._is_running:
+            self.live_diag_frame.hide()
+            return
+
+        self.live_diag_frame.show()
+
+        # 1. Hardware Status
+        audio_dev = m.get("audio_device") or "Системный звук (Loopback)"
+        req_dev = str(m.get("asr_device_requested", "cpu")).strip()
+        act_dev = str(m.get("asr_device_actual", "cpu")).strip()
+        mt_name = m.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
+
+        hw_text = f"🎧 <b>Захват:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice [<b>{act_dev.upper()}</b>] | 🧠 <b>Перевод:</b> {mt_name} [<b>CPU</b>]"
+        self.lbl_diag_hw.setText(hw_text)
+
+        # 2. Live Inference Metric
+        if m.get("last_original") and m.get("last_asr_ms") is not None:
+            asr_ms = m.get("last_asr_ms", 0)
+            tl_ms = m.get("last_tl_ms", 0)
+            tot_ms = m.get("last_total_ms", asr_ms + tl_ms)
+            orig = m.get("last_original", "")
+            if len(orig) > 55:
+                orig = orig[:52] + "..."
+            trans = m.get("last_translation", "")
+            if len(trans) > 55:
+                trans = trans[:52] + "..."
+            
+            live_text = (
+                f"⚡ <b>Факт последней фразы:</b> "
+                f"<span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ "
+                f"<span style='color: #c084fc;'>Перевод: {tl_ms} мс</span> ➔ "
+                f"<span style='color: #34d399;'>Итого: {tot_ms} мс</span> | "
+                f"💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
+            )
+            self.lbl_diag_live.setText(live_text)
+        else:
+            self.lbl_diag_live.setText("🎙 <i>Слушает системный звук (в наушниках тишина / ожидание речи)...</i>")
+
+        # 3. Alerts & Diagnostic Messages
+        if m.get("error_msg"):
+            self.lbl_diag_alert.setText(f"❌ <b>Ошибка этапа:</b> {m['error_msg']}")
+            self.lbl_diag_alert.setStyleSheet("background-color: #450a0a; color: #fca5a5; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #dc2626;")
+            self.lbl_diag_alert.show()
+        elif "cuda" in req_dev.lower() and act_dev == "cpu":
+            self.lbl_diag_alert.setText(f"ℹ️ <b>Уведомление оборудования:</b> В меню выбрано <b>{req_dev} (RTX 5070)</b>, но SenseVoice исполняется на <b>CPU</b> (библиотека sherpa-onnx скомпилирована под CPU). Видеокарта свободна на 100%.")
+            self.lbl_diag_alert.setStyleSheet("background-color: #172554; color: #93c5fd; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #3b82f6;")
+            self.lbl_diag_alert.show()
+        else:
+            self.lbl_diag_alert.hide()
+
     def set_running(self, running: bool, force: bool = False):
         if not force and self._is_running == running:
             return
@@ -495,6 +578,7 @@ class StageCard(QFrame):
             if self.on_open:
                 self.btn_open.show()
         else:
+            self.live_diag_frame.hide()
             self.setStyleSheet("""
                 StageCard {
                     background-color: #1a1b1e;
@@ -1384,6 +1468,15 @@ class EcosystemHub(QMainWindow):
         self.card_stage1.update_telemetry(status["stage_1"])
         self.card_stage2.update_telemetry(status["stage_2"])
         self.card_stage3.update_telemetry(status["stage_3"])
+
+        # 2. Live telemetry & diagnostic polling for Stage 1 (Real ASR/MT ms, hardware status & errors)
+        if status["stage_1"]["running"]:
+            try:
+                from launcher.telemetry import Stage1Telemetry
+                m1 = Stage1Telemetry.get_live_metrics()
+                self.card_stage1.update_stage1_live_telemetry(m1)
+            except Exception as e:
+                log.debug("Telemetry error: %s", e)
 
         running_count = status.get("running_count", 0)
         total_ram = status.get("total_ram_mb", 0.0)

@@ -211,6 +211,33 @@ exit 0
         
     log_test("PowerShell Scripts Syntax Gate", True, "Scripts parsed without AST syntax errors")
 
+def test_patch_integrity_checker():
+    """Verify automated Patch & Health Integrity Auditor and self-healing restoration."""
+    from launcher.patch_checker import PatchIntegrityChecker
+    
+    # 1. Audit check
+    audit = PatchIntegrityChecker.audit_all()
+    assert isinstance(audit, dict), "Audit result is not a dictionary"
+    assert audit["all_passed"] is True, f"Integrity check failed: {audit}"
+    assert audit["patches_ok"] is True, "The 4 golden patches are not all active"
+    assert audit["passed_count"] == audit["total_count"], f"Mismatch: {audit['passed_count']}/{audit['total_count']}"
+    assert len(audit["items"]) >= 8, f"Insufficient audit items: {len(audit['items'])}"
+    
+    # 2. Test self-healing restore logic
+    restore_res = PatchIntegrityChecker.restore_all_patches()
+    assert restore_res["success"] is True, f"Patch restore failed: {restore_res}"
+    assert len(restore_res["restored_files"]) >= 5, f"Unexpected restored count: {restore_res}"
+    
+    # 3. Post-restore verification
+    post_audit = PatchIntegrityChecker.audit_all()
+    assert post_audit["all_passed"] is True, "Post-restore integrity check failed"
+    
+    log_test(
+        "Patch & Health Integrity Auditor & Self-Healing",
+        True,
+        f"All 4 Golden Patches active | Vault validated ({audit['passed_count']}/{audit['total_count']} items) | Self-healing restored {len(restore_res['restored_files'])} files"
+    )
+
 if __name__ == "__main__":
     print("=" * 70)
     print(" TRANSLATION ECOSYSTEM - COMPREHENSIVE VERIFICATION TEST SUITE")
@@ -222,6 +249,7 @@ if __name__ == "__main__":
     test_pocket_tts_offline_synthesis()
     test_ctranslate2_offline_translation()
     test_hub_headless_lifecycle()
+    test_patch_integrity_checker()
     test_powershell_scripts_syntax()
     
     print("=" * 70)

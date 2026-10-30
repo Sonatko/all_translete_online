@@ -1,5 +1,5 @@
 """Trilingual Localization (i18n) for Translation Ecosystem Hub.
-Supports Russian, English, and Chinese. Clean KISS terminology.
+Supports Russian, English, and Chinese. Clean KISS terminology without juvenile slang.
 """
 from __future__ import annotations
 
@@ -12,45 +12,48 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "stop_all": "⏹ Остановить всё",
         "tab_dashboard": "🎛 Пульт и Схема работы",
         "tab_inventory": "🧠 Файлы нейросетей на диске",
+        "tab_patches": "🛡 Целостность и Патчи",
         "tab_guide": "ℹ Справка и Архитектура",
         "status_all_running": "🟢 Все 3 программы активны (0 MB облака)",
         "status_partial": "🟡 Работает программ: {count} из 3",
         "status_stopped": "⚪ Все программы остановлены",
 
-        # Module 1: Audio to Subtitles
-        "stage1_title": "1. Переводчик звука ➔ Субтитры на экране (LiveTranslate)",
-        "stage1_flow": "Схема: 🔊 Звук из ПК  ➔  ✂ Нарезка фраз  ➔  🧠 SenseVoice + MT  ➔  📺 Субтитры на экране",
-        "stage1_desc": "Захватывает любой звук из видео, фильмов, звонков и браузера, нарезает на фразы в паузах и выводит перевод прозрачными субтитрами поверх всех окон.",
-        "stage1_hotkeys": "F9 — Скрыть/Показать субтитры | 2x MMB — Клик сквозь окно",
+        # Module 1: Audio to Subtitles (LiveTranslate)
+        "stage1_title": "1. Синхронные субтитры (LiveTranslate)",
+        "stage1_flow": "Схема: 🔊 Системный звук ПК  ➔  ✂ Нарезка фраз  ➔  🧠 SenseVoice + Hunyuan MT  ➔  📺 Экранные субтитры",
+        "stage1_desc": "Захватывает системный звук (видео, медиа, онлайн-звонки, браузер), делит на фразы в паузах речи и выводит перевод поверхностными субтитрами поверх всех окон.",
+        "stage1_hotkeys": "F9 — Вкл/Пауза и скрыть субтитры | 2x MMB — Клик сквозь окно | MMB Drag — Перемещение",
 
-        # Module 2: Screen OCR
-        "stage2_title": "2. Экранный переводчик ➔ Текст по рамке (OverTranslate)",
+        # Module 2: Screen OCR (OverTranslate)
+        "stage2_title": "2. Экранный переводчик (OverTranslate)",
         "stage2_flow": "Схема: 🖼 Рамка на экране  ➔  🔍 OCR сканер  ➔  🧠 Нейросеть перевода  ➔  📝 Окно с текстом",
-        "stage2_desc": "Выделяете прямоугольную область на экране в любом месте (игры, книги, картинки, чаты) — программа распознает текст с пикселей и мгновенно переводит.",
-        "stage2_hotkeys": "Ctrl + Alt + A — Выделить рамкой | Ctrl + C + C — Быстрый перевод слова",
+        "stage2_desc": "Оптическое распознавание невыделяемого текста с экрана в заданной прямоугольной рамке (документы, графика, интерфейсы) с мгновенным переводом.",
+        "stage2_hotkeys": "Ctrl + Alt + A — Выделить рамкой | Ctrl + C + C — Быстрый перевод из буфера",
 
         # Module 3: Outgoing Voice Studio
-        "stage3_title": "3. Переводчик голоса ➔ Микрофон в Discord и игры (Voice Studio)",
-        "stage3_flow": "Схема: 🎙 Ваш микрофон (RU)  ➔  ✂ Нарезка + Вдохи  ➔  🧠 GigaAM + Pocket-TTS  ➔  🎧 Выход в Discord (EN)",
-        "stage3_desc": "Вы говорите в микрофон по-русски — собеседники в Discord или играх слышат английский перевод вашим собственным клонированным тембром.",
-        "stage3_hotkeys": "Shift + Колесико мыши — Говорить в микрофон с переводом",
+        "stage3_title": "3. Голосовой переводчик (Voice Studio)",
+        "stage3_flow": "Схема: 🎙 Микрофон (RU)  ➔  ✂ Нарезка + Пунктуация  ➔  🧠 GigaAM + Pocket-TTS  ➔  🔊 Выходной микрофон (EN)",
+        "stage3_desc": "Вы говорите в микрофон по-русски — программа переводит и синтезирует английскую речь вашим клонированным тембром в выходной микрофонный канал.",
+        "stage3_hotkeys": "Shift + Колесико мыши — Активация рации (Push-To-Talk / PTT)",
 
         "btn_start": "▶ Запустить",
         "btn_stop": "⏹ Остановить",
         "btn_open": "🗔 Открыть окно",
-        "btn_studio": "🗔 Студия голоса",
-        "btn_wizard": "🎙 Записать свой голос (7 сек)",
-        "wizard_desc": "Обучить программу говорить вашим тембром голоса за 7 секунд.",
+        "btn_studio": "🗔 Студия речи",
+        "btn_wizard": "🎙 Записать образец голоса (7 сек)",
+        "wizard_desc": "Обучить программу говорить вашим персональным тембром голоса за 7 секунд.",
 
         "status_running": "● Работает",
         "status_stopped_pill": "○ Остановлена",
 
-        "hardware_title": "Звуковое устройство для перевода голоса:",
+        # Hardware audio selector
+        "hardware_title": "Выходной аудиоканал для перевода голоса:",
         "hardware_topping": "🎛 Topping E2x2 (Аппаратный Loopback)",
-        "hardware_cable": "🔌 Виртуальный кабель (Обычный ПК)",
+        "hardware_cable": "🔌 Виртуальный кабель (VB-Audio Cable)",
         "hardware_install_cable": "📥 Установить VB-Cable (1 клик)",
-        "btn_open_folder": "📂 Папка с настройками (CONFIG/)",
+        "btn_open_folder": "📂 Защищенные настройки (CONFIG/)",
 
+        # Inventory Tab
         "inventory_header": "Проверка файлов локальных нейросетей на SSD (100% готовность без интернета):",
         "btn_refresh": "🔄 Проверить файлы",
         "col_stage": "Модуль",
@@ -60,6 +63,19 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "col_size": "Размер (МБ)",
         "ready": "✔ Скачана (Готова к работе)",
         "missing": "❌ Отсутствует",
+
+        # Patches & Health Tab
+        "patches_header": "Аудит целостности 4 ключевых патчей, исполняемых файлов и хранилища настроек:",
+        "patches_summary_ok": "🟢 Все 4 патча активны | Исполняемые файлы и нейросети проверены | CONFIG защищён",
+        "patches_summary_fail": "🔴 ВНИМАНИЕ: Обнаружен сбой или слетел патч! Нажмите «Восстановить патчи из CONFIG»",
+        "btn_audit_refresh": "🔄 Перепроверить целостность",
+        "btn_restore_patches": "🛠 Восстановить все патчи (1 клик)",
+        "col_patch_stage": "Модуль",
+        "col_patch_name": "Компонент / Патч",
+        "col_patch_type": "Категория",
+        "col_patch_status": "Состояние",
+        "col_patch_desc": "Назначение",
+
         "hotkeys_label": "Клавиши:",
         "res_metrics": "Память: {ram} МБ | ЦП: {cpu}%",
         "res_stopped": "Служба остановлена",
@@ -70,45 +86,48 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "stop_all": "⏹ Stop All Programs",
         "tab_dashboard": "🎛 Control Panel & Workflows",
         "tab_inventory": "🧠 Local AI Models on Disk",
+        "tab_patches": "🛡 Integrity & Patches",
         "tab_guide": "ℹ Architecture & Reference",
         "status_all_running": "🟢 All 3 programs active (0 MB Cloud)",
         "status_partial": "🟡 Active programs: {count} of 3",
         "status_stopped": "⚪ All programs stopped",
 
-        # Module 1: Audio to Subtitles
-        "stage1_title": "1. Audio Translator ➔ Screen Subtitles (LiveTranslate)",
-        "stage1_flow": "Pipeline: 🔊 PC Audio  ➔  ✂ VAD Chunking  ➔  🧠 SenseVoice + MT  ➔  📺 Screen Subtitles",
-        "stage1_desc": "Captures any audio from videos, calls, movies and browser, splits into phrases during pauses, and displays transparent overlay subtitles.",
-        "stage1_hotkeys": "F9 — Hide/Show Subtitles | 2x MMB — Click-through Lock",
+        # Module 1: Audio to Subtitles (LiveTranslate)
+        "stage1_title": "1. Synchronous Subtitles (LiveTranslate)",
+        "stage1_flow": "Pipeline: 🔊 PC Audio  ➔  ✂ VAD Chunking  ➔  🧠 SenseVoice + Hunyuan MT  ➔  📺 Screen Subtitles",
+        "stage1_desc": "Captures system audio (video, media streams, conference calls, browser), segments speech in natural pauses, and displays real-time subtitles overlay.",
+        "stage1_hotkeys": "F9 — Run/Pause & Hide Subtitles | 2x MMB — Click-through Lock | MMB Drag — Move Window",
 
-        # Module 2: Screen OCR
-        "stage2_title": "2. Screen Text Translator ➔ Bounding Box (OverTranslate)",
-        "stage2_flow": "Pipeline: 🖼 Screen Box  ➔  🔍 OCR Reader  ➔  🧠 MT Neural Model  ➔  📝 Result Window",
-        "stage2_desc": "Draw a bounding box anywhere on screen (games, documents, images) — extracts text from pixels and translates instantly.",
-        "stage2_hotkeys": "Ctrl + Alt + A — Box OCR | Ctrl + C + C — Quick Word Lookup",
+        # Module 2: Screen OCR (OverTranslate)
+        "stage2_title": "2. Screen Text Translator (OverTranslate)",
+        "stage2_flow": "Pipeline: 🖼 Screen Box  ➔  🔍 OCR Scanner  ➔  🧠 MT Neural Model  ➔  📝 Result Window",
+        "stage2_desc": "Optical character recognition (OCR) of non-selectable screen text in a bounding box (documents, UI dialogues, images) with instant translation.",
+        "stage2_hotkeys": "Ctrl + Alt + A — Box OCR | Ctrl + C + C — Quick Clipboard Translate",
 
         # Module 3: Outgoing Voice Studio
-        "stage3_title": "3. Voice Translator ➔ Microphone in Discord/Games (Voice Studio)",
-        "stage3_flow": "Pipeline: 🎙 Your Mic (RU)  ➔  ✂ Chunking + Punctuation  ➔  🧠 GigaAM + Pocket-TTS  ➔  🎧 Discord Output (EN)",
-        "stage3_desc": "Speak Russian into your mic — teammates in Discord or games hear fluent English translated in your own cloned voice timbre.",
+        "stage3_title": "3. Voice Translator (Voice Studio)",
+        "stage3_flow": "Pipeline: 🎙 Mic Input (RU)  ➔  ✂ VAD + Punctuation  ➔  🧠 GigaAM + Pocket-TTS  ➔  🔊 Virtual Mic Channel (EN)",
+        "stage3_desc": "Speak Russian into your mic — converts and synthesizes real-time English speech with your cloned timbre into the chosen virtual microphone output.",
         "stage3_hotkeys": "Shift + Mouse Wheel Click — Push-To-Talk Voice Translation",
 
         "btn_start": "▶ Launch",
         "btn_stop": "⏹ Stop",
         "btn_open": "🗔 Open Window",
-        "btn_studio": "🗔 Open Voice Studio",
-        "btn_wizard": "🎙 Record Your Voice (7 sec)",
-        "wizard_desc": "Train the model to speak with your voice timbre in 7 seconds.",
+        "btn_studio": "🗔 Voice Studio",
+        "btn_wizard": "🎙 Record Voice Sample (7 sec)",
+        "wizard_desc": "Train the neural model to speak with your unique voice timbre in 7 seconds.",
 
         "status_running": "● Running",
         "status_stopped_pill": "○ Stopped",
 
-        "hardware_title": "Audio output device for voice translation:",
+        # Hardware audio selector
+        "hardware_title": "Output audio channel for voice translation:",
         "hardware_topping": "🎛 Topping E2x2 (Hardware Loopback)",
-        "hardware_cable": "🔌 Virtual Cable (Standard PC)",
+        "hardware_cable": "🔌 Virtual Cable (VB-Audio Cable)",
         "hardware_install_cable": "📥 Install VB-Cable (1 Click)",
-        "btn_open_folder": "📂 Open Settings Folder (CONFIG/)",
+        "btn_open_folder": "📂 Protected Settings (CONFIG/)",
 
+        # Inventory Tab
         "inventory_header": "Local Neural Models on SSD Audit (100% Offline Ready):",
         "btn_refresh": "🔄 Refresh Audit",
         "col_stage": "Module",
@@ -118,6 +137,19 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "col_size": "Size (MB)",
         "ready": "✔ Ready (Offline)",
         "missing": "❌ Missing",
+
+        # Patches & Health Tab
+        "patches_header": "Integrity audit of the 4 Golden Patches, binaries, and CONFIG vault:",
+        "patches_summary_ok": "🟢 All 4 patches active | Executables & models verified | CONFIG protected",
+        "patches_summary_fail": "🔴 WARNING: Patch corruption detected! Click 'Restore All Patches from CONFIG'",
+        "btn_audit_refresh": "🔄 Re-audit Integrity",
+        "btn_restore_patches": "🛠 Restore All Patches (1 Click)",
+        "col_patch_stage": "Module",
+        "col_patch_name": "Component / Patch",
+        "col_patch_type": "Category",
+        "col_patch_status": "State",
+        "col_patch_desc": "Function",
+
         "hotkeys_label": "Hotkeys:",
         "res_metrics": "RAM: {ram} MB | CPU: {cpu}%",
         "res_stopped": "Service stopped",
@@ -128,28 +160,29 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "stop_all": "⏹ 停止全部程序",
         "tab_dashboard": "🎛 控制面板与数据流",
         "tab_inventory": "🧠 本地AI模型清单",
+        "tab_patches": "🛡 补丁完整性与诊断",
         "tab_guide": "ℹ 系统架构与说明",
         "status_all_running": "🟢 全部3个程序运行中 (0 云端调用)",
         "status_partial": "🟡 运行中程序: {count} / 3",
         "status_stopped": "⚪ 全部程序已停止",
 
-        # Module 1: Audio to Subtitles
-        "stage1_title": "1. 声音翻译器 ➔ 屏幕透明字幕 (LiveTranslate)",
-        "stage1_flow": "流程: 🔊 系统音频  ➔  ✂ 语音切分  ➔  🧠 SenseVoice + MT  ➔  📺 屏幕顶层字幕",
-        "stage1_desc": "截取视频、影视和会议音频，在停顿处自动切分，并在屏幕顶层显示透明双语字幕.",
-        "stage1_hotkeys": "F9 — 显示/隐藏字幕 | 双击滚轮 — 鼠标穿透",
+        # Module 1: Audio to Subtitles (LiveTranslate)
+        "stage1_title": "1. 实时音频字幕 (LiveTranslate)",
+        "stage1_flow": "流程: 🔊 系统音频  ➔  ✂ 语音切分  ➔  🧠 SenseVoice + Hunyuan MT  ➔  📺 屏幕顶层字幕",
+        "stage1_desc": "捕获系统声音（视频、会议、浏览器），在说话停顿处切分并在屏幕最顶层显示透明双语字幕.",
+        "stage1_hotkeys": "F9 — 启停/隐藏字幕 | 双击中键 — 鼠标穿透 | 拖拽中键 — 移动字幕",
 
-        # Module 2: Screen OCR
-        "stage2_title": "2. 屏幕划词翻译器 ➔ 截图框选 (OverTranslate)",
-        "stage2_flow": "流程: 🖼 屏幕选区  ➔  🔍 OCR光学识别  ➔  🧠 翻译模型  ➔  📝 翻译窗口",
-        "stage2_desc": "框选屏幕任意不可复制文字（游戏、文档、图片）并原地快速翻译.",
+        # Module 2: Screen OCR (OverTranslate)
+        "stage2_title": "2. 屏幕划词翻译 (OverTranslate)",
+        "stage2_flow": "流程: 🖼 屏幕选区  ➔  🔍 OCR光学扫描  ➔  🧠 翻译模型  ➔  📝 翻译窗口",
+        "stage2_desc": "框选屏幕任意不可复制文字（文档、图片、界面）并原地光学识别与翻译.",
         "stage2_hotkeys": "Ctrl + Alt + A — 框选截屏 | Ctrl + C + C — 查词",
 
         # Module 3: Outgoing Voice Studio
-        "stage3_title": "3. 语音翻译器 ➔ 麦克风输出至对局 (Voice Studio)",
-        "stage3_flow": "流程: 🎙 麦克风输入  ➔  ✂ 断句加标点  ➔  🧠 GigaAM + Pocket-TTS  ➔  🎧 声卡输出 (英文)",
-        "stage3_desc": "您说俄语，程序自动翻译并使用您自己的克隆声线在游戏中说英语.",
-        "stage3_hotkeys": "Shift + 鼠标滚轮中键 — 对讲机说话",
+        "stage3_title": "3. 语音合成翻译 (Voice Studio)",
+        "stage3_flow": "流程: 🎙 麦克风输入 (RU)  ➔  ✂ 断句加标点  ➔  🧠 GigaAM + Pocket-TTS  ➔  🔊 虚拟麦克风 (EN)",
+        "stage3_desc": "您说俄语，系统实时翻译为英语并通过专属克隆声线输出到虚拟麦克风通道.",
+        "stage3_hotkeys": "Shift + 鼠标中键 — 对讲机通话 (PTT)",
 
         "btn_start": "▶ 启动",
         "btn_stop": "⏹ 停止",
@@ -161,12 +194,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_running": "● 运行中",
         "status_stopped_pill": "○ 已停止",
 
-        "hardware_title": "声音输出设备路由:",
+        # Hardware audio selector
+        "hardware_title": "语音输出虚拟通道路由:",
         "hardware_topping": "🎛 Topping E2x2 (硬件回路)",
-        "hardware_cable": "🔌 虚拟音频线 (普通电脑)",
+        "hardware_cable": "🔌 虚拟音频线 (VB-Audio Cable)",
         "hardware_install_cable": "📥 一键安装虚拟音频线",
-        "btn_open_folder": "📂 打开配置目录 (CONFIG/)",
+        "btn_open_folder": "📂 受保护配置 (CONFIG/)",
 
+        # Inventory Tab
         "inventory_header": "本地神经模型清单 (100% 离线):",
         "btn_refresh": "🔄 刷新",
         "col_stage": "模块",
@@ -176,24 +211,44 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "col_size": "大小 (MB)",
         "ready": "✔ 已就绪",
         "missing": "❌ 缺失",
+
+        # Patches & Health Tab
+        "patches_header": "四大核心补丁完整性、二进制文件与配置库审计:",
+        "patches_summary_ok": "🟢 全部4个补丁正常 | 模型与程序完好 | CONFIG 受保护",
+        "patches_summary_fail": "🔴 警告: 补丁丢失或异常！请点击一键从CONFIG还原",
+        "btn_audit_refresh": "🔄 重新审计",
+        "btn_restore_patches": "🛠 一键恢复补丁",
+        "col_patch_stage": "模块",
+        "col_patch_name": "组件/补丁",
+        "col_patch_type": "类别",
+        "col_patch_status": "状态",
+        "col_patch_desc": "功能说明",
+
         "hotkeys_label": "快捷键:",
         "res_metrics": "内存: {ram} MB | CPU: {cpu}%",
-        "res_stopped": "已停止",
-    }
+        "res_stopped": "服务已停止",
+    },
 }
 
 
 class I18n:
-    current_lang: str = "ru"
+    """Static helper for application internationalization."""
+
+    _current_lang = "ru"
 
     @classmethod
     def set_language(cls, lang: str):
         if lang in TRANSLATIONS:
-            cls.current_lang = lang
+            cls._current_lang = lang
+
+    @classmethod
+    def get_language(cls) -> str:
+        return cls._current_lang
 
     @classmethod
     def t(cls, key: str, **kwargs) -> str:
-        text = TRANSLATIONS.get(cls.current_lang, {}).get(key, key)
+        dict_lang = TRANSLATIONS.get(cls._current_lang, TRANSLATIONS["ru"])
+        text = dict_lang.get(key, TRANSLATIONS["ru"].get(key, key))
         if kwargs:
             text = text.format(**kwargs)
         return text

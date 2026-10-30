@@ -1,6 +1,6 @@
 """Universal Real-Time Translation Hub & Ecosystem Orchestrator (PySide6).
 Supports Trilingual UI (Russian, English, Chinese), AI Models Storage Audit,
-Process Lifecycle Supervision, and Architecture / Signal Flow Guide.
+Process Lifecycle Supervision, Patch & Health Integrity Auditor, and Architecture Guide.
 """
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QTableWidget,
@@ -41,10 +42,12 @@ if str(PROJECT_ROOT) not in sys.path:
 try:
     from launcher.i18n import I18n
     from launcher.models_inventory import ModelsInventory
+    from launcher.patch_checker import PatchIntegrityChecker
     from launcher.process_manager import EcosystemProcessManager
 except ImportError:
     from i18n import I18n
     from models_inventory import ModelsInventory
+    from patch_checker import PatchIntegrityChecker
     from process_manager import EcosystemProcessManager
 
 log = logging.getLogger("Launcher.Hub")
@@ -156,7 +159,7 @@ class StageCard(QFrame):
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 14px;
+                padding: 0 12px;
             }
             QPushButton:hover { background-color: #10b981; }
         """)
@@ -167,12 +170,12 @@ class StageCard(QFrame):
         self.btn_stop.setFixedHeight(30)
         self.btn_stop.setStyleSheet("""
             QPushButton {
-                background-color: #991b1b;
+                background-color: #b91c1c;
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 14px;
+                padding: 0 12px;
             }
             QPushButton:hover { background-color: #dc2626; }
         """)
@@ -184,18 +187,19 @@ class StageCard(QFrame):
         self.btn_open.setFixedHeight(30)
         self.btn_open.setStyleSheet("""
             QPushButton {
-                background-color: #2563eb;
-                color: #ffffff;
-                font-weight: bold;
+                background-color: #374151;
+                color: #e5e7eb;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 14px;
+                padding: 0 12px;
             }
-            QPushButton:hover { background-color: #3b82f6; }
+            QPushButton:hover { background-color: #4b5563; }
         """)
         self.btn_open.clicked.connect(self._on_open_clicked)
         self.btn_open.hide()
         h_btn.addWidget(self.btn_open)
+
+        h_btn.addStretch()
 
         self.lbl_telemetry = QLabel(I18n.t("res_stopped"))
         self.lbl_telemetry.setStyleSheet("""
@@ -208,24 +212,19 @@ class StageCard(QFrame):
             border: 1px solid #374151;
         """)
         h_btn.addWidget(self.lbl_telemetry)
-
-        h_btn.addStretch()
         layout.addLayout(h_btn)
-
-        self._last_metrics = {"running": False, "ram_mb": 0.0, "cpu_pct": 0.0, "pid": None}
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
+        self.lbl_hotkey_badge.setText(I18n.t(self.hotkeys_key))
         self.lbl_flow.setText(I18n.t(self.flow_key))
         self.lbl_desc.setText(I18n.t(self.desc_key))
-        self.lbl_hotkey_badge.setText(I18n.t(self.hotkeys_key))
         self.btn_start.setText(I18n.t("btn_start"))
         self.btn_stop.setText(I18n.t("btn_stop"))
         self.btn_open.setText(I18n.t(self.open_label_key))
-        self.update_telemetry(self._last_metrics, force=True)
+        self.set_running(self._is_running, force=True)
 
-    def update_telemetry(self, data: Dict[str, Any], force: bool = False):
-        self._last_metrics = data
+    def update_telemetry(self, data: dict, force: bool = False):
         running = data.get("running", False)
         self.set_running(running, force=force)
 
@@ -320,8 +319,8 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(980, 780)
-        self.setMinimumSize(900, 680)
+        self.resize(1000, 780)
+        self.setMinimumSize(920, 680)
 
         self._apply_theme()
         self._init_ui()
@@ -340,6 +339,7 @@ class EcosystemHub(QMainWindow):
         self._poll_process_status()
         self.poll_timer.start()
         self._populate_inventory_table()
+        self._populate_patches_table()
         self._update_hub_profile_styles()
 
     def _update_hub_profile_styles(self):
@@ -401,13 +401,14 @@ class EcosystemHub(QMainWindow):
         root_layout.setContentsMargins(14, 14, 14, 14)
         root_layout.setSpacing(10)
 
-        # 1. Master Control Header Bar with Language Switcher
+        # 1. Master Control Header Bar with Language Switcher and Patch Status
         root_layout.addLayout(self._create_master_header())
 
         # 2. Main Tabs
         self.tabs = QTabWidget()
         self.tabs.addTab(self._create_dashboard_tab(), "🎛 Пульт и Схема работы")
         self.tabs.addTab(self._create_inventory_tab(), "🧠 Файлы нейросетей на диске")
+        self.tabs.addTab(self._create_patches_tab(), "🛡 Целостность и Патчи")
         self.tabs.addTab(self._create_guide_tab(), "ℹ Архитектура и справка")
         root_layout.addWidget(self.tabs, stretch=1)
 
@@ -448,6 +449,25 @@ class EcosystemHub(QMainWindow):
         """)
         self.btn_stop_all.clicked.connect(EcosystemProcessManager.stop_all)
         h.addWidget(self.btn_stop_all)
+
+        # Patch Health Quick Pill
+        self.lbl_patch_quick = QPushButton("🛡 Патчи: Проверка...")
+        self.lbl_patch_quick.setFixedHeight(42)
+        self.lbl_patch_quick.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #38bdf8;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 12px;
+                border: 1px solid #0284c7;
+            }
+            QPushButton:hover { background-color: #0f172a; }
+        """)
+        self.lbl_patch_quick.clicked.connect(lambda: self.tabs.setCurrentIndex(2))
+        h.addWidget(self.lbl_patch_quick)
 
         h.addStretch()
 
@@ -657,7 +677,132 @@ class EcosystemHub(QMainWindow):
             self.tbl_models.setItem(row, 4, QTableWidgetItem(f"{it['size_mb']} MB"))
 
     # =========================================================================
-    # Tab 3: Architecture & Models Guide (Pedagogical Overview)
+    # Tab 3: System Health, Patches & Protected CONFIG Vault
+    # =========================================================================
+    def _create_patches_tab(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+
+        # Header Info Banner
+        self.lbl_patches_head = QLabel()
+        self.lbl_patches_head.setStyleSheet("color: #e5e7eb; font-size: 13px; font-weight: bold;")
+        layout.addWidget(self.lbl_patches_head)
+
+        self.lbl_patches_summary = QLabel()
+        self.lbl_patches_summary.setStyleSheet("""
+            background-color: #111827;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #1f2937;
+        """)
+        layout.addWidget(self.lbl_patches_summary)
+
+        # Controls Row: Refresh, Restore 1-click, Open CONFIG
+        h_ctrl = QHBoxLayout()
+        h_ctrl.setSpacing(10)
+
+        self.btn_audit_refresh = QPushButton()
+        self.btn_audit_refresh.setFixedHeight(34)
+        self.btn_audit_refresh.setStyleSheet("background-color: #374151; color: #fff; border-radius: 4px; padding: 0 14px; font-weight: bold;")
+        self.btn_audit_refresh.clicked.connect(self._populate_patches_table)
+        h_ctrl.addWidget(self.btn_audit_refresh)
+
+        self.btn_restore_patches = QPushButton()
+        self.btn_restore_patches.setFixedHeight(34)
+        self.btn_restore_patches.setStyleSheet("""
+            QPushButton {
+                background-color: #2563eb;
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 0 16px;
+            }
+            QPushButton:hover { background-color: #3b82f6; }
+        """)
+        self.btn_restore_patches.clicked.connect(self._on_restore_patches_clicked)
+        h_ctrl.addWidget(self.btn_restore_patches)
+
+        self.btn_vault_folder = QPushButton()
+        self.btn_vault_folder.setFixedHeight(34)
+        self.btn_vault_folder.setStyleSheet("background-color: #1f2937; color: #9ca3af; border-radius: 4px; padding: 0 14px;")
+        self.btn_vault_folder.clicked.connect(self._on_open_config_folder)
+        h_ctrl.addWidget(self.btn_vault_folder)
+
+        h_ctrl.addStretch()
+        layout.addLayout(h_ctrl)
+
+        # Table of all components and patches
+        self.tbl_patches = QTableWidget()
+        self.tbl_patches.setColumnCount(5)
+        self.tbl_patches.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_patches.horizontalHeader().setStretchLastSection(True)
+        layout.addWidget(self.tbl_patches)
+
+        return w
+
+    def _populate_patches_table(self):
+        self.tbl_patches.setHorizontalHeaderLabels([
+            I18n.t("col_patch_stage"),
+            I18n.t("col_patch_name"),
+            I18n.t("col_patch_type"),
+            I18n.t("col_patch_status"),
+            I18n.t("col_patch_desc"),
+        ])
+
+        audit = PatchIntegrityChecker.audit_all()
+        items = audit["items"]
+        self.tbl_patches.setRowCount(len(items))
+
+        for row, it in enumerate(items):
+            self.tbl_patches.setItem(row, 0, QTableWidgetItem(it["stage"]))
+            self.tbl_patches.setItem(row, 1, QTableWidgetItem(it["name"]))
+            self.tbl_patches.setItem(row, 2, QTableWidgetItem(it["category"]))
+
+            st_item = QTableWidgetItem(it["status_text"])
+            if it["is_ok"]:
+                st_item.setForeground(QColor("#10b981"))
+                st_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+            else:
+                st_item.setForeground(QColor("#ef4444"))
+                st_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+            self.tbl_patches.setItem(row, 3, st_item)
+
+            self.tbl_patches.setItem(row, 4, QTableWidgetItem(it["desc"]))
+
+        # Update Summary Banner & Quick Header Pill
+        if audit["all_passed"]:
+            self.lbl_patches_summary.setText(I18n.t("patches_summary_ok"))
+            self.lbl_patches_summary.setStyleSheet("background-color: #064e3b; color: #a7f3d0; padding: 8px 12px; border-radius: 6px; font-weight: bold; border: 1px solid #059669;")
+            self.lbl_patch_quick.setText("🛡 4 Патча активны (ОК)")
+            self.lbl_patch_quick.setStyleSheet("background-color: #064e3b; color: #34d399; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #059669;")
+        else:
+            self.lbl_patches_summary.setText(I18n.t("patches_summary_fail"))
+            self.lbl_patches_summary.setStyleSheet("background-color: #7f1d1d; color: #fecaca; padding: 8px 12px; border-radius: 6px; font-weight: bold; border: 1px solid #dc2626;")
+            self.lbl_patch_quick.setText("🔴 Внимание: слетел патч!")
+            self.lbl_patch_quick.setStyleSheet("background-color: #7f1d1d; color: #fca5a5; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #dc2626;")
+
+    def _on_restore_patches_clicked(self):
+        res = PatchIntegrityChecker.restore_all_patches()
+        self._populate_patches_table()
+        if res["success"]:
+            QMessageBox.information(
+                self,
+                "Успешное восстановление",
+                f"Все ключевые патчи и настройки успешно восстановлены из CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
+            )
+        else:
+            QMessageBox.critical(
+                self,
+                "Ошибка восстановления",
+                f"Не удалось восстановить патчи:\n" + "\n".join(res["errors"]),
+            )
+
+    # =========================================================================
+    # Tab 4: Architecture & Models Guide (Pedagogical Overview)
     # =========================================================================
     def _create_guide_tab(self) -> QWidget:
         scroll = QScrollArea()
@@ -672,19 +817,19 @@ class EcosystemHub(QMainWindow):
         v_flow = QVBoxLayout(flow_box)
         diag = QLabel("""
 <pre style="font-family: Consolas, monospace; color: #a7f3d0; font-size: 11px;">
-[ВХОДЯЩИЙ ЗВУК ИГР / СТРИМОВ (RU, EN, ZH)]
+[ВХОДЯЩИЙ СИСТЕМНЫЙ ЗВУК (ПК / Видео / Звонки / Браузер / Игры)]
     │
     ▼ (WASAPI Loopback)
 [Этап 1: LiveTranslate] ──► [SenseVoice ASR (170ms)] ──► [HY-MT 1.8B GGUF (80ms)] ──► [ПРОЗРАЧНЫЕ СУБТИТРЫ]
 
-[ЭКРАННЫЙ ТЕКСТ / ИГРЫ (RU, EN, ZH)]
+[ЭКРАННЫЙ ТЕКСТ (Любые окна / Документы / Картинки / Интерфейсы)]
     │
     ▼ (Ctrl + Alt + A)
-[Этап 2: OverTranslate] ──► [Windows OCR / Paddle] ──► [Переводчик] ──► [Окно перевода / Замена в чате]
+[Этап 2: OverTranslate] ──► [Windows OCR / Paddle] ──► [Переводчик] ──► [Окно перевода / Вставка в буфер]
 
-[ИСХОДЯЩИЙ ГОЛОС В CS2 / DISCORD]
+[ИСХОДЯЩИЙ ГОЛОС В МИКРОФОН (Звонки / Конференции / VoIP / Игры)]
     │
-    ▼ (Микрофон NVIDIA Broadcast)
+    ▼ (Микрофон ПК)
 [Этап 3: Voice Studio] ──► [GigaAM v3 CTC (170ms)] ──► [Opus-MT (15ms)] ──► [Pocket-TTS Клон (800ms)]
                                                                                │
                                                                                ▼
@@ -693,8 +838,8 @@ class EcosystemHub(QMainWindow):
                                                                       (Аппаратный Loopback)
                                                                                │
                                                                                ▼
-                                                                     [Микрофон CS2 и Discord]
-                                                                     Тиммейты слышат ваш английский!
+                                                                     [Вход микрофона: Loopback 1/2]
+                                                                     Собеседники слышат ваш английский!
 </pre>
         """)
         v_flow.addWidget(diag)
@@ -711,13 +856,13 @@ class EcosystemHub(QMainWindow):
 Благодаря CTC-декодированию (Connectionist Temporal Classification) не тратит время на авторегрессионный цикл и работает за <b>~170 мс на 2 ядрах CPU</b>.<br><br>
 
 <b>2. Tencent Hunyuan MT 1.8B (GGUF INT4, ~1080 MB):</b><br>
-Современная языковая модель перевода от Tencent, квантованная до 4 бит. Специально оптимизирована для живых диалогов, игрового сленга и триады языков: <b>Русский ⇄ Английский ⇄ Китайский</b>.<br><br>
+Современная языковая модель перевода от Tencent, квантованная до 4 бит. Специально оптимизирована для живых диалогов, терминологии и триады языков: <b>Русский ⇄ Английский ⇄ Китайский</b>.<br><br>
 
 <b>3. Helsinki Opus-MT (CTranslate2 INT8, ~146 MB):</b><br>
-Ультра-легковесный трансформер MarianMT, оптимизированный в движке CTranslate2. Переводит тактические команды CS2 с русского на английский всего за <b>14–18 миллисекунд</b> с нулевой нагрузкой на GPU.<br><br>
+Ультра-легковесный трансформер MarianMT, оптимизированный в движке CTranslate2. Переводит разговорную речь с русского на английский всего за <b>14–18 миллисекунд</b> с нулевой нагрузкой на GPU.<br><br>
 
 <b>4. Kyutai Pocket-TTS & Mimi Codec (Mimi + Flow Matching, ~320 MB):</b><br>
-Нейросеть последнего поколения (Kyutai 2025–2026). Использует 24 кГц нейронный аудиокодек <b>Mimi</b> и диффузионный поток <b>Flow Matching</b>. В отличие от старых XTTS-v2, она не роботит, не заикается и клонирует тембр всего по 7-секундному образцу голоса прямо на обычном процессоре за ~800 мс!
+Нейросеть последнего поколения (Kyutai 2025–2026). Использует 24 кГц нейронный аудиокодек <b>Mimi</b> и диффузионный поток <b>Flow Matching</b>. Не роботит, не заикается и клонирует тембр всего по 7-секундному образцу голоса прямо на обычном процессоре за ~800 мс!
 </div>
         """)
         models_info.setWordWrap(True)
@@ -725,14 +870,14 @@ class EcosystemHub(QMainWindow):
         layout.addWidget(models_box)
 
         # Section 3: Topping E2x2 Loopback Guide (Forget-Proof Standard)
-        loopback_box = QGroupBox("3. Звуковая карта Topping E2x2: Как устроен Loopback и что выбрать в Discord (Шпаргалка на века)")
+        loopback_box = QGroupBox("3. Звуковая карта Topping E2x2: Как устроен Loopback и что выбрать в программах связи (Шпаргалка на века)")
         v_loopback = QVBoxLayout(loopback_box)
         loopback_info = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
 <b style="color: #38bdf8; font-size: 13px;">Что такое Loopback простыми словами?</b><br>
 <b>Loopback (аппаратная петля)</b> — это встроенный в звуковую карту Topping «провод-невидимка». Он аппаратно перенаправляет любой звук, отправленный в канал <b>Playback 3/4</b>, прямо во вход виртуального микрофона <b>Loopback 1/2</b> со скоростью света (0 мс задержки) и с 0% нагрузки на процессор.<br><br>
 
-<b style="color: #a7f3d0; font-size: 13px;">Шпаргалка: Куда что нажимать в Windows и Discord (За 30 секунд):</b><br>
+<b style="color: #a7f3d0; font-size: 13px;">Шпаргалка: Куда что нажимать в Windows и программах связи (За 30 секунд):</b><br>
 <table border="0" cellpadding="8" style="background-color: #16171a; border-radius: 6px; width: 100%; border: 1px solid #2e3035;">
 <tr style="background-color: #212328; color: #ffffff;">
     <th align="left">Программа / Место</th>
@@ -742,7 +887,7 @@ class EcosystemHub(QMainWindow):
 <tr>
     <td><b>1. Windows (Вывод звука)</b></td>
     <td><code style="color: #60a5fa; font-weight: bold;">Playback 1/2</code></td>
-    <td>Обычный звук: вы слышите игру, музыку, тиммейтов и свой перевод в наушниках.</td>
+    <td>Обычный звук: вы слышите видео, музыку, собеседников и свой перевод в наушниках.</td>
 </tr>
 <tr>
     <td><b>2. Наш Лаунчер (Этап 3)</b></td>
@@ -750,15 +895,15 @@ class EcosystemHub(QMainWindow):
     <td>Канал озвучки: ИИ бесшумно отправляет сгенерированный английский голос в карту Topping.</td>
 </tr>
 <tr>
-    <td><b>3. Discord / CS2 / Telegram</b></td>
+    <td><b>3. Программы связи (VoIP, звонки, игры)</b></td>
     <td><b style="color: #34d399; font-size: 13px;">Loopback 1/2 (Topping E2x2 OTG)</b></td>
-    <td><b>Самое главное!</b> Микрофон в игре, через который тиммейты слышат ваш чистый перевод!</td>
+    <td><b>Самое главное!</b> Входной микрофон, через который собеседники слышат ваш чистый перевод!</td>
 </tr>
 </table><br>
 
-<b style="color: #facc15; font-size: 12px;">Почему эта схема вечная и не ломается:</b><br>
-Вам не нужны виртуальные кабели (типа VB-Audio Cable), которые постоянно слетают при обновлениях Windows и дают задержку 100+ мс. 
-Всё смешивание делает сам чип Topping на уровне железа. Даже если через год вы переустановите систему, достаточно просто запустить START.bat и выбрать эти 3 пункта!
+<b style="color: #facc15; font-size: 12px;">Почему эта схема надёжна:</b><br>
+Вам не нужны виртуальные кабели (типа VB-Audio Cable), которые могут слетать при обновлениях Windows и дают задержку 100+ мс. 
+Всё смешивание делает сам чип Topping на аппаратном уровне. Даже если через год вы вернётесь к проекту, достаточно просто запустить START.bat и выбрать эти 3 пункта!
 </div>
         """)
         loopback_info.setWordWrap(True)
@@ -768,47 +913,6 @@ class EcosystemHub(QMainWindow):
         layout.addStretch()
         scroll.setWidget(w)
         return scroll
-
-    # =========================================================================
-    # Tab 4: Safe Updates & Patch Vault
-    # =========================================================================
-    def _create_vault_tab(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(12)
-
-        box_vault = QGroupBox("Защита настроек и патчей от обновлений авторов (CONFIG Vault)")
-        v_vault = QVBoxLayout(box_vault)
-
-        v_vault.addWidget(QLabel("<b>Почему наши доработки никогда не потеряются при выходе обновлений:</b>"))
-        desc = QLabel(
-            "1. <b>Изолированное хранилище `CONFIG/`</b>: Все ваши индивидуальные профили (клонированный голос, "
-            "настройки карты Topping, задержки VAD) хранятся в защищенной директории, отделенной от чужих репозиториев.<br>"
-            "2. <b>Независимая Студия</b>: Наша Студия (`stage_3_voice/studio/`) использует чистые API нейросетей, "
-            "поэтому любые внешние изменения чужих интерфейсов не ломают наш голосовой перевод.<br>"
-            "3. <b>Git Invariant</b>: Все доработки зафиксированы в изолированной ветке <code>feature/stage3-audio-routing</code>."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("color: #cbd5e1; font-size: 12px;")
-        v_vault.addWidget(desc)
-        layout.addWidget(box_vault)
-
-        # Topping Checklist Box
-        box_topping = QGroupBox("Памятка по настройке звука в Windows и играх (Topping E2x2)")
-        v_top = QVBoxLayout(box_topping)
-        top_txt = QLabel(
-            "• <b>Микрофон в Windows / Discord / CS2</b>: установите <code>Loopback 1/2 (6- E2x2 OTG)</code>.<br>"
-            "• <b>Вывод перевода</b>: Студия отправляет английский голос в <code>Playback 3/4</code> (Topping аппаратно перенаправляет в Loopback 1/2).<br>"
-            "• <b>Наушники</b>: слушайте игру в <code>Playback 1/2</code> (слышен чистый звук игры + тихий самоконтроль своего английского голоса)."
-        )
-        top_txt.setWordWrap(True)
-        top_txt.setStyleSheet("color: #93c5fd; font-size: 12px;")
-        v_top.addWidget(top_txt)
-        layout.addWidget(box_topping)
-
-        layout.addStretch()
-        return w
 
     # =========================================================================
     # Multilingual & Polling Logic
@@ -825,7 +929,8 @@ class EcosystemHub(QMainWindow):
 
         self.tabs.setTabText(0, I18n.t("tab_dashboard"))
         self.tabs.setTabText(1, I18n.t("tab_inventory"))
-        self.tabs.setTabText(2, I18n.t("tab_guide"))
+        self.tabs.setTabText(2, I18n.t("tab_patches"))
+        self.tabs.setTabText(3, I18n.t("tab_guide"))
 
         self.card_stage1.retranslate()
         self.card_stage2.retranslate()
@@ -841,8 +946,14 @@ class EcosystemHub(QMainWindow):
         self.lbl_inv_head.setText(f"<b>{I18n.t('inventory_header')}</b>")
         self.btn_refresh.setText(I18n.t("btn_refresh"))
 
+        self.lbl_patches_head.setText(f"<b>{I18n.t('patches_header')}</b>")
+        self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh"))
+        self.btn_restore_patches.setText(I18n.t("btn_restore_patches"))
+        self.btn_vault_folder.setText(I18n.t("btn_open_folder"))
+
         if not is_initial:
             self._populate_inventory_table()
+            self._populate_patches_table()
             self._poll_process_status()
 
     def _poll_process_status(self):
@@ -873,6 +984,7 @@ class EcosystemHub(QMainWindow):
         wiz = VoiceCloningWizard(self)
         wiz.exec()
         self._populate_inventory_table()
+        self._populate_patches_table()
 
     def _apply_theme(self):
         self.setStyleSheet("""

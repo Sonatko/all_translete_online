@@ -110,6 +110,53 @@ class EcosystemProcessManager:
             return False
 
     @classmethod
+    def stop_stage_1(cls) -> bool:
+        """Stop Stage 1 LiveTranslate."""
+        current_pid = os.getpid()
+        for p in psutil.process_iter(["name"]):
+            try:
+                if p.pid == current_pid:
+                    continue
+                if "python" in (p.info.get("name") or "").lower():
+                    cmdline = " ".join(p.cmdline() or []).lower()
+                    if "hub.py" in cmdline:
+                        continue
+                    if "stage_1_audio" in cmdline or "livetranslate" in cmdline:
+                        p.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return True
+
+    @classmethod
+    def stop_stage_2(cls) -> bool:
+        """Stop Stage 2 OverTranslate."""
+        for p in psutil.process_iter(["name"]):
+            try:
+                if "overtranslate" in (p.info.get("name") or "").lower():
+                    p.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return True
+
+    @classmethod
+    def stop_stage_3(cls) -> bool:
+        """Stop Stage 3 Voice Translation Studio."""
+        current_pid = os.getpid()
+        for p in psutil.process_iter(["name"]):
+            try:
+                if p.pid == current_pid:
+                    continue
+                if "python" in (p.info.get("name") or "").lower():
+                    cmdline = " ".join(p.cmdline() or []).lower()
+                    if "hub.py" in cmdline:
+                        continue
+                    if "stage_3_voice" in cmdline or "studio" in cmdline:
+                        p.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return True
+
+    @classmethod
     def start_all(cls) -> None:
         """Start all three stages in sequence."""
         cls.start_stage_1()

@@ -51,16 +51,31 @@ log = logging.getLogger("Launcher.Hub")
 
 
 class StageCard(QFrame):
-    """Visual status and control card for an ecosystem stage."""
+    """Visual pipeline flow and control card for a translation program (KISS)."""
 
-    def __init__(self, stage_id: str, title_key: str, desc_key: str, hotkeys_key: str, on_start, on_stop=None, parent=None):
+    def __init__(
+        self,
+        stage_id: str,
+        title_key: str,
+        flow_key: str,
+        desc_key: str,
+        hotkeys_key: str,
+        on_start,
+        on_stop=None,
+        on_open=None,
+        open_label_key="btn_open",
+        parent=None,
+    ):
         super().__init__(parent)
         self.stage_id = stage_id
         self.title_key = title_key
+        self.flow_key = flow_key
         self.desc_key = desc_key
         self.hotkeys_key = hotkeys_key
         self.on_start = on_start
         self.on_stop = on_stop
+        self.on_open = on_open
+        self.open_label_key = open_label_key
         self._is_running = False
 
         self.setFrameShape(QFrame.Shape.StyledPanel)
@@ -69,21 +84,32 @@ class StageCard(QFrame):
                 background-color: #1a1b1e;
                 border: 1px solid #2e3035;
                 border-radius: 8px;
-                padding: 10px;
             }
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(6)
 
-        # Header Row: Title + Status Pill
+        # 1. Header Row: Title + Hotkey Badge + Status Pill
         h_head = QHBoxLayout()
         self.lbl_title = QLabel(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_title.setStyleSheet("font-size: 13px; color: #ffffff;")
         h_head.addWidget(self.lbl_title)
 
         h_head.addStretch()
+
+        self.lbl_hotkey_badge = QLabel(I18n.t(self.hotkeys_key))
+        self.lbl_hotkey_badge.setStyleSheet("""
+            background-color: #1e293b;
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: Consolas, monospace;
+            border: 1px solid #3b82f6;
+        """)
+        h_head.addWidget(self.lbl_hotkey_badge)
 
         self.status_pill = QLabel(I18n.t("status_stopped_pill"))
         self.status_pill.setStyleSheet("""
@@ -98,36 +124,79 @@ class StageCard(QFrame):
         h_head.addWidget(self.status_pill)
         layout.addLayout(h_head)
 
-        # Description
+        # 2. Pipeline Flow Schema Banner
+        self.lbl_flow = QLabel(I18n.t(self.flow_key))
+        self.lbl_flow.setStyleSheet("""
+            background-color: #111827;
+            color: #38bdf8;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 5px;
+            border: 1px solid #1f2937;
+        """)
+        layout.addWidget(self.lbl_flow)
+
+        # 3. Plain Human Description
         self.lbl_desc = QLabel(I18n.t(self.desc_key))
         self.lbl_desc.setWordWrap(True)
-        self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
         layout.addWidget(self.lbl_desc)
 
-        # Hotkey Info
-        self.lbl_hotkeys = QLabel(f"<b>Горячие клавиши:</b> {I18n.t(self.hotkeys_key)}")
-        self.lbl_hotkeys.setStyleSheet("color: #60a5fa; font-size: 11px;")
-        layout.addWidget(self.lbl_hotkeys)
-
-        # Action Buttons and Live Telemetry
+        # 4. Action Buttons and Live Telemetry
         h_btn = QHBoxLayout()
-        self.btn_action = QPushButton(I18n.t("btn_start"))
-        self.btn_action.setFixedHeight(30)
-        self.btn_action.setStyleSheet("""
+        h_btn.setSpacing(8)
+
+        self.btn_start = QPushButton(I18n.t("btn_start"))
+        self.btn_start.setFixedHeight(30)
+        self.btn_start.setStyleSheet("""
+            QPushButton {
+                background-color: #059669;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 0 14px;
+            }
+            QPushButton:hover { background-color: #10b981; }
+        """)
+        self.btn_start.clicked.connect(self._on_start_clicked)
+        h_btn.addWidget(self.btn_start)
+
+        self.btn_stop = QPushButton(I18n.t("btn_stop"))
+        self.btn_stop.setFixedHeight(30)
+        self.btn_stop.setStyleSheet("""
+            QPushButton {
+                background-color: #991b1b;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 0 14px;
+            }
+            QPushButton:hover { background-color: #dc2626; }
+        """)
+        self.btn_stop.clicked.connect(self._on_stop_clicked)
+        self.btn_stop.hide()
+        h_btn.addWidget(self.btn_stop)
+
+        self.btn_open = QPushButton(I18n.t(self.open_label_key))
+        self.btn_open.setFixedHeight(30)
+        self.btn_open.setStyleSheet("""
             QPushButton {
                 background-color: #2563eb;
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 12px;
+                padding: 0 14px;
             }
             QPushButton:hover { background-color: #3b82f6; }
         """)
-        self.btn_action.clicked.connect(self._on_action_clicked)
-        h_btn.addWidget(self.btn_action)
+        self.btn_open.clicked.connect(self._on_open_clicked)
+        self.btn_open.hide()
+        h_btn.addWidget(self.btn_open)
 
-        # Resource Telemetry Badge
         self.lbl_telemetry = QLabel(I18n.t("res_stopped"))
         self.lbl_telemetry.setStyleSheet("""
             color: #9ca3af;
@@ -147,8 +216,12 @@ class StageCard(QFrame):
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
+        self.lbl_flow.setText(I18n.t(self.flow_key))
         self.lbl_desc.setText(I18n.t(self.desc_key))
-        self.lbl_hotkeys.setText(f"<b>{I18n.t('hotkeys_label')}</b> {I18n.t(self.hotkeys_key)}")
+        self.lbl_hotkey_badge.setText(I18n.t(self.hotkeys_key))
+        self.btn_start.setText(I18n.t("btn_start"))
+        self.btn_stop.setText(I18n.t("btn_stop"))
+        self.btn_open.setText(I18n.t(self.open_label_key))
         self.update_telemetry(self._last_metrics, force=True)
 
     def update_telemetry(self, data: Dict[str, Any], force: bool = False):
@@ -159,8 +232,7 @@ class StageCard(QFrame):
         if running:
             ram = data.get("ram_mb", 0.0)
             cpu = data.get("cpu_pct", 0.0)
-            pid = data.get("pid", "-")
-            self.lbl_telemetry.setText(I18n.t("res_metrics", ram=ram, cpu=cpu, pid=pid))
+            self.lbl_telemetry.setText(I18n.t("res_metrics", ram=ram, cpu=cpu))
             self.lbl_telemetry.setStyleSheet("""
                 color: #34d399;
                 font-family: Consolas, monospace;
@@ -189,10 +261,9 @@ class StageCard(QFrame):
         if running:
             self.setStyleSheet("""
                 StageCard {
-                    background-color: #172554;
+                    background-color: #132338;
                     border: 1px solid #2563eb;
                     border-radius: 8px;
-                    padding: 10px;
                 }
             """)
             self.status_pill.setText(I18n.t("status_running"))
@@ -205,14 +276,16 @@ class StageCard(QFrame):
                 font-weight: bold;
                 border: 1px solid #059669;
             """)
-            self.btn_action.setText(I18n.t("btn_open") if "3" in self.stage_id else I18n.t("btn_start"))
+            self.btn_start.hide()
+            self.btn_stop.show()
+            if self.on_open:
+                self.btn_open.show()
         else:
             self.setStyleSheet("""
                 StageCard {
                     background-color: #1a1b1e;
                     border: 1px solid #2e3035;
                     border-radius: 8px;
-                    padding: 10px;
                 }
             """)
             self.status_pill.setText(I18n.t("status_stopped_pill"))
@@ -225,11 +298,21 @@ class StageCard(QFrame):
                 font-weight: bold;
                 border: 1px solid #374151;
             """)
-            self.btn_action.setText(I18n.t("btn_start"))
+            self.btn_start.show()
+            self.btn_stop.hide()
+            self.btn_open.hide()
 
-    def _on_action_clicked(self):
+    def _on_start_clicked(self):
         if self.on_start:
             self.on_start()
+
+    def _on_stop_clicked(self):
+        if self.on_stop:
+            self.on_stop()
+
+    def _on_open_clicked(self):
+        if self.on_open:
+            self.on_open()
 
 
 class EcosystemHub(QMainWindow):
@@ -237,8 +320,8 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(940, 720)
-        self.setMinimumSize(880, 640)
+        self.resize(980, 780)
+        self.setMinimumSize(900, 680)
 
         self._apply_theme()
         self._init_ui()
@@ -262,36 +345,50 @@ class EcosystemHub(QMainWindow):
     def _update_hub_profile_styles(self):
         try:
             from stage_3_voice.studio.config import load_settings
+            from stage_3_voice.studio.routing_presets import RoutingPresets
             cfg = load_settings()
             mode = cfg.get("audio", {}).get("routing_mode", "topping")
+            hw = RoutingPresets.get_hardware_info()
+            has_cable = hw.get("has_cable", False)
         except Exception:
             mode = "topping"
+            has_cable = True
 
         if mode == "topping":
-            self.btn_hub_topping.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; border: 1px solid #60a5fa;")
-            self.btn_hub_cable.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 10px; border: 1px solid #374151;")
+            self.btn_hub_topping.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 12px; border: 1px solid #60a5fa;")
+            self.btn_hub_cable.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 12px; border: 1px solid #374151;")
+            self.btn_install_cable.hide()
         else:
-            self.btn_hub_cable.setStyleSheet("background-color: #059669; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; border: 1px solid #34d399;")
-            self.btn_hub_topping.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 10px; border: 1px solid #374151;")
+            self.btn_hub_cable.setStyleSheet("background-color: #059669; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 12px; border: 1px solid #34d399;")
+            self.btn_hub_topping.setStyleSheet("background-color: #212328; color: #9ca3af; border-radius: 4px; padding: 0 12px; border: 1px solid #374151;")
+            if not has_cable:
+                self.btn_install_cable.show()
+            else:
+                self.btn_install_cable.hide()
 
     def _on_hub_switch_profile(self, mode: str):
         try:
             from stage_3_voice.studio.routing_presets import RoutingPresets
             from stage_3_voice.studio.config import load_settings, save_settings
-            import subprocess
             cfg = load_settings()
             success, msg = RoutingPresets.apply_preset(mode, cfg)
             if success:
                 save_settings(cfg)
                 self._update_hub_profile_styles()
-
-                hw = RoutingPresets.get_hardware_info()
-                if mode == "cable" and not hw.get("has_cable", False):
-                    bat = PROJECT_ROOT / "scripts" / "install_vbcable.bat"
-                    if bat.is_file():
-                        subprocess.Popen(["cmd.exe", "/c", str(bat)])
         except Exception as e:
             log.error("Failed to switch profile: %s", e)
+
+    def _on_install_cable(self):
+        import subprocess
+        bat = PROJECT_ROOT / "scripts" / "install_vbcable.bat"
+        if bat.is_file():
+            subprocess.Popen(["cmd.exe", "/c", str(bat)])
+
+    def _on_open_config_folder(self):
+        import subprocess
+        config_dir = PROJECT_ROOT / "CONFIG"
+        if config_dir.is_dir():
+            subprocess.Popen(["explorer.exe", str(config_dir)])
 
     def closeEvent(self, event):
         self.poll_timer.stop()
@@ -309,10 +406,9 @@ class EcosystemHub(QMainWindow):
 
         # 2. Main Tabs
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._create_dashboard_tab(), "🚀 Dashboard")
-        self.tabs.addTab(self._create_inventory_tab(), "🧠 Models Inventory")
-        self.tabs.addTab(self._create_guide_tab(), "📖 Architecture & Models Guide")
-        self.tabs.addTab(self._create_vault_tab(), "🛡 Vault & Patches")
+        self.tabs.addTab(self._create_dashboard_tab(), "🎛 Пульт и Схема работы")
+        self.tabs.addTab(self._create_inventory_tab(), "🧠 Файлы нейросетей на диске")
+        self.tabs.addTab(self._create_guide_tab(), "ℹ Архитектура и справка")
         root_layout.addWidget(self.tabs, stretch=1)
 
     def _create_master_header(self) -> QHBoxLayout:
@@ -386,122 +482,125 @@ class EcosystemHub(QMainWindow):
         return h
 
     # =========================================================================
-    # Tab 1: Ecosystem Dashboard & Voice Wizard
+    # Tab 1: Ecosystem Dashboard & Pipeline Flow Map (KISS)
     # =========================================================================
     def _create_dashboard_tab(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(10)
 
-        # Stage Cards Grid
-        grid = QGridLayout()
-        grid.setSpacing(10)
-
+        # 1. Module 1: LiveTranslate (Audio to Subtitles)
         self.card_stage1 = StageCard(
             "stage_1",
-            "stage1_title", "stage1_desc", "stage1_hotkeys",
+            "stage1_title", "stage1_flow", "stage1_desc", "stage1_hotkeys",
             on_start=EcosystemProcessManager.start_stage_1,
+            on_stop=EcosystemProcessManager.stop_stage_1,
+            on_open=EcosystemProcessManager.start_stage_1,
+            open_label_key="btn_open",
         )
-        grid.addWidget(self.card_stage1, 0, 0)
+        layout.addWidget(self.card_stage1)
 
+        # 2. Module 2: OverTranslate (Screen OCR)
         self.card_stage2 = StageCard(
             "stage_2",
-            "stage2_title", "stage2_desc", "stage2_hotkeys",
+            "stage2_title", "stage2_flow", "stage2_desc", "stage2_hotkeys",
             on_start=EcosystemProcessManager.start_stage_2,
+            on_stop=EcosystemProcessManager.stop_stage_2,
+            on_open=EcosystemProcessManager.start_stage_2,
+            open_label_key="btn_open",
         )
-        grid.addWidget(self.card_stage2, 0, 1)
+        layout.addWidget(self.card_stage2)
 
+        # 3. Module 3: Voice Studio (Outgoing Mic Speech)
         self.card_stage3 = StageCard(
             "stage_3",
-            "stage3_title", "stage3_desc", "stage3_hotkeys",
+            "stage3_title", "stage3_flow", "stage3_desc", "stage3_hotkeys",
             on_start=EcosystemProcessManager.start_stage_3,
+            on_stop=EcosystemProcessManager.stop_stage_3,
+            on_open=EcosystemProcessManager.start_stage_3,
+            open_label_key="btn_studio",
         )
-        grid.addWidget(self.card_stage3, 1, 0, 1, 2)
+        layout.addWidget(self.card_stage3)
 
-        layout.addLayout(grid)
-
-        # 1-Click Audio Hardware Profile Selector
-        prof_frame = QFrame()
-        prof_frame.setStyleSheet("""
+        # 4. Hardware Routing & Project Settings Frame (KISS)
+        bottom_frame = QFrame()
+        bottom_frame.setStyleSheet("""
             QFrame {
                 background-color: #1a1b1e;
                 border: 1px solid #2e3035;
                 border-radius: 8px;
-                padding: 8px 12px;
             }
         """)
-        h_prof = QHBoxLayout(prof_frame)
-        h_prof.setSpacing(10)
+        v_bottom = QVBoxLayout(bottom_frame)
+        v_bottom.setContentsMargins(14, 10, 14, 10)
+        v_bottom.setSpacing(8)
 
-        lbl_prof_icon = QLabel("🎧")
-        lbl_prof_icon.setStyleSheet("font-size: 18px;")
-        h_prof.addWidget(lbl_prof_icon)
+        # Hardware Selector Row
+        h_hw = QHBoxLayout()
+        h_hw.setSpacing(10)
+        self.lbl_hw_title = QLabel(f"<b>{I18n.t('hardware_title')}</b>")
+        self.lbl_hw_title.setStyleSheet("color: #e5e7eb; font-size: 11px;")
+        h_hw.addWidget(self.lbl_hw_title)
 
-        v_prof_text = QVBoxLayout()
-        v_prof_text.setSpacing(1)
-        self.lbl_prof_title = QLabel("<b>Аудио-профиль в играх (1 клик):</b>")
-        self.lbl_prof_title.setStyleSheet("color: #ffffff; font-size: 11px;")
-        self.lbl_prof_desc = QLabel("Выберите вариант под ваше оборудование:")
-        self.lbl_prof_desc.setStyleSheet("color: #9ca3af; font-size: 10px;")
-        v_prof_text.addWidget(self.lbl_prof_title)
-        v_prof_text.addWidget(self.lbl_prof_desc)
-        h_prof.addLayout(v_prof_text, stretch=1)
-
-        self.btn_hub_topping = QPushButton("🎛 Topping E2x2 (Аппаратный)")
-        self.btn_hub_topping.setFixedHeight(32)
+        self.btn_hub_topping = QPushButton(I18n.t("hardware_topping"))
+        self.btn_hub_topping.setFixedHeight(30)
         self.btn_hub_topping.clicked.connect(lambda: self._on_hub_switch_profile("topping"))
-        h_prof.addWidget(self.btn_hub_topping)
+        h_hw.addWidget(self.btn_hub_topping)
 
-        self.btn_hub_cable = QPushButton("🔌 Виртуальный Кабель (Обычный ПК)")
-        self.btn_hub_cable.setFixedHeight(32)
+        self.btn_hub_cable = QPushButton(I18n.t("hardware_cable"))
+        self.btn_hub_cable.setFixedHeight(30)
         self.btn_hub_cable.clicked.connect(lambda: self._on_hub_switch_profile("cable"))
-        h_prof.addWidget(self.btn_hub_cable)
+        h_hw.addWidget(self.btn_hub_cable)
 
-        layout.addWidget(prof_frame)
+        self.btn_install_cable = QPushButton(I18n.t("hardware_install_cable"))
+        self.btn_install_cable.setFixedHeight(30)
+        self.btn_install_cable.setStyleSheet("background-color: #0284c7; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px;")
+        self.btn_install_cable.clicked.connect(self._on_install_cable)
+        self.btn_install_cable.hide()
+        h_hw.addWidget(self.btn_install_cable)
 
-        # Voice Wizard Hero Card
-        wiz_frame = QFrame()
-        wiz_frame.setStyleSheet("""
-            QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #1e1b4b, stop:1 #1e293b);
-                border: 1px solid #6366f1;
-                border-radius: 8px;
-                padding: 14px;
-            }
-        """)
-        h_wiz = QHBoxLayout(wiz_frame)
-        h_wiz.setSpacing(16)
+        h_hw.addStretch()
+        v_bottom.addLayout(h_hw)
 
-        v_wiz_info = QVBoxLayout()
-        self.lbl_wiz_title = QLabel()
-        self.lbl_wiz_title.setStyleSheet("font-size: 14px; color: #ffffff;")
-        v_wiz_info.addWidget(self.lbl_wiz_title)
-
-        self.lbl_wiz_desc = QLabel()
-        self.lbl_wiz_desc.setWordWrap(True)
-        self.lbl_wiz_desc.setStyleSheet("color: #cbd5e1; font-size: 11px;")
-        v_wiz_info.addWidget(self.lbl_wiz_desc)
-        h_wiz.addLayout(v_wiz_info, stretch=1)
-
-        self.btn_launch_wizard = QPushButton()
-        self.btn_launch_wizard.setFixedHeight(44)
+        # Tools Row: Record Voice (7 sec) + Open Settings Folder
+        h_tools = QHBoxLayout()
+        h_tools.setSpacing(10)
+        self.btn_launch_wizard = QPushButton(I18n.t("btn_wizard"))
+        self.btn_launch_wizard.setFixedHeight(32)
         self.btn_launch_wizard.setStyleSheet("""
             QPushButton {
                 background-color: #4f46e5;
                 color: #ffffff;
                 font-weight: bold;
-                font-size: 12px;
-                border-radius: 6px;
-                padding: 0 16px;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 0 14px;
             }
             QPushButton:hover { background-color: #6366f1; }
         """)
         self.btn_launch_wizard.clicked.connect(self._on_open_voice_wizard)
-        h_wiz.addWidget(self.btn_launch_wizard)
+        h_tools.addWidget(self.btn_launch_wizard)
 
-        layout.addWidget(wiz_frame)
+        self.btn_open_folder = QPushButton(I18n.t("btn_open_folder"))
+        self.btn_open_folder.setFixedHeight(32)
+        self.btn_open_folder.setStyleSheet("""
+            QPushButton {
+                background-color: #374151;
+                color: #e5e7eb;
+                font-size: 11px;
+                border-radius: 4px;
+                padding: 0 14px;
+            }
+            QPushButton:hover { background-color: #4b5563; }
+        """)
+        self.btn_open_folder.clicked.connect(self._on_open_config_folder)
+        h_tools.addWidget(self.btn_open_folder)
+
+        h_tools.addStretch()
+        v_bottom.addLayout(h_tools)
+
+        layout.addWidget(bottom_frame)
         layout.addStretch()
         return w
 
@@ -727,15 +826,17 @@ class EcosystemHub(QMainWindow):
         self.tabs.setTabText(0, I18n.t("tab_dashboard"))
         self.tabs.setTabText(1, I18n.t("tab_inventory"))
         self.tabs.setTabText(2, I18n.t("tab_guide"))
-        self.tabs.setTabText(3, I18n.t("tab_vault"))
 
         self.card_stage1.retranslate()
         self.card_stage2.retranslate()
         self.card_stage3.retranslate()
 
-        self.lbl_wiz_title.setText(f"<b>{I18n.t('wizard_hero_title')}</b>")
-        self.lbl_wiz_desc.setText(I18n.t("wizard_hero_desc"))
+        self.lbl_hw_title.setText(f"<b>{I18n.t('hardware_title')}</b>")
+        self.btn_hub_topping.setText(I18n.t("hardware_topping"))
+        self.btn_hub_cable.setText(I18n.t("hardware_cable"))
+        self.btn_install_cable.setText(I18n.t("hardware_install_cable"))
         self.btn_launch_wizard.setText(I18n.t("btn_wizard"))
+        self.btn_open_folder.setText(I18n.t("btn_open_folder"))
 
         self.lbl_inv_head.setText(f"<b>{I18n.t('inventory_header')}</b>")
         self.btn_refresh.setText(I18n.t("btn_refresh"))

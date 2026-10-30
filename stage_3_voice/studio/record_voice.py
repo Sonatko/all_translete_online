@@ -1,6 +1,6 @@
 """Studio Quality Voice Cloning with Kyutai Pocket-TTS.
 
-Records a pristine 7-second English speech sample from Behringer XM8500,
+Records a pristine 7-second English speech sample from user microphone,
 extracts Mimi neural audio conditioning,
 saves the voice profile to safetensors for 0-ms instant reuse,
 and synthesizes a realistic tactical game phrase in the user's voice.
@@ -48,17 +48,18 @@ def main():
     print()
     print("ТЕКСТ ДЛЯ ЧТЕНИЯ (нажмите ENTER и сразу читайте):")
     print()
-    print("  «Hello guys, this is my natural voice. I am testing the real-time voice translation for our game.»")
+    print("  «Tactical squad, watch the angles! Moving into the sector now.")
+    print("   Two hostiles behind the cover, requesting immediate smoke and cover fire!»")
     print()
+    print("-" * 74)
 
-    devices.ensure_com()
-    inputs = devices.input_devices()
-    outputs = devices.output_devices()
+    inputs = devices.InputDevice.list()
+    outputs = devices.OutputDevice.list()
 
-    # Prefer NVIDIA Broadcast (APO filters active) or Topping Analog 1/2
+    # Prefer NVIDIA Broadcast or Topping Analog 1/2
     mic_idx = None
     for i, d in enumerate(inputs):
-        if "broadcast" in d.lower():
+        if "nvidia broadcast" in d.lower():
             mic_idx = i
             break
     if mic_idx is None:
@@ -108,7 +109,9 @@ def main():
 
     print(f"Пиковый уровень после фильтрации: {np.max(np.abs(audio)):.4f} [ОТЛИЧНЫЙ СИГНАЛ]")
 
-    ref_wav_path = SCRIPT_DIR / "my_clean_reference.wav"
+    ref_wav_dir = STAGE3_DIR / "models" / "pocket_tts"
+    ref_wav_dir.mkdir(parents=True, exist_ok=True)
+    ref_wav_path = ref_wav_dir / "my_reference_voice.wav"
     sf.write(str(ref_wav_path), audio, sr)
     print(f"[OK] Чистый сэмпл сохранен: {ref_wav_path.name}")
 
@@ -116,7 +119,8 @@ def main():
     import pocket_tts
 
     weights_file = hf_hub_download(
-        "latent-variable/pocket-tts-cloning-en", "languages/english/model.safetensors"
+        repo_id="kyutai/pocket-tts",
+        filename="pocket_tts.safetensors",
     )
     tts_model = pocket_tts.TTSModel.load_model()
     state = safetensors.torch.load_file(weights_file)
@@ -131,17 +135,14 @@ def main():
     print(f"[OK] Слепок вашего тембра сформирован за {t_latent:.3f} с!")
 
     # Export model state for 0-latency future reuse
-    profile_path = SCRIPT_DIR / "my_pocket_voice.safetensors"
-    pocket_tts.export_model_state(model_state, str(profile_path))
-    print(f"[OK] Профиль сохранен в {profile_path.name} (готов для мгновенного синтеза в игре).")
-
-    # Auto-sync to authoritative CONFIG and permanent models folders
     config_voice = ROOT_DIR / "CONFIG" / "stage_3_voice" / "my_pocket_voice.safetensors"
     models_voice = STAGE3_DIR / "models" / "pocket_tts" / "my_pocket_voice.safetensors"
-    for dest in (config_voice, models_voice):
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(profile_path, dest)
-    print(f"[OK] Голосовой профиль автоматически синхронизирован в {config_voice.relative_to(ROOT_DIR)}")
+    config_voice.parent.mkdir(parents=True, exist_ok=True)
+    models_voice.parent.mkdir(parents=True, exist_ok=True)
+
+    pocket_tts.export_model_state(model_state, str(config_voice))
+    shutil.copy2(config_voice, models_voice)
+    print(f"[OK] Профиль сохранен и синхронизирован: {config_voice.name}")
 
     test_phrase = "Enemy spotted on B site! Fall back and hold the angles, I am covering you."
     print(f"\nСинтез боевой игровой фразы вашим новым чистым голосом:")
@@ -158,23 +159,24 @@ def main():
     if peak_out > 0.001:
         gen_audio = gen_audio * (0.90 / peak_out)
 
-    out_file = SCRIPT_DIR / "my_clean_cloned_game.wav"
+    out_file = ref_wav_dir / "my_cloned_sample.wav"
     sf.write(str(out_file), gen_audio, tts_model.sample_rate)
     print(f"[OK] Сгенерированное аудио сохранено: {out_file.name}")
 
-    print("\n[▶ ВОСПРОИЗВЕДЕНИЕ В ВАШИ НАУШНИКИ TOPPING...]")
-    dev = player.OutputDevice(out_name)
-    dev.open()
-    clip = dev.play(gen_audio, tts_model.sample_rate, 1.0, "clean_cloned_play")
-    clip.done.wait(10.0)
-    dev.close()
-    print("[✔ Воспроизведение успешно завершено!]\n")
-    print("=" * 74)
-    print("ИТОГ: Ваш чистый эталонный голос готов!")
-    print(f"Профиль: {profile_path}")
+    print("\n[▶ ВОСПРОИЗВЕДЕНИЕ В ВАШИ НАУШНИКИ...]")
+    try:
+        dev = player.OutputDevice(out_name)
+        dev.open()
+        clip = dev.play(gen_audio, tts_model.sample_rate, 1.0, "clean_cloned_play")
+        clip.done.wait(10.0)
+        dev.close()
+    except Exception as exc:
+        print(f"[NOTE] Воспроизведение пропущено: {exc}")
+
+    print("\n" + "=" * 74)
+    print(" [УСПЕХ] ВАШ ГОЛОСОВОЙ ПРОФИЛЬ УСПЕШНО ЗАПИСАН И ГОТОВ К РАБОТЕ В ИГРАХ!")
     print("=" * 74)
 
 
 if __name__ == "__main__":
     main()
-

@@ -17,6 +17,7 @@ Audits the physical engineering modifications across all modules:
 """
 from __future__ import annotations
 
+import filecmp
 import hashlib
 import logging
 import os
@@ -365,6 +366,9 @@ class PatchIntegrityChecker:
             targets = [cls.OT_DLL, cls.OT_DIR / "OverTranslate.dll"]
             for target in targets:
                 if target.parent.is_dir():
+                    if target.is_file() and filecmp.cmp(cls.VAULT_DLL_FILE, target, shallow=False):
+                        restored.append(f"OverTranslate/{target.name}")
+                        continue
                     try:
                         shutil.copy2(cls.VAULT_DLL_FILE, target)
                         restored.append(f"OverTranslate/{target.name}")

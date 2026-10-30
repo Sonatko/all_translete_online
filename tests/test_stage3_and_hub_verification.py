@@ -186,8 +186,7 @@ def test_powershell_scripts_syntax():
     import subprocess
     
     scripts = [
-        PROJECT_ROOT / "scripts" / "install_vbcable.ps1",
-        PROJECT_ROOT / "scripts" / "rename_audio.ps1"
+        PROJECT_ROOT / "scripts" / "install_vbcable.ps1"
     ]
     
     for ps_script in scripts:

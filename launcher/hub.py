@@ -1,6 +1,6 @@
 """Universal Real-Time Translation Hub & Ecosystem Orchestrator (PySide6).
 Supports Trilingual UI (Russian, English, Chinese), 3-Stage Process Supervision,
-Dynamic Pipeline Latency Monitoring per Stage, Modular 5-Patch Integrity Auditor,
+Dynamic Pipeline Latency Monitoring with Individual Step Chips, Modular 5-Patch Integrity Auditor,
 and Embedded Stage 3 Hardware Audio Routing.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ import logging
 import os
 from pathlib import Path
 import sys
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
@@ -54,7 +54,7 @@ log = logging.getLogger("Launcher.Hub")
 
 
 class LatencyEstimator:
-    """Calculates dynamic pipeline latency breakdown based on active model and routing choices."""
+    """Calculates structured pipeline latency steps based on active model and routing choices."""
 
     @staticmethod
     def get_stage1_latency() -> Dict[str, Any]:
@@ -62,7 +62,7 @@ class LatencyEstimator:
         settings_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
         asr_name = "SenseVoice ASR"
         asr_ms = 170
-        mt_name = "Hunyuan MT"
+        mt_name = "Hunyuan MT 1.8B"
         mt_ms = 80
         is_cloud = False
 
@@ -74,7 +74,7 @@ class LatencyEstimator:
                     asr_name = "Whisper Local"
                     asr_ms = 900
                 elif "remote" in asr_eng:
-                    asr_name = "Whisper Cloud API"
+                    asr_name = "Whisper Cloud"
                     asr_ms = 450
                     is_cloud = True
 
@@ -92,15 +92,20 @@ class LatencyEstimator:
                             mt_name = "Hunyuan MT 1.8B"
                             mt_ms = 80
                     else:
-                        mt_name = f"Облачный API ({active_m.get('name', 'Cloud')[:12]})"
-                        mt_ms = 400
+                        clean_name = active_m.get("name", "Cloud API").split()[0]
+                        mt_name = f"API {clean_name}"
+                        mt_ms = 380
                         is_cloud = True
             except Exception as e:
                 log.warning("Could not parse LiveTranslate settings: %s", e)
 
         total_ms = asr_ms + mt_ms
+        steps = [
+            {"name": asr_name, "ms": asr_ms, "icon": "🎙"},
+            {"name": mt_name, "ms": mt_ms, "icon": "🧠"},
+        ]
         return {
-            "breakdown": f"{asr_name} ({asr_ms}мс) + {mt_name} ({mt_ms}мс)",
+            "steps": steps,
             "total_ms": total_ms,
             "is_cloud": is_cloud,
             "mode_text": I18n.t("latency_mode_cloud") if is_cloud else I18n.t("latency_mode_local"),
@@ -121,8 +126,8 @@ class LatencyEstimator:
                 cfg = json.loads(settings_file.read_text(encoding="utf-8"))
                 provider = cfg.get("Provider", "Microsoft")
                 if provider in ("OpenAI", "DeepL", "GoogleChrome"):
-                    mt_name = f"Облачный {provider}"
-                    mt_ms = 320
+                    mt_name = f"API {provider}"
+                    mt_ms = 300
                     is_cloud = True
                 else:
                     mt_name = "Windows Local"
@@ -131,8 +136,12 @@ class LatencyEstimator:
                 log.warning("Could not parse OverTranslate settings: %s", e)
 
         total_ms = ocr_ms + mt_ms
+        steps = [
+            {"name": ocr_name, "ms": ocr_ms, "icon": "🖼"},
+            {"name": mt_name, "ms": mt_ms, "icon": "📝"},
+        ]
         return {
-            "breakdown": f"{ocr_name} ({ocr_ms}мс) + {mt_name} ({mt_ms}мс)",
+            "steps": steps,
             "total_ms": total_ms,
             "is_cloud": is_cloud,
             "mode_text": I18n.t("latency_mode_cloud") if is_cloud else I18n.t("latency_mode_local"),
@@ -148,15 +157,19 @@ class LatencyEstimator:
         if routing_mode == "topping":
             route_name = "Topping Loopback"
             route_ms = 0
-            route_label = "0мс"
         else:
             route_name = "VB-Cable"
             route_ms = 15
-            route_label = "15мс"
 
         total_ms = asr_ms + mt_ms + tts_ms + route_ms
+        steps = [
+            {"name": "Sber GigaAM", "ms": asr_ms, "icon": "🎙"},
+            {"name": "Opus-MT", "ms": mt_ms, "icon": "🧠"},
+            {"name": "Pocket-TTS клон", "ms": tts_ms, "icon": "🗣"},
+            {"name": route_name, "ms": route_ms, "icon": "🔊"},
+        ]
         return {
-            "breakdown": f"GigaAM ({asr_ms}мс) + Opus-MT ({mt_ms}мс) + Pocket-TTS ({tts_ms}мс) + {route_name} ({route_label})",
+            "steps": steps,
             "total_ms": total_ms,
             "is_cloud": False,
             "mode_text": I18n.t("latency_mode_local"),
@@ -164,7 +177,7 @@ class LatencyEstimator:
 
 
 class StageCard(QFrame):
-    """Visual pipeline flow, dynamic latency, and control card for a translation program."""
+    """Visual pipeline flow, dynamic latency chips, and control card for a translation program."""
 
     def __init__(
         self,
@@ -242,18 +255,19 @@ class StageCard(QFrame):
         self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
         layout.addWidget(self.lbl_desc)
 
-        # 4. Dynamic Pipeline Latency Monitor Bar
-        self.lbl_latency = QLabel()
-        self.lbl_latency.setStyleSheet("""
-            background-color: #0f172a;
-            color: #38bdf8;
-            font-family: Consolas, monospace;
-            font-size: 11px;
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: 1px solid #1e293b;
+        # 4. Dynamic Pipeline Latency Chips Bar (NO PARENTHESES, CLEAN PILLS)
+        self.latency_frame = QFrame()
+        self.latency_frame.setStyleSheet("""
+            QFrame {
+                background-color: #0f172a;
+                border-radius: 6px;
+                border: 1px solid #1e293b;
+            }
         """)
-        layout.addWidget(self.lbl_latency)
+        self.h_latency = QHBoxLayout(self.latency_frame)
+        self.h_latency.setContentsMargins(8, 4, 8, 4)
+        self.h_latency.setSpacing(6)
+        layout.addWidget(self.latency_frame)
 
         # 5. Embedded Stage 3 Controls Container (if stage_3)
         self.stage3_container = QWidget()
@@ -332,16 +346,69 @@ class StageCard(QFrame):
         layout.addLayout(h_btn)
 
     def update_latency_display(self, lat_info: dict):
-        prefix = I18n.t("latency_prefix")
-        breakdown = lat_info.get("breakdown", "")
-        total_ms = lat_info.get("total_ms", 0)
-        mode_text = lat_info.get("mode_text", "")
+        """Render distinct latency chips for each pipeline step (no parentheses)."""
+        while self.h_latency.count():
+            child = self.h_latency.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
-        color = "#10b981" if total_ms < 400 else ("#facc15" if total_ms < 1100 else "#f87171")
-        self.lbl_latency.setText(
-            f"<b>{prefix}</b> {breakdown} ➔ <b style='color: {color};'>Итого: ~{total_ms} мс</b> "
-            f"<span style='color: #64748b;'>[{mode_text}]</span>"
-        )
+        lbl_lead = QLabel(f"<b>{I18n.t('latency_prefix')}</b>")
+        lbl_lead.setStyleSheet("color: #64748b; font-size: 11px;")
+        self.h_latency.addWidget(lbl_lead)
+
+        steps = lat_info.get("steps", [])
+        for i, step in enumerate(steps):
+            if i > 0:
+                arr = QLabel("➔")
+                arr.setStyleSheet("color: #475569; font-weight: bold; font-size: 11px;")
+                self.h_latency.addWidget(arr)
+
+            chip = QLabel(f"{step['icon']} {step['name']}: <b style='color: #38bdf8;'>{step['ms']} мс</b>")
+            chip.setStyleSheet("""
+                background-color: #1e293b;
+                color: #cbd5e1;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                border: 1px solid #334155;
+            """)
+            self.h_latency.addWidget(chip)
+
+        # Arrow before total
+        eq = QLabel("➔")
+        eq.setStyleSheet("color: #475569; font-weight: bold; font-size: 11px;")
+        self.h_latency.addWidget(eq)
+
+        # Highlighted total chip
+        total_ms = lat_info.get("total_ms", 0)
+        tot_color = "#34d399" if total_ms < 500 else ("#facc15" if total_ms < 1100 else "#f87171")
+        tot_chip = QLabel(f"⚡ <b>Итого:</b> <b style='color: {tot_color};'>~{total_ms} мс</b>")
+        tot_chip.setStyleSheet("""
+            background-color: #064e3b;
+            color: #ffffff;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            border: 1px solid #059669;
+        """)
+        self.h_latency.addWidget(tot_chip)
+
+        # Mode badge (Local vs Cloud API)
+        is_cloud = lat_info.get("is_cloud", False)
+        mode_text = lat_info.get("mode_text", "")
+        mode_border = "#0284c7" if not is_cloud else "#d97706"
+        mode_chip = QLabel(f"<b>{mode_text}</b>")
+        mode_chip.setStyleSheet(f"""
+            background-color: #172554;
+            color: #93c5fd;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            border: 1px solid {mode_border};
+        """)
+        self.h_latency.addWidget(mode_chip)
+
+        self.h_latency.addStretch()
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")

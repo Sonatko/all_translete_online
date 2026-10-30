@@ -647,6 +647,19 @@ class StudioWindow(QMainWindow):
         h_speed.addWidget(self.lbl_speed_val)
         v_tts.addLayout(h_speed)
 
+        # Expressiveness / AI Temperature Slider (Human Prosody & Emotions)
+        h_temp = QHBoxLayout()
+        h_temp.addWidget(QLabel("Живая интонация и эмоции (Температура ИИ):"))
+        self.slider_temp = QSlider(Qt.Orientation.Horizontal)
+        self.slider_temp.setRange(20, 80)
+        cur_temp = int(self.cfg.get("models", {}).get("tts_temperature", 0.48) * 100)
+        self.slider_temp.setValue(cur_temp)
+        self.lbl_temp_val = QLabel(self._get_temp_label(cur_temp / 100.0))
+        self.slider_temp.valueChanged.connect(self._on_temp_slider)
+        h_temp.addWidget(self.slider_temp)
+        h_temp.addWidget(self.lbl_temp_val)
+        v_tts.addLayout(h_temp)
+
         h_tts_btn = QHBoxLayout()
         self.btn_tts_load = QPushButton("📥 Загрузить")
         self.btn_tts_load.clicked.connect(lambda: self.mm.load_tts(self.combo_voices.currentData()))
@@ -842,6 +855,24 @@ class StudioWindow(QMainWindow):
             self.cfg["models"] = {}
         self.cfg["models"]["tts_speed"] = speed_factor
         self.engine.config["models"]["tts_speed"] = speed_factor
+        save_settings(self.cfg)
+
+    def _get_temp_label(self, val: float) -> str:
+        if val < 0.35:
+            return f"{val:.2f} (Строгий диктор)"
+        elif val <= 0.55:
+            return f"{val:.2f} (Живая речь)"
+        else:
+            return f"{val:.2f} (Высокие эмоции)"
+
+    def _on_temp_slider(self, val: int):
+        temp_val = round(val / 100.0, 2)
+        self.lbl_temp_val.setText(self._get_temp_label(temp_val))
+        if "models" not in self.cfg:
+            self.cfg["models"] = {}
+        self.cfg["models"]["tts_temperature"] = temp_val
+        self.engine.config["models"]["tts_temperature"] = temp_val
+        self.mm.set_tts_temperature(temp_val)
         save_settings(self.cfg)
 
     def _on_passthrough_toggle(self, checked: bool):

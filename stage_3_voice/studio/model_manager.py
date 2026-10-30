@@ -42,6 +42,8 @@ class ModelManager:
         self._tts_current_voice: str = "my_pocket_voice"
         self._tts_status: str = "unloaded"
         self._tts_error: str = ""
+        self._tts_temperature: float = 0.48
+        self._tts_decode_steps: int = 1
 
     # =========================================================================
     # RAM Telemetry
@@ -223,6 +225,8 @@ class ModelManager:
             state = safetensors.torch.load_file(weights_file)
             model.load_state_dict(state, strict=True)
             model.has_voice_cloning = True
+            model.temp = self._tts_temperature
+            model.sampler_decode_steps = self._tts_decode_steps
             self._tts_model = model
 
             # Setup voice state
@@ -275,6 +279,20 @@ class ModelManager:
         self._tts_status = "unloaded"
         gc.collect()
         log.info("TTS unloaded from memory.")
+
+    def set_tts_temperature(self, temp: float) -> None:
+        """Set stochastic sampling temperature for expressive prosody (0.2=strict, 0.48=human, 0.7=expressive)."""
+        self._tts_temperature = max(0.1, min(1.0, float(temp)))
+        if self._tts_model is not None:
+            self._tts_model.temp = self._tts_temperature
+            log.info("Pocket-TTS temperature updated to %.2f", self._tts_temperature)
+
+    def set_tts_decode_steps(self, steps: int) -> None:
+        """Set flow matching decode steps (1=ultra-fast, 2=higher acoustic purity)."""
+        self._tts_decode_steps = max(1, min(4, int(steps)))
+        if self._tts_model is not None:
+            self._tts_model.sampler_decode_steps = self._tts_decode_steps
+            log.info("Pocket-TTS decode steps updated to %d", self._tts_decode_steps)
 
     def synthesize(self, text: str) -> Tuple[Optional[np.ndarray], int, float]:
         """Synthesize English text to 24kHz audio. Returns (audio_np, sample_rate, elapsed_ms)."""

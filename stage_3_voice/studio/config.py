@@ -37,7 +37,9 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
         "mt_threads": 2,
         "tts_provider": "pocket_tts",
         "tts_voice": "my_pocket_voice",
-        "tts_temperature": 0.3,
+        "tts_temperature": 0.48,
+        "tts_decode_steps": 1,
+        "tts_speed": 0.85,
         "auto_load_on_startup": True,
     },
     "ui": {

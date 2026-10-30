@@ -19,19 +19,19 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Module 1: Audio to Subtitles (LiveTranslate)
         "stage1_title": "1. Синхронные субтитры (LiveTranslate)",
-        "stage1_flow": "Схема: 🔊 Системный звук ПК  ➔  ✂ Нарезка фраз  ➔  🧠 SenseVoice + Hunyuan MT  ➔  📺 Экранные субтитры",
+        "stage1_flow": "Схема: 🔊 Системный звук  ➔  ✂ Silero VAD  ➔  🎙 SenseVoice INT8  ➔  🧠 Hunyuan MT 1.8B  ➔  📺 Субтитры",
         "stage1_desc": "Захватывает системный звук (видео, медиа, онлайн-звонки, браузер), делит на фразы в паузах речи и выводит перевод поверхностными субтитрами поверх всех окон.",
         "stage1_hotkeys": "F9 — Вкл/Пауза и скрыть субтитры | 2x MMB — Клик сквозь окно | MMB Drag — Перемещение",
 
         # Module 2: Screen OCR (OverTranslate)
         "stage2_title": "2. Экранный переводчик (OverTranslate)",
-        "stage2_flow": "Схема: 🖼 Рамка на экране  ➔  🔍 OCR сканер  ➔  🧠 Нейросеть перевода  ➔  📝 Окно с текстом",
+        "stage2_flow": "Схема: 🖼 Рамка на экране  ➔  🔍 RapidOcr ONNX  ➔  🌐 Microsoft MT  ➔  📝 Окно с текстом",
         "stage2_desc": "Оптическое распознавание невыделяемого текста с экрана в заданной прямоугольной рамке (документы, графика, интерфейсы) с мгновенным переводом.",
         "stage2_hotkeys": "Ctrl + Alt + A — Выделить рамкой | Ctrl + C + C — Быстрый перевод из буфера",
 
         # Module 3: Outgoing Voice Studio
         "stage3_title": "3. Голосовой переводчик (Voice Studio)",
-        "stage3_flow": "Схема: 🎙 Микрофон (RU)  ➔  ✂ Нарезка + Пунктуация  ➔  🧠 GigaAM + Pocket-TTS  ➔  🔊 Выходной микрофон (EN)",
+        "stage3_flow": "Схема: 🎙 Микрофон (RU)  ➔  ✂ VAD + Пунктуация  ➔  🧠 GigaAM CTC  ➔  📝 Opus-MT  ➔  🗣 Pocket-TTS Клон  ➔  🔊 Выход (EN)",
         "stage3_desc": "Вы говорите в микрофон по-русски — программа переводит и синтезирует английскую речь вашим клонированным тембром в выходной микрофонный канал.",
         "stage3_hotkeys": "Shift + Колесико мыши — Активация рации (Push-To-Talk / PTT)",
 
@@ -96,19 +96,19 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Module 1: Audio to Subtitles (LiveTranslate)
         "stage1_title": "1. Synchronous Subtitles (LiveTranslate)",
-        "stage1_flow": "Pipeline: 🔊 PC Audio  ➔  ✂ VAD Chunking  ➔  🧠 SenseVoice + Hunyuan MT  ➔  📺 Screen Subtitles",
+        "stage1_flow": "Pipeline: 🔊 PC Audio  ➔  ✂ Silero VAD  ➔  🎙 SenseVoice INT8  ➔  🧠 Hunyuan MT 1.8B  ➔  📺 Screen Subtitles",
         "stage1_desc": "Captures system audio (video, media streams, conference calls, browser), segments speech in natural pauses, and displays real-time subtitles overlay.",
         "stage1_hotkeys": "F9 — Run/Pause & Hide Subtitles | 2x MMB — Click-through Lock | MMB Drag — Move Window",
 
         # Module 2: Screen OCR (OverTranslate)
         "stage2_title": "2. Screen Text Translator (OverTranslate)",
-        "stage2_flow": "Pipeline: 🖼 Screen Box  ➔  🔍 OCR Scanner  ➔  🧠 MT Neural Model  ➔  📝 Result Window",
+        "stage2_flow": "Pipeline: 🖼 Screen Box  ➔  🔍 RapidOcr ONNX  ➔  🌐 Microsoft MT  ➔  📝 Result Window",
         "stage2_desc": "Optical character recognition (OCR) of non-selectable screen text in a bounding box (documents, UI dialogues, images) with instant translation.",
         "stage2_hotkeys": "Ctrl + Alt + A — Box OCR | Ctrl + C + C — Quick Clipboard Translate",
 
         # Module 3: Outgoing Voice Studio
         "stage3_title": "3. Voice Translator (Voice Studio)",
-        "stage3_flow": "Pipeline: 🎙 Mic Input (RU)  ➔  ✂ VAD + Punctuation  ➔  🧠 GigaAM + Pocket-TTS  ➔  🔊 Virtual Mic Channel (EN)",
+        "stage3_flow": "Pipeline: 🎙 Mic Input (RU)  ➔  ✂ VAD + Punctuation  ➔  🧠 GigaAM CTC  ➔  📝 Opus-MT  ➔  🗣 Pocket-TTS Clone  ➔  🔊 Output (EN)",
         "stage3_desc": "Speak Russian into your mic — converts and synthesizes real-time English speech with your cloned timbre into the chosen virtual microphone output.",
         "stage3_hotkeys": "Shift + Mouse Wheel Click — Push-To-Talk Voice Translation",
 

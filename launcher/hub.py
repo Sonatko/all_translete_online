@@ -54,13 +54,15 @@ log = logging.getLogger("Launcher.Hub")
 
 
 class LatencyEstimator:
-    """Calculates structured pipeline latency steps based on active model and routing choices."""
+    """Dynamic, architecture-accurate latency analyzer for all 3 pipeline flows."""
 
     @staticmethod
     def get_stage1_latency() -> Dict[str, Any]:
-        """Inspect LiveTranslate user_settings.json for ASR and MT configuration."""
+        """Inspect LiveTranslate user_settings.json for VAD, ASR, and MT configuration."""
         settings_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
-        asr_name = "SenseVoice ASR"
+        vad_name = "Silero VAD"
+        vad_ms = 5
+        asr_name = "SenseVoice INT8"
         asr_ms = 170
         mt_name = "Hunyuan MT 1.8B"
         mt_ms = 80
@@ -69,6 +71,9 @@ class LatencyEstimator:
         if settings_file.is_file():
             try:
                 cfg = json.loads(settings_file.read_text(encoding="utf-8"))
+                vad_m = cfg.get("vad_mode", "silero")
+                vad_name = f"{vad_m.capitalize()} VAD"
+
                 asr_eng = cfg.get("asr_engine", "sherpa_onnx")
                 if "whisper" in asr_eng:
                     asr_name = "Whisper Local"
@@ -77,9 +82,12 @@ class LatencyEstimator:
                     asr_name = "Whisper Cloud"
                     asr_ms = 450
                     is_cloud = True
+                else:
+                    asr_name = "SenseVoice INT8"
+                    asr_ms = 170
 
                 models = cfg.get("models", [])
-                active_idx = cfg.get("active_model", 0)
+                active_idx = cfg.get("active_model", 1)
                 if active_idx < len(models):
                     active_m = models[active_idx]
                     api_base = active_m.get("api_base", "local")
@@ -87,20 +95,21 @@ class LatencyEstimator:
                     if api_base == "local":
                         if "nllb" in m_model:
                             mt_name = "NLLB-200"
-                            mt_ms = 280
+                            mt_ms = 50
                         else:
                             mt_name = "Hunyuan MT 1.8B"
                             mt_ms = 80
                     else:
                         clean_name = active_m.get("name", "Cloud API").split()[0]
                         mt_name = f"API {clean_name}"
-                        mt_ms = 380
+                        mt_ms = 350
                         is_cloud = True
             except Exception as e:
                 log.warning("Could not parse LiveTranslate settings: %s", e)
 
-        total_ms = asr_ms + mt_ms
+        total_ms = vad_ms + asr_ms + mt_ms
         steps = [
+            {"name": vad_name, "ms": vad_ms, "icon": "✂"},
             {"name": asr_name, "ms": asr_ms, "icon": "🎙"},
             {"name": mt_name, "ms": mt_ms, "icon": "🧠"},
         ]
@@ -113,32 +122,41 @@ class LatencyEstimator:
 
     @staticmethod
     def get_stage2_latency() -> Dict[str, Any]:
-        """Inspect OverTranslate configuration for OCR and provider choice."""
+        """Inspect OverTranslate appsettings.json for RapidOcr ONNX and translation provider."""
         settings_file = PROJECT_ROOT / "CONFIG" / "stage_2_screen" / "appsettings.json"
-        ocr_name = "Windows OCR"
-        ocr_ms = 35
-        mt_name = "Локальный перевод"
-        mt_ms = 50
-        is_cloud = False
+        ocr_name = "RapidOcr ONNX"
+        ocr_ms = 30
+        mt_name = "Microsoft MT"
+        mt_ms = 150
+        is_cloud = True
 
         if settings_file.is_file():
             try:
                 cfg = json.loads(settings_file.read_text(encoding="utf-8"))
                 provider = cfg.get("Provider", "Microsoft")
-                if provider in ("OpenAI", "DeepL", "GoogleChrome"):
-                    mt_name = f"API {provider}"
-                    mt_ms = 300
+                if provider == "OpenAi":
+                    mt_name = "Groq LPU (GPT-OSS)"
+                    mt_ms = 180
+                    is_cloud = True
+                elif provider == "Microsoft":
+                    mt_name = "Microsoft MT"
+                    mt_ms = 150
+                    is_cloud = True
+                elif provider == "GoogleWeb":
+                    mt_name = "Google Web MT"
+                    mt_ms = 160
                     is_cloud = True
                 else:
-                    mt_name = "Windows Local"
-                    mt_ms = 50
+                    mt_name = f"API {provider}"
+                    mt_ms = 200
+                    is_cloud = True
             except Exception as e:
                 log.warning("Could not parse OverTranslate settings: %s", e)
 
         total_ms = ocr_ms + mt_ms
         steps = [
-            {"name": ocr_name, "ms": ocr_ms, "icon": "🖼"},
-            {"name": mt_name, "ms": mt_ms, "icon": "📝"},
+            {"name": ocr_name, "ms": ocr_ms, "icon": "🔍"},
+            {"name": mt_name, "ms": mt_ms, "icon": "🌐"},
         ]
         return {
             "steps": steps,
@@ -150,8 +168,9 @@ class LatencyEstimator:
     @staticmethod
     def get_stage3_latency(routing_mode: str = "topping") -> Dict[str, Any]:
         """Inspect Voice Studio configuration for ASR, MT, TTS, and Audio Routing."""
-        asr_ms = 170  # Sber GigaAM CTC
-        mt_ms = 15    # Helsinki Opus-MT
+        vad_ms = 10   # VAD segmentation and punctuation restoration
+        asr_ms = 170  # Sber GigaAM CTC INT8
+        mt_ms = 15    # Helsinki Opus-MT INT8
         tts_ms = 750  # Kyutai Pocket-TTS 24kHz
 
         if routing_mode == "topping":
@@ -161,10 +180,11 @@ class LatencyEstimator:
             route_name = "VB-Cable"
             route_ms = 15
 
-        total_ms = asr_ms + mt_ms + tts_ms + route_ms
+        total_ms = vad_ms + asr_ms + mt_ms + tts_ms + route_ms
         steps = [
+            {"name": "VAD + Пунктуация", "ms": vad_ms, "icon": "✂"},
             {"name": "Sber GigaAM", "ms": asr_ms, "icon": "🎙"},
-            {"name": "Opus-MT", "ms": mt_ms, "icon": "🧠"},
+            {"name": "Opus-MT", "ms": mt_ms, "icon": "📝"},
             {"name": "Pocket-TTS клон", "ms": tts_ms, "icon": "🗣"},
             {"name": route_name, "ms": route_ms, "icon": "🔊"},
         ]
@@ -822,30 +842,6 @@ class EcosystemHub(QMainWindow):
         self.card_stage3.stage3_layout.addLayout(h_stage3_hw)
 
         layout.addWidget(self.card_stage3)
-
-        # 4. Minimal Project Bottom Bar: Open Protected CONFIG Folder
-        h_bottom = QHBoxLayout()
-        h_bottom.setContentsMargins(4, 4, 4, 4)
-
-        self.btn_open_folder = QPushButton(I18n.t("btn_open_folder"))
-        self.btn_open_folder.setFixedHeight(32)
-        self.btn_open_folder.setStyleSheet("""
-            QPushButton {
-                background-color: #1f2937;
-                color: #94a3b8;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 0 14px;
-                border: 1px solid #374151;
-            }
-            QPushButton:hover { background-color: #374151; color: #fff; }
-        """)
-        self.btn_open_folder.clicked.connect(self._on_open_config_folder)
-        h_bottom.addWidget(self.btn_open_folder)
-
-        h_bottom.addStretch()
-        layout.addLayout(h_bottom)
-
         layout.addStretch()
         return w
 
@@ -1206,7 +1202,6 @@ class EcosystemHub(QMainWindow):
         self.btn_hub_cable.setText(I18n.t("hardware_cable"))
         self.btn_install_cable.setText(I18n.t("hardware_install_cable"))
         self.btn_launch_wizard.setText(I18n.t("btn_wizard"))
-        self.btn_open_folder.setText(I18n.t("btn_open_folder"))
 
         self.lbl_patches_head.setText(f"<b>{I18n.t('patches_header')}</b>")
         self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh"))

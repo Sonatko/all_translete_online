@@ -507,16 +507,16 @@ class StageCard(QFrame):
 
         self.live_diag_frame.show()
 
-        # 1. Hardware Status
-        audio_dev = m.get("audio_device") or "Системный звук (Loopback)"
+        # 1. Hardware & Audio Signal Path
+        audio_dev = m.get("audio_device") or "WASAPI Loopback (Default Output)"
         req_dev = str(m.get("asr_device_requested", "cpu")).strip()
         act_dev = str(m.get("asr_device_actual", "cpu")).strip()
         mt_name = m.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
 
-        hw_text = f"🎧 <b>Захват:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice [<b>{act_dev.upper()}</b>] | 🧠 <b>Перевод:</b> {mt_name} [<b>CPU</b>]"
+        hw_text = f"🎛 <b>Сигнальный тракт:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice INT8 [<b>{act_dev.upper()} Execution Provider</b>] | 🧠 <b>MT:</b> {mt_name} [<b>CPU / GGUF</b>]"
         self.lbl_diag_hw.setText(hw_text)
 
-        # 2. Live Inference Metric
+        # 2. Live Inference Segment Telemetry
         if m.get("last_original") and m.get("last_asr_ms") is not None:
             asr_ms = m.get("last_asr_ms", 0)
             tl_ms = m.get("last_tl_ms", 0)
@@ -529,23 +529,23 @@ class StageCard(QFrame):
                 trans = trans[:52] + "..."
             
             live_text = (
-                f"⚡ <b>Факт последней фразы:</b> "
+                f"⏱ <b>Инференс сегмента:</b> "
                 f"<span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ "
-                f"<span style='color: #c084fc;'>Перевод: {tl_ms} мс</span> ➔ "
-                f"<span style='color: #34d399;'>Итого: {tot_ms} мс</span> | "
+                f"<span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ "
+                f"<span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | "
                 f"💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
             )
             self.lbl_diag_live.setText(live_text)
         else:
-            self.lbl_diag_live.setText("🎙 <i>Слушает системный звук (в наушниках тишина / ожидание речи)...</i>")
+            self.lbl_diag_live.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Сигнал ниже порога детекции)")
 
-        # 3. Alerts & Diagnostic Messages
+        # 3. Diagnostic Context & Pipeline Alerts
         if m.get("error_msg"):
-            self.lbl_diag_alert.setText(f"❌ <b>Ошибка этапа:</b> {m['error_msg']}")
+            self.lbl_diag_alert.setText(f"🛑 <b>Сбой конвейера [Pipeline Failure]:</b> {m['error_msg']}")
             self.lbl_diag_alert.setStyleSheet("background-color: #450a0a; color: #fca5a5; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #dc2626;")
             self.lbl_diag_alert.show()
         elif "cuda" in req_dev.lower() and act_dev == "cpu":
-            self.lbl_diag_alert.setText(f"ℹ️ <b>Уведомление оборудования:</b> В меню выбрано <b>{req_dev} (RTX 5070)</b>, но SenseVoice исполняется на <b>CPU</b> (библиотека sherpa-onnx скомпилирована под CPU). Видеокарта свободна на 100%.")
+            self.lbl_diag_alert.setText(f"⚠️ <b>Аппаратный контекст:</b> В интерфейсе запрошен бэкенд <b>{req_dev} (RTX 5070)</b> ➔ Активен <b>CPU Execution Provider</b> (библиотека sherpa-onnx собрана без рантайма CUDA). Видеопамять (VRAM) на 100% свободна под игры.")
             self.lbl_diag_alert.setStyleSheet("background-color: #172554; color: #93c5fd; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #3b82f6;")
             self.lbl_diag_alert.show()
         else:

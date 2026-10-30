@@ -27,9 +27,9 @@ class EcosystemProcessManager:
     def get_stage_status() -> Dict[str, Any]:
         """Check whether each stage is currently running and collect live resource telemetry."""
         status = {
-            "stage_1": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
-            "stage_2": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
-            "stage_3": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0},
+            "stage_1": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
+            "stage_2": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
+            "stage_3": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
             "total_ram_mb": 0.0,
             "total_cpu_pct": 0.0,
             "running_count": 0,
@@ -60,13 +60,29 @@ class EcosystemProcessManager:
 
                         total_mem_bytes = 0
                         total_cpu_val = 0.0
+                        breakdown = []
                         for proc in tree:
                             try:
-                                total_mem_bytes += proc.memory_info().rss
+                                proc_mem = proc.memory_info().rss
+                                total_mem_bytes += proc_mem
                                 total_cpu_val += proc.cpu_percent(interval=None)
+                                p_mb = round(proc_mem / (1024.0 * 1024.0), 1)
+                                cmd_str = " ".join(proc.cmdline() or []).lower()
+                                if "spawn_main" in cmd_str:
+                                    comp_name = "SenseVoice INT8 ASR (Распознавание)"
+                                elif p_mb > 1000:
+                                    comp_name = "Tencent HY-MT1.5 (Нейроперевод)"
+                                elif "overtranslate" in cmd_str or "overtranslate" in (proc.name() or "").lower():
+                                    comp_name = "OverTranslate OCR"
+                                elif "studio" in cmd_str or "pocket" in cmd_str:
+                                    comp_name = "Voice Studio Engine"
+                                else:
+                                    comp_name = "Оболочка / GUI Оркестратор"
+                                breakdown.append({"name": comp_name, "pid": proc.pid, "ram_mb": p_mb})
                             except (psutil.NoSuchProcess, psutil.AccessDenied):
                                 pass
 
+                        breakdown.sort(key=lambda x: x["ram_mb"], reverse=True)
                         mem_mb = round(total_mem_bytes / (1024.0 * 1024.0), 1)
                         cpu = round(total_cpu_val, 1)
 
@@ -74,6 +90,7 @@ class EcosystemProcessManager:
                         status[matched]["pid"] = p.pid
                         status[matched]["ram_mb"] = mem_mb
                         status[matched]["cpu_pct"] = cpu
+                        status[matched]["breakdown"] = breakdown
                         status["total_ram_mb"] += mem_mb
                         status["total_cpu_pct"] += cpu
                         status["running_count"] += 1

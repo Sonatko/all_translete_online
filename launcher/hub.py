@@ -298,6 +298,7 @@ class StageCard(QFrame):
         self.on_open = on_open
         self.open_label_key = open_label_key
         self._is_running = False
+        self._last_telemetry_data = {}
 
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -572,10 +573,23 @@ class StageCard(QFrame):
                 act_dev = str(live_data.get("asr_device_actual", "cpu")).strip()
                 mt_name = live_data.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
 
+                breakdown = self._last_telemetry_data.get("breakdown", [])
+                asr_mb = None
+                mt_mb = None
+                for b in breakdown:
+                    name_lower = b["name"].lower()
+                    if "sensevoice" in name_lower or "asr" in name_lower:
+                        asr_mb = b["ram_mb"]
+                    elif "tencent" in name_lower or "mt" in name_lower or b["ram_mb"] > 1000:
+                        mt_mb = b["ram_mb"]
+
+                asr_sub = f"{act_dev.upper()} ONNX | {asr_mb} MB" if asr_mb else f"{act_dev.upper()} ONNX"
+                mt_sub = f"CPU / GGUF | {mt_mb} MB" if mt_mb else "CPU / GGUF"
+
                 if len(self.nodes) >= 5:
                     self.nodes[0].update_node(backend=audio_dev)
-                    self.nodes[2].update_node(title="SenseVoice INT8", backend=f"{act_dev.upper()} ONNX")
-                    self.nodes[3].update_node(title=mt_name)
+                    self.nodes[2].update_node(title="SenseVoice INT8", backend=asr_sub)
+                    self.nodes[3].update_node(title=mt_name, backend=mt_sub)
 
                 if live_data.get("last_original") and live_data.get("last_asr_ms") is not None:
                     asr_ms = live_data.get("last_asr_ms", 0)
@@ -603,8 +617,8 @@ class StageCard(QFrame):
                 else:
                     if len(self.nodes) >= 5:
                         self.nodes[1].update_node(active=False, metric="Standby")
-                        self.nodes[2].update_node(active=False, metric=None)
-                        self.nodes[3].update_node(active=False, metric=None)
+                        self.nodes[2].update_node(active=False, metric=f"{asr_mb} MB" if asr_mb else None)
+                        self.nodes[3].update_node(active=False, metric=f"{mt_mb} MB" if mt_mb else None)
                         self.nodes[4].update_node(active=False, metric=None)
                     self.lbl_mon_state.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Порог: 50%)")
 
@@ -655,12 +669,14 @@ class StageCard(QFrame):
         self.set_running(self._is_running, force=True)
 
     def update_telemetry(self, data: dict, force: bool = False):
+        self._last_telemetry_data = data or {}
         running = data.get("running", False)
         self.set_running(running, force=force)
 
         if running:
             ram = data.get("ram_mb", 0.0)
             cpu = data.get("cpu_pct", 0.0)
+            breakdown = data.get("breakdown", [])
             self.lbl_telemetry.setText(I18n.t("res_metrics", ram=ram, cpu=cpu))
             self.lbl_telemetry.setStyleSheet("""
                 color: #34d399;
@@ -671,7 +687,15 @@ class StageCard(QFrame):
                 border-radius: 4px;
                 border: 1px solid #059669;
             """)
+            if breakdown:
+                lines = [f"📊 Использование памяти ({ram} МБ):"]
+                for b in breakdown:
+                    lines.append(f"  • {b['name']}: {b['ram_mb']} МБ (PID {b['pid']})")
+                self.lbl_telemetry.setToolTip("\n".join(lines))
+            else:
+                self.lbl_telemetry.setToolTip("")
         else:
+            self.lbl_telemetry.setToolTip("")
             self.lbl_telemetry.setText(I18n.t("res_stopped"))
             self.lbl_telemetry.setStyleSheet("""
                 color: #9ca3af;
@@ -1693,14 +1717,26 @@ class EcosystemHub(QMainWindow):
         total_cpu = status.get("total_cpu_pct", 0.0)
 
         if running_count == 3:
-            self.lbl_system_summary.setText(f"🟢 {I18n.t('status_all_running').split('|')[0].strip()} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
+            base_txt = I18n.t("status_all_running").split("|")[0].strip()
+            self.lbl_system_summary.setText(f"{base_txt} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
             self.lbl_system_summary.setStyleSheet("color: #10b981; font-weight: bold; background-color: #064e3b; padding: 8px 12px; border-radius: 6px;")
         elif running_count > 0:
-            self.lbl_system_summary.setText(f"🟡 {I18n.t('status_partial', count=running_count).split('|')[0].strip()} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
+            base_txt = I18n.t("status_partial", count=running_count).split("|")[0].strip()
+            self.lbl_system_summary.setText(f"{base_txt} | ОЗУ: {total_ram} МБ | ЦП: {total_cpu}% | VRAM: 0 MB")
             self.lbl_system_summary.setStyleSheet("color: #facc15; font-weight: bold; background-color: #713f12; padding: 8px 12px; border-radius: 6px;")
         else:
             self.lbl_system_summary.setText(I18n.t("status_stopped"))
             self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
+
+        # Rich memory & process breakdown tooltip on master header badge
+        sys_tooltip = [f"📊 Общее потребление ресурсов: ОЗУ {total_ram} МБ, ЦП {total_cpu}%"]
+        for st_id, st_name in [("stage_1", "Этап 1: LiveTranslate"), ("stage_2", "Этап 2: OverTranslate"), ("stage_3", "Этап 3: Voice Studio")]:
+            st_info = status.get(st_id, {})
+            if st_info.get("running"):
+                sys_tooltip.append(f"\n{st_name} (PID {st_info.get('pid')}) — {st_info.get('ram_mb')} МБ:")
+                for b in st_info.get("breakdown", []):
+                    sys_tooltip.append(f"  • {b['name']}: {b['ram_mb']} МБ")
+        self.lbl_system_summary.setToolTip("\n".join(sys_tooltip))
 
     def _on_open_voice_wizard(self):
         try:
@@ -1774,6 +1810,22 @@ class EcosystemHub(QMainWindow):
 
 
 def main():
+    # Terminate any stale prior Hub instances to guarantee fresh code and single-window UX
+    current_pid = os.getpid()
+    for p in psutil.process_iter(["name"]):
+        try:
+            if p.pid == current_pid:
+                continue
+            if "python" in (p.info.get("name") or "").lower():
+                cmdline = " ".join(p.cmdline() or []).lower()
+                if "hub.py" in cmdline:
+                    try:
+                        p.terminate()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
     app = QApplication(sys.argv)
     app.setApplicationName("Translation Ecosystem Hub")
     hub = EcosystemHub()

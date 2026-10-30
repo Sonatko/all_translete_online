@@ -175,6 +175,8 @@ def test_hub_headless_lifecycle():
     
     # Close window cleanly
     window.close()
+    window.deleteLater()
+    app.processEvents()
     
     log_test("Universal Hub Headless UI Lifecycle", True, f"Boot time: {init_time_ms:.1f}ms | 3 Stages & 3 Languages verified")
 
@@ -256,3 +258,4 @@ if __name__ == "__main__":
     print("=" * 70)
     print(" [ALL GATES PASSED] System is 100% verified and production-ready.")
     print("=" * 70)
+    sys.exit(0)

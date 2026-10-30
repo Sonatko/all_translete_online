@@ -47,7 +47,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Dynamic Latency Monitor
         "latency_prefix": "⏱ Задержка пайплайна:",
-        "latency_mode_local": "100% Локально",
+        "latency_mode_local": "100% Локально (CPU)",
         "latency_mode_cloud": "Облачный API",
 
         # Hardware audio selector
@@ -124,7 +124,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Dynamic Latency Monitor
         "latency_prefix": "⏱ Pipeline Latency:",
-        "latency_mode_local": "100% Offline",
+        "latency_mode_local": "100% Offline (CPU)",
         "latency_mode_cloud": "Cloud API",
 
         # Hardware audio selector
@@ -201,7 +201,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Dynamic Latency Monitor
         "latency_prefix": "⏱ 流程延迟:",
-        "latency_mode_local": "100% 本地运行",
+        "latency_mode_local": "100% 本地运行 (CPU)",
         "latency_mode_cloud": "云端 API",
 
         # Hardware audio selector

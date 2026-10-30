@@ -60,11 +60,11 @@ class LatencyEstimator:
     def get_stage1_latency() -> Dict[str, Any]:
         """Inspect LiveTranslate user_settings.json for VAD, ASR, and MT configuration."""
         settings_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
-        vad_name = "Silero VAD"
+        vad_name = "Silero VAD (CPU)"
         vad_ms = 5
-        asr_name = "SenseVoice INT8"
+        asr_name = "SenseVoice INT8 (CPU)"
         asr_ms = 170
-        mt_name = "Hunyuan MT 1.8B"
+        mt_name = "Hunyuan MT 1.8B (CPU)"
         mt_ms = 80
         is_cloud = False
 
@@ -72,18 +72,18 @@ class LatencyEstimator:
             try:
                 cfg = json.loads(settings_file.read_text(encoding="utf-8"))
                 vad_m = cfg.get("vad_mode", "silero")
-                vad_name = f"{vad_m.capitalize()} VAD"
+                vad_name = f"{vad_m.capitalize()} VAD (CPU)"
 
                 asr_eng = cfg.get("asr_engine", "sherpa_onnx")
                 if "whisper" in asr_eng:
-                    asr_name = "Whisper Local"
+                    asr_name = "Whisper Local (CPU)"
                     asr_ms = 900
                 elif "remote" in asr_eng:
-                    asr_name = "Whisper Cloud"
+                    asr_name = "Whisper Cloud (Облако)"
                     asr_ms = 450
                     is_cloud = True
                 else:
-                    asr_name = "SenseVoice INT8"
+                    asr_name = "SenseVoice INT8 (CPU)"
                     asr_ms = 170
 
                 models = cfg.get("models", [])
@@ -94,14 +94,14 @@ class LatencyEstimator:
                     m_model = active_m.get("model", "")
                     if api_base == "local":
                         if "nllb" in m_model:
-                            mt_name = "NLLB-200"
+                            mt_name = "NLLB-200 (CPU)"
                             mt_ms = 50
                         else:
-                            mt_name = "Hunyuan MT 1.8B"
+                            mt_name = "Hunyuan MT 1.8B (CPU)"
                             mt_ms = 80
                     else:
                         clean_name = active_m.get("name", "Cloud API").split()[0]
-                        mt_name = f"API {clean_name}"
+                        mt_name = f"API {clean_name} (Облако)"
                         mt_ms = 350
                         is_cloud = True
             except Exception as e:
@@ -124,9 +124,9 @@ class LatencyEstimator:
     def get_stage2_latency() -> Dict[str, Any]:
         """Inspect OverTranslate appsettings.json for RapidOcr ONNX and translation provider."""
         settings_file = PROJECT_ROOT / "CONFIG" / "stage_2_screen" / "appsettings.json"
-        ocr_name = "RapidOcr ONNX"
+        ocr_name = "RapidOcr ONNX (CPU)"
         ocr_ms = 30
-        mt_name = "Microsoft MT"
+        mt_name = "Microsoft MT (Облако)"
         mt_ms = 150
         is_cloud = True
 
@@ -135,19 +135,19 @@ class LatencyEstimator:
                 cfg = json.loads(settings_file.read_text(encoding="utf-8"))
                 provider = cfg.get("Provider", "Microsoft")
                 if provider == "OpenAi":
-                    mt_name = "Groq LPU (GPT-OSS)"
+                    mt_name = "Groq LPU (Облако)"
                     mt_ms = 180
                     is_cloud = True
                 elif provider == "Microsoft":
-                    mt_name = "Microsoft MT"
+                    mt_name = "Microsoft MT (Облако)"
                     mt_ms = 150
                     is_cloud = True
                 elif provider == "GoogleWeb":
-                    mt_name = "Google Web MT"
+                    mt_name = "Google Web (Облако)"
                     mt_ms = 160
                     is_cloud = True
                 else:
-                    mt_name = f"API {provider}"
+                    mt_name = f"API {provider} (Облако)"
                     mt_ms = 200
                     is_cloud = True
             except Exception as e:
@@ -174,18 +174,18 @@ class LatencyEstimator:
         tts_ms = 750  # Kyutai Pocket-TTS 24kHz
 
         if routing_mode == "topping":
-            route_name = "Topping Loopback"
+            route_name = "Topping Loopback (Аппаратный)"
             route_ms = 0
         else:
-            route_name = "VB-Cable"
+            route_name = "VB-Cable (Драйвер)"
             route_ms = 15
 
         total_ms = vad_ms + asr_ms + mt_ms + tts_ms + route_ms
         steps = [
-            {"name": "VAD + Пунктуация", "ms": vad_ms, "icon": "✂"},
-            {"name": "Sber GigaAM", "ms": asr_ms, "icon": "🎙"},
-            {"name": "Opus-MT", "ms": mt_ms, "icon": "📝"},
-            {"name": "Pocket-TTS клон", "ms": tts_ms, "icon": "🗣"},
+            {"name": "VAD + Пунктуация (CPU)", "ms": vad_ms, "icon": "✂"},
+            {"name": "Sber GigaAM (CPU)", "ms": asr_ms, "icon": "🎙"},
+            {"name": "Opus-MT (CPU)", "ms": mt_ms, "icon": "📝"},
+            {"name": "Pocket-TTS клон (CPU)", "ms": tts_ms, "icon": "🗣"},
             {"name": route_name, "ms": route_ms, "icon": "🔊"},
         ]
         return {

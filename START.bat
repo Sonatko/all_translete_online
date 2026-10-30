@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0"
 
-set "VENV_PY=%~dp0stage_3_voice\Dizcord\.venv\Scripts\python.exe"
-set "VENV_PYW=%~dp0stage_3_voice\Dizcord\.venv\Scripts\pythonw.exe"
+set "VENV_PY=%~dp0stage_3_voice\.venv\Scripts\python.exe"
+set "VENV_PYW=%~dp0stage_3_voice\.venv\Scripts\pythonw.exe"
 set "HUB_SCRIPT=%~dp0launcher\hub.py"
 
 if not exist "%VENV_PY%" goto need_setup

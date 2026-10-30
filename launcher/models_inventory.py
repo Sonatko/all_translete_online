@@ -101,13 +101,6 @@ class ModelsInventory:
             path: Path = m["path"]
             exists = path.is_file() if m["is_file"] else path.exists()
 
-            # Alternative check in Dizcord folder if not found in primary
-            if not exists and "stage_3_voice" in str(path):
-                alt_path = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / path.relative_to(PROJECT_ROOT / "stage_3_voice")
-                if (alt_path.is_file() if m["is_file"] else alt_path.exists()):
-                    path = alt_path
-                    exists = True
-
             size_mb = get_dir_size_mb(path) if exists else 0.0
 
             result.append({

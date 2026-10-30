@@ -35,11 +35,11 @@ echo [1/3] Python detected: !SYS_PY!
 
 :: 2. Create or Repair Virtual Environment
 set "ROOT_DIR=%~dp0.."
-set "VENV_DIR=%ROOT_DIR%\stage_3_voice\Dizcord\.venv"
+set "VENV_DIR=%ROOT_DIR%\stage_3_voice\.venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (
-    echo [2/3] Creating isolated virtual environment in stage_3_voice\Dizcord\.venv...
+    echo [2/3] Creating isolated virtual environment in stage_3_voice\.venv...
     !SYS_PY! -m venv "%VENV_DIR%"
     if %errorlevel% neq 0 (
         echo [ERROR] Failed to create virtual environment.
@@ -58,7 +58,7 @@ if !errorlevel! neq 0 (
     "%VENV_PY%" -m ensurepip --upgrade >nul 2>&1
 )
 "%VENV_PY%" -m pip install --upgrade pip >nul 2>&1
-"%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\Dizcord\requirements_studio.txt"
+"%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\requirements.txt"
 
 echo.
 echo ======================================================================

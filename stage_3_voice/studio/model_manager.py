@@ -85,14 +85,7 @@ class ModelManager:
             tokens_path = MODELS_DIR / "giga-am-v3" / "tokens.txt"
 
             if not model_path.is_file() or not tokens_path.is_file():
-                # Check alternative Dizcord cache
-                alt_model = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / "models" / "giga-am-v3" / "model.int8.onnx"
-                alt_tokens = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / "models" / "giga-am-v3" / "tokens.txt"
-                if alt_model.is_file() and alt_tokens.is_file():
-                    model_path = alt_model
-                    tokens_path = alt_tokens
-                else:
-                    raise FileNotFoundError(f"GigaAM files not found at {model_path}")
+                raise FileNotFoundError(f"GigaAM files not found at {model_path}")
 
             log.info("Loading GigaAM STT from %s (threads=%d)...", model_path, cpu_threads)
             self._stt_model = sherpa_onnx.OfflineRecognizer.from_nemo_ctc(
@@ -143,11 +136,7 @@ class ModelManager:
 
             model_dir = MODELS_DIR / "opus-mt-ru-en-ct2"
             if not (model_dir / "model.bin").is_file():
-                alt_dir = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / "models" / "opus-mt-ru-en-ct2"
-                if (alt_dir / "model.bin").is_file():
-                    model_dir = alt_dir
-                else:
-                    raise FileNotFoundError(f"Opus-MT not found at {model_dir}")
+                raise FileNotFoundError(f"Opus-MT not found at {model_dir}")
 
             log.info("Loading Opus-MT from %s...", model_dir)
             self._mt_translator = ctranslate2.Translator(

@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-# Add project root and Dizcord to sys.path
+# Add project root to sys.path
 SCRIPT_DIR = Path(__file__).resolve().parent
 STAGE3_DIR = SCRIPT_DIR.parent
 ROOT_DIR = STAGE3_DIR.parent

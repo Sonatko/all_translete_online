@@ -28,7 +28,6 @@ stage_1_audio/LiveTranslate/
 stage_1_audio/nllb_server/models/
 stage_1_audio/nllb_server/backends/
 stage_3_voice/models/
-stage_3_voice/Dizcord/models/
 stage_3_voice/scratch/
 stage_2_screen/OverTranslate/current/
 stage_2_screen/OverTranslate/*.dll

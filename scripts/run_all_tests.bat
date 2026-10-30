@@ -4,7 +4,7 @@ cd /d "%~dp0.."
 title Translation Ecosystem - Automated Test Suite
 
 set "ROOT_DIR=%~dp0.."
-set "VENV_PY=%ROOT_DIR%\stage_3_voice\Dizcord\.venv\Scripts\python.exe"
+set "VENV_PY=%ROOT_DIR%\stage_3_voice\.venv\Scripts\python.exe"
 
 if not exist "%VENV_PY%" goto err_no_venv
 

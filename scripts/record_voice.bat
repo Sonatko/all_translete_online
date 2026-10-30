@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0.."
 title Studio Voice Cloning - Pocket-TTS
 
-set "VENV_PY=%~dp0..\stage_3_voice\Dizcord\.venv\Scripts\python.exe"
+set "VENV_PY=%~dp0..\stage_3_voice\.venv\Scripts\python.exe"
 set "CLONE_SCRIPT=%~dp0..\stage_3_voice\studio\record_voice.py"
 
 if not exist "%VENV_PY%" (

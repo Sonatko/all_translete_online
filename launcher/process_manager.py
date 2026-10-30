@@ -16,8 +16,8 @@ import psutil
 log = logging.getLogger("Launcher.Process")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PYTHON_EXE = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / ".venv" / "Scripts" / "python.exe"
-PYTHONW_EXE = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / ".venv" / "Scripts" / "pythonw.exe"
+PYTHON_EXE = PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "python.exe"
+PYTHONW_EXE = PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "pythonw.exe"
 PYTHONW_STAGE1 = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / ".venv" / "Scripts" / "pythonw.exe"
 
 _CPU_HARDWARE_INFO: Optional[Dict[str, Any]] = None

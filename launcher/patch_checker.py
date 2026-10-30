@@ -195,7 +195,7 @@ class PatchIntegrityChecker:
         all_items.extend(m1_items)
 
         # =============================================================
-        # MODULE 2: OverTranslate (1 Verified Binary CIL Patch + Config)
+        # MODULE 2: OverTranslate (Ready Portable App + Win11 Clipboard Bugfix)
         # =============================================================
         m2_items = []
         ot_dll_ok = False
@@ -212,11 +212,11 @@ class PatchIntegrityChecker:
         m2_items.append({
             "stage_id": "stage_2",
             "stage_name": "Модуль 2: Экранный переводчик (OverTranslate)",
-            "name": "Патч 7: OverTranslate.patched.dll (CIL-патч буфера обмена)",
-            "category": "Патч бинарника",
+            "name": "Фикс бага буфера обмена (OverTranslate.dll Win11 Fix)",
+            "category": "Исправление бага",
             "is_ok": ot_dll_ok,
             "status_text": "Активен (Фикс 0x800401D0)" if ot_dll_ok else "СЛЕТЕЛ (Требуется восстановление)",
-            "desc": "Устранен системный сбой буфера обмена в Windows 11 при быстром переводе выделенного текста (Ctrl+C+C).",
+            "desc": "Устраняет системный сбой «Буфер обмена недоступен» в Windows 11 при быстром переводе выделенного текста (Ctrl+C+C).",
         })
 
         ot_cfg_file = cls.CONFIG_DIR / "stage_2_screen" / "appsettings.json"
@@ -228,7 +228,7 @@ class PatchIntegrityChecker:
             "category": "Настройки",
             "is_ok": ot_cfg_ok,
             "status_text": "Готов (Двуязычный режим RU ⇄ EN)" if ot_cfg_ok else "Файл не найден",
-            "desc": "Настройки OCR (RapidOcrNet ONNX) и взаимного двуязычного перевода по выделению.",
+            "desc": "Настройки быстрого OCR (RapidOcrNet) и взаимного перевода по выделению текста.",
         })
 
         ot_exe_ok = cls.OT_EXE.is_file()

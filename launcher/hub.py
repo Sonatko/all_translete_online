@@ -1,6 +1,6 @@
 """Universal Real-Time Translation Hub & Ecosystem Orchestrator (PySide6).
-Supports Trilingual UI (Russian, English, Chinese), AI Models Storage Audit,
-Process Lifecycle Supervision, Patch & Health Integrity Auditor, and Architecture Guide.
+Supports Trilingual UI (Russian, English, Chinese), 3-Stage Process Supervision,
+Modular 5-Patch Integrity Auditor with 1-Click Self-Healing, and Plain-Human Architecture Guide.
 """
 from __future__ import annotations
 
@@ -41,12 +41,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 try:
     from launcher.i18n import I18n
-    from launcher.models_inventory import ModelsInventory
     from launcher.patch_checker import PatchIntegrityChecker
     from launcher.process_manager import EcosystemProcessManager
 except ImportError:
     from i18n import I18n
-    from models_inventory import ModelsInventory
     from patch_checker import PatchIntegrityChecker
     from process_manager import EcosystemProcessManager
 
@@ -319,8 +317,8 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(1000, 780)
-        self.setMinimumSize(920, 680)
+        self.resize(1020, 800)
+        self.setMinimumSize(940, 700)
 
         self._apply_theme()
         self._init_ui()
@@ -331,15 +329,14 @@ class EcosystemHub(QMainWindow):
         self.poll_timer.setInterval(2000)
         self.poll_timer.timeout.connect(self._poll_process_status)
 
-        # Defer disk inventory scan and process checking to after window renders
+        # Defer scan and process checking to after window renders
         QTimer.singleShot(40, self._initial_load)
 
     def _initial_load(self):
         """Runs right after GUI window appears on screen for instant startup."""
         self._poll_process_status()
         self.poll_timer.start()
-        self._populate_inventory_table()
-        self._populate_patches_table()
+        self._populate_patches_view()
         self._update_hub_profile_styles()
 
     def _update_hub_profile_styles(self):
@@ -367,6 +364,23 @@ class EcosystemHub(QMainWindow):
                 self.btn_install_cable.hide()
 
     def _on_hub_switch_profile(self, mode: str):
+        if mode == "cable":
+            try:
+                from stage_3_voice.studio.routing_presets import RoutingPresets
+                hw = RoutingPresets.get_hardware_info()
+                if not hw.get("has_cable", False):
+                    reply = QMessageBox.question(
+                        self,
+                        I18n.t("cable_not_found_title"),
+                        I18n.t("cable_not_found_msg"),
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        self._on_install_cable()
+                    return
+            except Exception as e:
+                log.warning("Could not check hardware: %s", e)
+
         try:
             from stage_3_voice.studio.routing_presets import RoutingPresets
             from stage_3_voice.studio.config import load_settings, save_settings
@@ -404,12 +418,11 @@ class EcosystemHub(QMainWindow):
         # 1. Master Control Header Bar with Language Switcher and Patch Status
         root_layout.addLayout(self._create_master_header())
 
-        # 2. Main Tabs
+        # 2. Clean 3 Tabs (KISS Standard: Dashboard, Patches by Module, Architecture Guide)
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._create_dashboard_tab(), "🎛 Пульт и Схема работы")
-        self.tabs.addTab(self._create_inventory_tab(), "🧠 Файлы нейросетей на диске")
-        self.tabs.addTab(self._create_patches_tab(), "🛡 Целостность и Патчи")
-        self.tabs.addTab(self._create_guide_tab(), "ℹ Архитектура и справка")
+        self.tabs.addTab(self._create_dashboard_tab(), "🎛 Пульт управления")
+        self.tabs.addTab(self._create_patches_tab(), "🛡 Защита и Патчи")
+        self.tabs.addTab(self._create_guide_tab(), "📖 Памятка на будущее")
         root_layout.addWidget(self.tabs, stretch=1)
 
     def _create_master_header(self) -> QHBoxLayout:
@@ -450,7 +463,7 @@ class EcosystemHub(QMainWindow):
         self.btn_stop_all.clicked.connect(EcosystemProcessManager.stop_all)
         h.addWidget(self.btn_stop_all)
 
-        # Patch Health Quick Pill
+        # Patch Health Quick Pill (Navigates to Tab 1)
         self.lbl_patch_quick = QPushButton("🛡 Патчи: Проверка...")
         self.lbl_patch_quick.setFixedHeight(42)
         self.lbl_patch_quick.setStyleSheet("""
@@ -466,7 +479,7 @@ class EcosystemHub(QMainWindow):
             }
             QPushButton:hover { background-color: #0f172a; }
         """)
-        self.lbl_patch_quick.clicked.connect(lambda: self.tabs.setCurrentIndex(2))
+        self.lbl_patch_quick.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
         h.addWidget(self.lbl_patch_quick)
 
         h.addStretch()
@@ -625,67 +638,17 @@ class EcosystemHub(QMainWindow):
         return w
 
     # =========================================================================
-    # Tab 2: AI Models Inventory (100% Offline)
-    # =========================================================================
-    def _create_inventory_tab(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
-
-        # Header Info
-        h_info = QHBoxLayout()
-        self.lbl_inv_head = QLabel()
-        self.lbl_inv_head.setStyleSheet("color: #e5e7eb; font-size: 13px;")
-        h_info.addWidget(self.lbl_inv_head)
-        h_info.addStretch()
-
-        self.btn_refresh = QPushButton()
-        self.btn_refresh.clicked.connect(self._populate_inventory_table)
-        h_info.addWidget(self.btn_refresh)
-        layout.addLayout(h_info)
-
-        # Table
-        self.tbl_models = QTableWidget()
-        self.tbl_models.setColumnCount(5)
-        self.tbl_models.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_models.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.tbl_models)
-        return w
-
-    def _populate_inventory_table(self):
-        self.tbl_models.setHorizontalHeaderLabels([
-            I18n.t("col_stage"), I18n.t("col_task"), I18n.t("col_model"),
-            I18n.t("col_status"), I18n.t("col_size")
-        ])
-        items = ModelsInventory.get_inventory()
-        self.tbl_models.setRowCount(len(items))
-
-        for row, it in enumerate(items):
-            self.tbl_models.setItem(row, 0, QTableWidgetItem(it["stage"]))
-            self.tbl_models.setItem(row, 1, QTableWidgetItem(it["task"]))
-            self.tbl_models.setItem(row, 2, QTableWidgetItem(it["name"]))
-
-            if it["is_ready"]:
-                st_item = QTableWidgetItem(I18n.t("ready"))
-                st_item.setForeground(QColor("#10b981"))
-            else:
-                st_item = QTableWidgetItem(I18n.t("missing"))
-                st_item.setForeground(QColor("#ef4444"))
-            self.tbl_models.setItem(row, 3, st_item)
-
-            self.tbl_models.setItem(row, 4, QTableWidgetItem(f"{it['size_mb']} MB"))
-
-    # =========================================================================
-    # Tab 3: System Health, Patches & Protected CONFIG Vault
+    # Tab 2: System Health, Patches Grouped by Module & CONFIG Vault
     # =========================================================================
     def _create_patches_tab(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
         w = QWidget()
         layout = QVBoxLayout(w)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(12)
 
-        # Header Info Banner
+        # 1. Header Info Banner
         self.lbl_patches_head = QLabel()
         self.lbl_patches_head.setStyleSheet("color: #e5e7eb; font-size: 13px; font-weight: bold;")
         layout.addWidget(self.lbl_patches_head)
@@ -693,7 +656,7 @@ class EcosystemHub(QMainWindow):
         self.lbl_patches_summary = QLabel()
         self.lbl_patches_summary.setStyleSheet("""
             background-color: #111827;
-            padding: 8px 12px;
+            padding: 10px 14px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: bold;
@@ -701,33 +664,34 @@ class EcosystemHub(QMainWindow):
         """)
         layout.addWidget(self.lbl_patches_summary)
 
-        # Controls Row: Refresh, Restore 1-click, Open CONFIG
+        # 2. Action Toolbar: Restore, Re-audit, Open CONFIG
         h_ctrl = QHBoxLayout()
         h_ctrl.setSpacing(10)
 
-        self.btn_audit_refresh = QPushButton()
-        self.btn_audit_refresh.setFixedHeight(34)
-        self.btn_audit_refresh.setStyleSheet("background-color: #374151; color: #fff; border-radius: 4px; padding: 0 14px; font-weight: bold;")
-        self.btn_audit_refresh.clicked.connect(self._populate_patches_table)
-        h_ctrl.addWidget(self.btn_audit_refresh)
-
         self.btn_restore_patches = QPushButton()
-        self.btn_restore_patches.setFixedHeight(34)
+        self.btn_restore_patches.setFixedHeight(36)
         self.btn_restore_patches.setStyleSheet("""
             QPushButton {
                 background-color: #2563eb;
                 color: #ffffff;
                 font-weight: bold;
+                font-size: 12px;
                 border-radius: 4px;
-                padding: 0 16px;
+                padding: 0 18px;
             }
             QPushButton:hover { background-color: #3b82f6; }
         """)
         self.btn_restore_patches.clicked.connect(self._on_restore_patches_clicked)
         h_ctrl.addWidget(self.btn_restore_patches)
 
+        self.btn_audit_refresh = QPushButton()
+        self.btn_audit_refresh.setFixedHeight(36)
+        self.btn_audit_refresh.setStyleSheet("background-color: #374151; color: #fff; border-radius: 4px; padding: 0 14px; font-weight: bold;")
+        self.btn_audit_refresh.clicked.connect(self._populate_patches_view)
+        h_ctrl.addWidget(self.btn_audit_refresh)
+
         self.btn_vault_folder = QPushButton()
-        self.btn_vault_folder.setFixedHeight(34)
+        self.btn_vault_folder.setFixedHeight(36)
         self.btn_vault_folder.setStyleSheet("background-color: #1f2937; color: #9ca3af; border-radius: 4px; padding: 0 14px;")
         self.btn_vault_folder.clicked.connect(self._on_open_config_folder)
         h_ctrl.addWidget(self.btn_vault_folder)
@@ -735,64 +699,116 @@ class EcosystemHub(QMainWindow):
         h_ctrl.addStretch()
         layout.addLayout(h_ctrl)
 
-        # Table of all components and patches
-        self.tbl_patches = QTableWidget()
-        self.tbl_patches.setColumnCount(5)
-        self.tbl_patches.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_patches.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.tbl_patches)
+        # 3. Modular Cards Container
+        self.box_module1 = QGroupBox("📦 Модуль 1: Синхронные субтитры (LiveTranslate) — 4 патча")
+        self.v_m1 = QVBoxLayout(self.box_module1)
+        self.v_m1.setSpacing(6)
+        layout.addWidget(self.box_module1)
 
-        return w
+        self.box_module2 = QGroupBox("📦 Модуль 2: Экранный переводчик (OverTranslate) — 1 патч")
+        self.v_m2 = QVBoxLayout(self.box_module2)
+        self.v_m2.setSpacing(6)
+        layout.addWidget(self.box_module2)
 
-    def _populate_patches_table(self):
-        self.tbl_patches.setHorizontalHeaderLabels([
-            I18n.t("col_patch_stage"),
-            I18n.t("col_patch_name"),
-            I18n.t("col_patch_type"),
-            I18n.t("col_patch_status"),
-            I18n.t("col_patch_desc"),
-        ])
+        self.box_module3 = QGroupBox("📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Автономный движок")
+        self.v_m3 = QVBoxLayout(self.box_module3)
+        self.v_m3.setSpacing(6)
+        layout.addWidget(self.box_module3)
 
+        self.box_vault = QGroupBox("🔒 Защищенное хранилище настроек (CONFIG/)")
+        self.v_vault = QVBoxLayout(self.box_vault)
+        self.v_vault.setSpacing(6)
+        layout.addWidget(self.box_vault)
+
+        layout.addStretch()
+        scroll.setWidget(w)
+        return scroll
+
+    def _render_patch_row(self, item: dict) -> QFrame:
+        frame = QFrame()
+        frame.setStyleSheet("""
+            QFrame {
+                background-color: #16171a;
+                border: 1px solid #2e3035;
+                border-radius: 6px;
+            }
+        """)
+        h = QHBoxLayout(frame)
+        h.setContentsMargins(10, 6, 10, 6)
+        h.setSpacing(10)
+
+        # Status badge
+        badge = QLabel()
+        if item["is_ok"]:
+            badge.setText("✔ АКТИВЕН")
+            badge.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px; background-color: #064e3b; padding: 3px 8px; border-radius: 4px; border: 1px solid #059669;")
+        else:
+            badge.setText("❌ СЛЕТЕЛ")
+            badge.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px; background-color: #7f1d1d; padding: 3px 8px; border-radius: 4px; border: 1px solid #dc2626;")
+        badge.setFixedWidth(90)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        h.addWidget(badge)
+
+        # Name and category
+        lbl_name = QLabel(f"<b>{item['name']}</b> <span style='color: #64748b;'>({item['category']})</span>")
+        lbl_name.setStyleSheet("font-size: 12px; color: #ffffff;")
+        h.addWidget(lbl_name)
+
+        # Description
+        lbl_desc = QLabel(item["desc"])
+        lbl_desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        lbl_desc.setWordWrap(True)
+        h.addWidget(lbl_desc, stretch=1)
+
+        return frame
+
+    def _populate_patches_view(self):
         audit = PatchIntegrityChecker.audit_all()
-        items = audit["items"]
-        self.tbl_patches.setRowCount(len(items))
+        modules = audit["modules"]
 
-        for row, it in enumerate(items):
-            self.tbl_patches.setItem(row, 0, QTableWidgetItem(it["stage"]))
-            self.tbl_patches.setItem(row, 1, QTableWidgetItem(it["name"]))
-            self.tbl_patches.setItem(row, 2, QTableWidgetItem(it["category"]))
+        # 1. Clear old widgets
+        for layout in (self.v_m1, self.v_m2, self.v_m3, self.v_vault):
+            while layout.count():
+                child = layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
 
-            st_item = QTableWidgetItem(it["status_text"])
-            if it["is_ok"]:
-                st_item.setForeground(QColor("#10b981"))
-                st_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-            else:
-                st_item.setForeground(QColor("#ef4444"))
-                st_item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-            self.tbl_patches.setItem(row, 3, st_item)
+        # 2. Populate Module 1
+        for it in modules.get("stage_1", {}).get("items", []):
+            self.v_m1.addWidget(self._render_patch_row(it))
 
-            self.tbl_patches.setItem(row, 4, QTableWidgetItem(it["desc"]))
+        # 3. Populate Module 2
+        for it in modules.get("stage_2", {}).get("items", []):
+            self.v_m2.addWidget(self._render_patch_row(it))
 
-        # Update Summary Banner & Quick Header Pill
+        # 4. Populate Module 3
+        for it in modules.get("stage_3", {}).get("items", []):
+            self.v_m3.addWidget(self._render_patch_row(it))
+
+        # 5. Populate Vault
+        for it in modules.get("config", {}).get("items", []):
+            self.v_vault.addWidget(self._render_patch_row(it))
+
+        # 6. Update Summary Banner & Quick Header Pill
         if audit["all_passed"]:
-            self.lbl_patches_summary.setText(I18n.t("patches_summary_ok"))
-            self.lbl_patches_summary.setStyleSheet("background-color: #064e3b; color: #a7f3d0; padding: 8px 12px; border-radius: 6px; font-weight: bold; border: 1px solid #059669;")
-            self.lbl_patch_quick.setText("🛡 4 Патча активны (ОК)")
+            self.lbl_patches_summary.setText(f"🟢 Все 5 патчей активны (5/5) | Настройки и файлы в CONFIG/ защищены")
+            self.lbl_patches_summary.setStyleSheet("background-color: #064e3b; color: #a7f3d0; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #059669;")
+            self.lbl_patch_quick.setText("🛡 5 Патчей активны (ОК)")
             self.lbl_patch_quick.setStyleSheet("background-color: #064e3b; color: #34d399; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #059669;")
         else:
             self.lbl_patches_summary.setText(I18n.t("patches_summary_fail"))
-            self.lbl_patches_summary.setStyleSheet("background-color: #7f1d1d; color: #fecaca; padding: 8px 12px; border-radius: 6px; font-weight: bold; border: 1px solid #dc2626;")
-            self.lbl_patch_quick.setText("🔴 Внимание: слетел патч!")
+            self.lbl_patches_summary.setStyleSheet("background-color: #7f1d1d; color: #fecaca; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #dc2626;")
+            self.lbl_patch_quick.setText(f"🔴 Патчи: {audit['active_patches_count']}/5 (СЛЕТЕЛ)")
             self.lbl_patch_quick.setStyleSheet("background-color: #7f1d1d; color: #fca5a5; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #dc2626;")
 
     def _on_restore_patches_clicked(self):
         res = PatchIntegrityChecker.restore_all_patches()
-        self._populate_patches_table()
+        self._populate_patches_view()
         if res["success"]:
             QMessageBox.information(
                 self,
                 "Успешное восстановление",
-                f"Все ключевые патчи и настройки успешно восстановлены из CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
+                f"Все 5 ключевых патчей и конфигурации успешно восстановлены из хранилища CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
             )
         else:
             QMessageBox.critical(
@@ -802,7 +818,7 @@ class EcosystemHub(QMainWindow):
             )
 
     # =========================================================================
-    # Tab 4: Architecture & Models Guide (Pedagogical Overview)
+    # Tab 3: Plain-Human Architecture & Future Reference Guide
     # =========================================================================
     def _create_guide_tab(self) -> QWidget:
         scroll = QScrollArea()
@@ -812,103 +828,111 @@ class EcosystemHub(QMainWindow):
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(14)
 
-        # Signal Flow Diagram Box
-        flow_box = QGroupBox("1. Схема движения звуковых потоков и OCR (Signal Flow Diagram)")
-        v_flow = QVBoxLayout(flow_box)
-        diag = QLabel("""
-<pre style="font-family: Consolas, monospace; color: #a7f3d0; font-size: 11px;">
-[ВХОДЯЩИЙ СИСТЕМНЫЙ ЗВУК (ПК / Видео / Звонки / Браузер / Игры)]
-    │
-    ▼ (WASAPI Loopback)
-[Этап 1: LiveTranslate] ──► [SenseVoice ASR (170ms)] ──► [HY-MT 1.8B GGUF (80ms)] ──► [ПРОЗРАЧНЫЕ СУБТИТРЫ]
-
-[ЭКРАННЫЙ ТЕКСТ (Любые окна / Документы / Картинки / Интерфейсы)]
-    │
-    ▼ (Ctrl + Alt + A)
-[Этап 2: OverTranslate] ──► [Windows OCR / Paddle] ──► [Переводчик] ──► [Окно перевода / Вставка в буфер]
-
-[ИСХОДЯЩИЙ ГОЛОС В МИКРОФОН (Звонки / Конференции / VoIP / Игры)]
-    │
-    ▼ (Микрофон ПК)
-[Этап 3: Voice Studio] ──► [GigaAM v3 CTC (170ms)] ──► [Opus-MT (15ms)] ──► [Pocket-TTS Клон (800ms)]
-                                                                               │
-                                                                               ▼
-                                                                     [Topping Playback 3/4]
-                                                                               │
-                                                                      (Аппаратный Loopback)
-                                                                               │
-                                                                               ▼
-                                                                     [Вход микрофона: Loopback 1/2]
-                                                                     Собеседники слышат ваш английский!
-</pre>
-        """)
-        v_flow.addWidget(diag)
-        layout.addWidget(flow_box)
-
-        # Detailed Models Explanations Box
-        models_box = QGroupBox("2. Как работают наши нейросети под капотом (Model Technology Breakdown)")
-        v_models = QVBoxLayout(models_box)
-
-        models_info = QLabel("""
+        # Card 1: Module 1 Guide
+        box_m1 = QGroupBox("1. Программа 1: Синхронные субтитры (LiveTranslate)")
+        v_m1 = QVBoxLayout(box_m1)
+        lbl_m1 = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
-<b>1. Sber GigaAM v3 CTC (Sherpa-ONNX INT8, ~214 MB):</b><br>
-Конформерная архитектура (Conformer = CNN + Self-Attention) для моментального распознавания русской речи. 
-Благодаря CTC-декодированию (Connectionist Temporal Classification) не тратит время на авторегрессионный цикл и работает за <b>~170 мс на 2 ядрах CPU</b>.<br><br>
-
-<b>2. Tencent Hunyuan MT 1.8B (GGUF INT4, ~1080 MB):</b><br>
-Современная языковая модель перевода от Tencent, квантованная до 4 бит. Специально оптимизирована для живых диалогов, терминологии и триады языков: <b>Русский ⇄ Английский ⇄ Китайский</b>.<br><br>
-
-<b>3. Helsinki Opus-MT (CTranslate2 INT8, ~146 MB):</b><br>
-Ультра-легковесный трансформер MarianMT, оптимизированный в движке CTranslate2. Переводит разговорную речь с русского на английский всего за <b>14–18 миллисекунд</b> с нулевой нагрузкой на GPU.<br><br>
-
-<b>4. Kyutai Pocket-TTS & Mimi Codec (Mimi + Flow Matching, ~320 MB):</b><br>
-Нейросеть последнего поколения (Kyutai 2025–2026). Использует 24 кГц нейронный аудиокодек <b>Mimi</b> и диффузионный поток <b>Flow Matching</b>. Не роботит, не заикается и клонирует тембр всего по 7-секундному образцу голоса прямо на обычном процессоре за ~800 мс!
+<b>Что делает:</b> Перехватывает любой системный звук из наушников (видео, онлайн-звонки, браузер, медиа) и выводит перевод субтитрами поверх экрана.<br><br>
+<b>Как устроен поток данных:</b><br>
+1. <b>Захват звука:</b> через системную петлю Windows WASAPI Loopback.<br>
+2. <b>Распознавание речи:</b> локальная нейросеть <b>SenseVoice</b> расшифровывает голос всего за ~170 миллисекунд прямо на процессоре.<br>
+3. <b>Перевод:</b> языковая модель <b>Tencent Hunyuan MT 1.8B</b> переводит фразу на русский язык.<br>
+4. <b>Вывод:</b> прозрачные субтитры поверх всех окон.<br><br>
+<b>Главные горячие клавиши:</b><br>
+• <code style="color: #60a5fa; font-weight: bold;">F9</code> — Единый переключатель: мгновенно скрывает/показывает субтитры и ставит транскрипцию на паузу (чтобы не нагружать процессор в тишине).<br>
+• <code style="color: #60a5fa; font-weight: bold;">2x Клик колесиком мыши (2x MMB)</code> — Режим клика сквозь окно (субтитры не мешают нажимать на кнопки под ними).<br>
+• <code style="color: #60a5fa; font-weight: bold;">Зажать колесико мыши (MMB Drag)</code> — Перемещение субтитров в любую точку экрана без срыва левой кнопки.
 </div>
         """)
-        models_info.setWordWrap(True)
-        v_models.addWidget(models_info)
-        layout.addWidget(models_box)
+        lbl_m1.setWordWrap(True)
+        v_m1.addWidget(lbl_m1)
+        layout.addWidget(box_m1)
 
-        # Section 3: Topping E2x2 Loopback Guide (Forget-Proof Standard)
-        loopback_box = QGroupBox("3. Звуковая карта Topping E2x2: Как устроен Loopback и что выбрать в программах связи (Шпаргалка на века)")
-        v_loopback = QVBoxLayout(loopback_box)
-        loopback_info = QLabel("""
+        # Card 2: Module 2 Guide
+        box_m2 = QGroupBox("2. Программа 2: Экранный переводчик по рамке (OverTranslate)")
+        v_m2 = QVBoxLayout(box_m2)
+        lbl_m2 = QLabel("""
 <div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
-<b style="color: #38bdf8; font-size: 13px;">Что такое Loopback простыми словами?</b><br>
-<b>Loopback (аппаратная петля)</b> — это встроенный в звуковую карту Topping «провод-невидимка». Он аппаратно перенаправляет любой звук, отправленный в канал <b>Playback 3/4</b>, прямо во вход виртуального микрофона <b>Loopback 1/2</b> со скоростью света (0 мс задержки) и с 0% нагрузки на процессор.<br><br>
+<b>Что делает:</b> Переводит невыделяемый текст на экране: из картинок, интерфейсов, документов, презентаций и окон программ.<br><br>
+<b>Как пользоваться:</b><br>
+• <code style="color: #60a5fa; font-weight: bold;">Ctrl + Alt + A</code> — Обвести прямоугольную область экрана рамкой мыши. Программа прочитает текст с пикселей и покажет перевод.<br>
+• <code style="color: #60a5fa; font-weight: bold;">Ctrl + C + C</code> — Быстрый перевод любого скопированного слова из буфера обмена.<br><br>
+<b>Почему работает мгновенно:</b> Использует встроенный движок оптического распознавания Windows OCR с нулевой нагрузкой на видеокарту.
+</div>
+        """)
+        lbl_m2.setWordWrap(True)
+        v_m2.addWidget(lbl_m2)
+        layout.addWidget(box_m2)
 
-<b style="color: #a7f3d0; font-size: 13px;">Шпаргалка: Куда что нажимать в Windows и программах связи (За 30 секунд):</b><br>
+        # Card 3: Module 3 Guide
+        box_m3 = QGroupBox("3. Программа 3: Голосовой переводчик (Voice Studio)")
+        v_m3 = QVBoxLayout(box_m3)
+        lbl_m3 = QLabel("""
+<div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
+<b>Что делает:</b> Вы говорите в микрофон по-русски — собеседники в любой программе связи слышат беглый английский перевод вашим клонированным тембром голоса.<br><br>
+<b>Как устроен поток данных:</b><br>
+1. <b>Рация PTT:</b> зажали <code style="color: #60a5fa; font-weight: bold;">Shift + Колесико мыши</code> и произнесли фразу по-русски.<br>
+2. <b>Русский слух:</b> нейросеть <b>Sber GigaAM v3 CTC</b> моментально расшифровывает русскую речь.<br>
+3. <b>Интонации и знаки:</b> движок автоматически восстанавливает паузы, вопросы и точки.<br>
+4. <b>Английский перевод:</b> модель <b>Opus-MT</b> переводит смысл за 15 миллисекунд.<br>
+5. <b>Клонирование голоса:</b> нейросеть <b>Kyutai Pocket-TTS</b> синтезирует английскую речь с вашим персональным тембром.<br>
+6. <b>Выход в эфир:</b> звук отправляется в аппаратный Loopback звуковой карты Topping или в виртуальный кабель.
+</div>
+        """)
+        lbl_m3.setWordWrap(True)
+        v_m3.addWidget(lbl_m3)
+        layout.addWidget(box_m3)
+
+        # Card 4: Audio Routing Guide (Topping vs Cable)
+        box_audio = QGroupBox("4. Звуковая карта Topping E2x2: Шпаргалка «Куда что нажимать» (На века)")
+        v_audio = QVBoxLayout(box_audio)
+        lbl_audio = QLabel("""
+<div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
+<b style="color: #38bdf8;">Шпаргалка из 3 пунктов для идеального звука:</b><br>
 <table border="0" cellpadding="8" style="background-color: #16171a; border-radius: 6px; width: 100%; border: 1px solid #2e3035;">
 <tr style="background-color: #212328; color: #ffffff;">
-    <th align="left">Программа / Место</th>
-    <th align="left">Что выбрать в настройках звука</th>
-    <th align="left">Зачем это нужно</th>
+    <th align="left">Где настраивать</th>
+    <th align="left">Что выбрать</th>
+    <th align="left">Простым языком: зачем это нужно</th>
 </tr>
 <tr>
     <td><b>1. Windows (Вывод звука)</b></td>
     <td><code style="color: #60a5fa; font-weight: bold;">Playback 1/2</code></td>
-    <td>Обычный звук: вы слышите видео, музыку, собеседников и свой перевод в наушниках.</td>
+    <td>Ваши наушники: слышно музыку, видео, собеседников и тихий самоконтроль перевода.</td>
 </tr>
 <tr>
     <td><b>2. Наш Лаунчер (Этап 3)</b></td>
-    <td><code style="color: #60a5fa; font-weight: bold;">Вывод ➔ Playback 3/4</code></td>
-    <td>Канал озвучки: ИИ бесшумно отправляет сгенерированный английский голос в карту Topping.</td>
+    <td><code style="color: #60a5fa; font-weight: bold;">Playback 3/4</code></td>
+    <td>Канал озвучки: ИИ бесшумно шепчет английскую речь в карту Topping.</td>
 </tr>
 <tr>
-    <td><b>3. Программы связи (VoIP, звонки, игры)</b></td>
-    <td><b style="color: #34d399; font-size: 13px;">Loopback 1/2 (Topping E2x2 OTG)</b></td>
-    <td><b>Самое главное!</b> Входной микрофон, через который собеседники слышат ваш чистый перевод!</td>
+    <td><b>3. Программа связи (Discord, Zoom, звонки)</b></td>
+    <td><b style="color: #34d399;">Loopback 1/2 (Topping OTG)</b></td>
+    <td><b>Микрофон:</b> карта Topping аппаратно смешивает ваш перевод и отправляет собеседникам с нулевой задержкой!</td>
 </tr>
 </table><br>
-
-<b style="color: #facc15; font-size: 12px;">Почему эта схема надёжна:</b><br>
-Вам не нужны виртуальные кабели (типа VB-Audio Cable), которые могут слетать при обновлениях Windows и дают задержку 100+ мс. 
-Всё смешивание делает сам чип Topping на аппаратном уровне. Даже если через год вы вернётесь к проекту, достаточно просто запустить START.bat и выбрать эти 3 пункта!
+<b style="color: #facc15;">Если у вас обычный ПК без звуковой карты Topping:</b><br>
+Нажмите кнопку <b>«Виртуальный кабель (VB-Audio Cable)»</b> на Пульте управления. Лаунчер сам предложит установить драйвер виртуального кабеля в 1 клик.
 </div>
         """)
-        loopback_info.setWordWrap(True)
-        v_loopback.addWidget(loopback_info)
-        layout.addWidget(loopback_box)
+        lbl_audio.setWordWrap(True)
+        v_audio.addWidget(lbl_audio)
+        layout.addWidget(box_audio)
+
+        # Card 5: Upstream Update Safety
+        box_safe = QGroupBox("5. Почему обновления авторов репозиториев никогда не сломают систему")
+        v_safe = QVBoxLayout(box_safe)
+        lbl_safe = QLabel("""
+<div style="font-size: 12px; line-height: 1.5; color: #cbd5e1;">
+<b>1. Автономный офлайн-принцип:</b> Наша система на 100% автономна. Лаунчер никогда не делает автоматических обновлений чужого кода из интернета. То, что работает сегодня, будет работать и через 5 лет.<br><br>
+<b>2. Защищенное хранилище CONFIG/:</b> Все ваши настройки, образец голоса и эталонные копии 5 патчей изолированы в защищенной директории <code>CONFIG/</code>.<br><br>
+<b>3. Если вы сами обновите чужой репозиторий:</b> Лаунчер сразу покажет красный статус <code>СЛЕТЕЛ</code>. Одно нажатие на кнопку <b>«🛠 Восстановить все 5 патчей»</b> вернет все файлы на место за 0.1 секунды.
+</div>
+        """)
+        lbl_safe.setWordWrap(True)
+        v_safe.addWidget(lbl_safe)
+        layout.addWidget(box_safe)
 
         layout.addStretch()
         scroll.setWidget(w)
@@ -928,9 +952,8 @@ class EcosystemHub(QMainWindow):
         self.btn_stop_all.setText(I18n.t("stop_all"))
 
         self.tabs.setTabText(0, I18n.t("tab_dashboard"))
-        self.tabs.setTabText(1, I18n.t("tab_inventory"))
-        self.tabs.setTabText(2, I18n.t("tab_patches"))
-        self.tabs.setTabText(3, I18n.t("tab_guide"))
+        self.tabs.setTabText(1, I18n.t("tab_patches"))
+        self.tabs.setTabText(2, I18n.t("tab_guide"))
 
         self.card_stage1.retranslate()
         self.card_stage2.retranslate()
@@ -943,17 +966,13 @@ class EcosystemHub(QMainWindow):
         self.btn_launch_wizard.setText(I18n.t("btn_wizard"))
         self.btn_open_folder.setText(I18n.t("btn_open_folder"))
 
-        self.lbl_inv_head.setText(f"<b>{I18n.t('inventory_header')}</b>")
-        self.btn_refresh.setText(I18n.t("btn_refresh"))
-
         self.lbl_patches_head.setText(f"<b>{I18n.t('patches_header')}</b>")
         self.btn_audit_refresh.setText(I18n.t("btn_audit_refresh"))
         self.btn_restore_patches.setText(I18n.t("btn_restore_patches"))
         self.btn_vault_folder.setText(I18n.t("btn_open_folder"))
 
         if not is_initial:
-            self._populate_inventory_table()
-            self._populate_patches_table()
+            self._populate_patches_view()
             self._poll_process_status()
 
     def _poll_process_status(self):
@@ -983,8 +1002,7 @@ class EcosystemHub(QMainWindow):
             from voice_wizard import VoiceCloningWizard
         wiz = VoiceCloningWizard(self)
         wiz.exec()
-        self._populate_inventory_table()
-        self._populate_patches_table()
+        self._populate_patches_view()
 
     def _apply_theme(self):
         self.setStyleSheet("""
@@ -998,7 +1016,7 @@ class EcosystemHub(QMainWindow):
             QTabBar::tab {
                 background-color: #1f2125;
                 color: #9ca3af;
-                padding: 8px 16px;
+                padding: 8px 18px;
                 margin-right: 4px;
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
@@ -1031,19 +1049,6 @@ class EcosystemHub(QMainWindow):
                 border-radius: 4px;
                 padding: 4px 10px;
                 color: #ffffff;
-            }
-            QTableWidget {
-                background-color: #1a1b1e;
-                gridline-color: #2e3035;
-                border: 1px solid #2e3035;
-                border-radius: 4px;
-            }
-            QHeaderView::section {
-                background-color: #212328;
-                color: #9ca3af;
-                padding: 6px;
-                border: 1px solid #2e3035;
-                font-weight: bold;
             }
             QPushButton {
                 background-color: #374151;

@@ -219,7 +219,8 @@ def test_patch_integrity_checker():
     audit = PatchIntegrityChecker.audit_all()
     assert isinstance(audit, dict), "Audit result is not a dictionary"
     assert audit["all_passed"] is True, f"Integrity check failed: {audit}"
-    assert audit["patches_ok"] is True, "The 4 golden patches are not all active"
+    assert audit["patches_ok"] is True, "The 5 golden patches are not all active"
+    assert audit["total_patches_count"] == 5, f"Expected 5 patches, got {audit['total_patches_count']}"
     assert audit["passed_count"] == audit["total_count"], f"Mismatch: {audit['passed_count']}/{audit['total_count']}"
     assert len(audit["items"]) >= 8, f"Insufficient audit items: {len(audit['items'])}"
     
@@ -235,7 +236,7 @@ def test_patch_integrity_checker():
     log_test(
         "Patch & Health Integrity Auditor & Self-Healing",
         True,
-        f"All 4 Golden Patches active | Vault validated ({audit['passed_count']}/{audit['total_count']} items) | Self-healing restored {len(restore_res['restored_files'])} files"
+        f"All 5 Golden Patches active across modules | Modular vault validated ({audit['passed_count']}/{audit['total_count']} items) | Self-healing restored {len(restore_res['restored_files'])} files"
     )
 
 if __name__ == "__main__":

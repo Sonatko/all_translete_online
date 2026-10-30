@@ -17,6 +17,6 @@
 ---
 
 ## 2. Зафиксированная документация
-* Мастер-план и 5 контрольных рубежей (Milestones) зафиксированы в [stage_3_voice/ROADMAP.md](file:///c:/Users/SONATO/Dev/active/all_translete_online/stage_3_voice/ROADMAP.md).
-* Архитектурная спецификация сохранена в [stage_3_voice/README.md](file:///c:/Users/SONATO/Dev/active/all_translete_online/stage_3_voice/README.md).
+* Мастер-план и 5 контрольных рубежей (Milestones) зафиксированы в [stage_3_voice/ROADMAP.md](../stage_3_voice/ROADMAP.md).
+* Архитектурная спецификация сохранена в [stage_3_voice/README.md](../stage_3_voice/README.md).
 * Рабочая ветка разработки: `feature/stage3-voice-tts`.

@@ -58,7 +58,7 @@
 - Провайдер: `GoogleWeb` (мгновенный отклик 0.3 с).
 - Двуязычный обучающий режим: активен (`BilingualEnabled = true`, `CompareDisplay = true`).
 - OpenRouter полностью удалён из активного цикла.
-- Запуск осуществляется через [START_OVERTRANSLATE.bat](file:///c:/Users/SONATO/Dev/active/all_translete_online/START_OVERTRANSLATE.bat).
+- Запуск осуществляется через [START_OVERTRANSLATE.bat](../START_OVERTRANSLATE.bat).
 
 ---
 

@@ -1,5 +1,5 @@
 """Global Hotkey and Mouse Listener for Stage 3 Studio.
-Monitors Shift + Middle Mouse Button (MMB) for PTT and F9 for Master Toggle.
+Monitors Shift + Middle Mouse Button (MMB) for PTT and F8 for Master Toggle.
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ class HotkeyListener:
             self._mouse_listener.daemon = True
             self._mouse_listener.start()
 
-            log.info("Global hotkey listeners initialized (PTT: Shift + MMB, Master: F9).")
+            log.info("Global hotkey listeners initialized (PTT: Shift + MMB, Master: F8).")
         except Exception as e:
             log.error("Failed to initialize hotkey listeners: %s", e)
 
@@ -80,7 +80,7 @@ class HotkeyListener:
         if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
             self._shift_pressed = True
             self._update_ptt_state()
-        elif key == keyboard.Key.f9:
+        elif key == keyboard.Key.f8:
             try:
                 self.on_master_toggle()
             except Exception as e:

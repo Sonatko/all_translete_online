@@ -65,6 +65,13 @@ class VUMeter(QProgressBar):
         """)
 
 
+class NoWheelComboBox(QComboBox):
+    """QComboBox that ignores mouse wheel events to prevent accidental changes when scrolling."""
+
+    def wheelEvent(self, event):
+        event.ignore()
+
+
 class ChainNode(QFrame):
     """A visual node in the audio processing chain monitor."""
 
@@ -97,6 +104,7 @@ class ChainNode(QFrame):
         # Subtitle / Model Info
         self.sub_lbl = QLabel(subtitle)
         self.sub_lbl.setStyleSheet("color: #9ca3af; font-size: 11px;")
+        self.sub_lbl.setWordWrap(True)
         layout.addWidget(self.sub_lbl)
 
         # Latency / Status Badge
@@ -167,9 +175,9 @@ class StudioWindow(QMainWindow):
         self.cfg = engine.config
 
         self.setWindowTitle("Stage 3: Voice Translation Studio (S2ST) — CS2 & Discord")
-        self.resize(self.cfg.get("ui", {}).get("window_width", 840),
+        self.resize(self.cfg.get("ui", {}).get("window_width", 880),
                     self.cfg.get("ui", {}).get("window_height", 640))
-        self.setMinimumSize(780, 580)
+        self.setMinimumSize(820, 560)
 
         self._apply_dark_style()
         self._init_ui()
@@ -213,7 +221,7 @@ class StudioWindow(QMainWindow):
 
         # 3. Functional Tabs (Topping Routing / Models & RAM / Live Transcript)
         tabs = QTabWidget()
-        tabs.addTab(self._create_routing_tab(), "🎛 Монитор и Topping E2x2")
+        tabs.addTab(self._create_routing_tab(), "🎛 Настройка звука и устройств")
         tabs.addTab(self._create_models_tab(), "🧠 Модели и Управление памятью")
         tabs.addTab(self._create_transcript_tab(), "📜 Живой журнал перевода")
         root_layout.addWidget(tabs, stretch=1)
@@ -223,8 +231,8 @@ class StudioWindow(QMainWindow):
         h.setSpacing(12)
 
         # Master Toggle Button
-        self.btn_master = QPushButton("🟢 СИСТЕМА АКТИВНА (F9)")
-        self.btn_master.setFixedHeight(42)
+        self.btn_master = QPushButton("🟢 СИСТЕМА АКТИВНА (F8)")
+        self.btn_master.setFixedHeight(34)
         self.btn_master.setStyleSheet("""
             QPushButton {
                 background-color: #059669;
@@ -244,7 +252,7 @@ class StudioWindow(QMainWindow):
         # Glowing PTT State Banner
         self.ptt_banner = QLabel("🎙 Нажмите Shift + Колесико мыши (MMB) для записи речи")
         self.ptt_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.ptt_banner.setFixedHeight(42)
+        self.ptt_banner.setFixedHeight(34)
         self.ptt_banner.setStyleSheet("""
             QLabel {
                 background-color: #1f2937;
@@ -281,7 +289,7 @@ class StudioWindow(QMainWindow):
         grp = QGroupBox("Интерактивная цепочка звука (Audio Signal Chain & Real-Time Monitors)")
         grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
         layout = QHBoxLayout(grp)
-        layout.setContentsMargins(10, 14, 10, 10)
+        layout.setContentsMargins(8, 6, 8, 6)
         layout.setSpacing(6)
 
         # Node 1: Input Mic
@@ -340,42 +348,51 @@ class StudioWindow(QMainWindow):
     def _create_routing_tab(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(8)
 
         # 1-Click Hardware Profiles Selector Banner
-        grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик (1-Click Hardware Profiles)")
-        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
+        grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик")
+        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
         h_prof = QHBoxLayout(grp_profiles)
+        h_prof.setContentsMargins(8, 4, 8, 6)
         h_prof.setSpacing(10)
 
-        self.btn_prof_topping = QPushButton("🎛 Режим: Звуковая карта Topping (Аппаратный 0 ms)")
-        self.btn_prof_topping.setFixedHeight(38)
+        self.btn_prof_topping = QPushButton("🎛 Режим: Звуковая карта Topping (0 ms)")
+        self.btn_prof_topping.setToolTip("Аппаратный нулевой мониторинг через карту Topping E2x2 OTG (0 ms latency)")
+        self.btn_prof_topping.setFixedHeight(34)
         self.btn_prof_topping.clicked.connect(lambda: self._on_switch_profile("topping"))
         h_prof.addWidget(self.btn_prof_topping, stretch=1)
 
-        self.btn_prof_cable = QPushButton("🔌 Режим: Виртуальный Кабель (Для обычных ПК без Topping)")
-        self.btn_prof_cable.setFixedHeight(38)
+        self.btn_prof_cable = QPushButton("🔌 Режим: Виртуальный Кабель (Для ПК без Topping)")
+        self.btn_prof_cable.setToolTip("Универсальная передача аудио через драйвер VB-Audio Virtual Cable для любых ПК")
+        self.btn_prof_cable.setFixedHeight(34)
         self.btn_prof_cable.clicked.connect(lambda: self._on_switch_profile("cable"))
         h_prof.addWidget(self.btn_prof_cable, stretch=1)
 
         layout.addWidget(grp_profiles)
 
-        # Device Selection Grid
-        grp_devs = QGroupBox("Аудиоустройства и интеграция")
+        # Device Selection Grid (Ultra-compact)
+        grp_devs = QGroupBox("Аудиоустройства")
+        grp_devs.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 8px; }")
         grid = QGridLayout(grp_devs)
-        grid.setSpacing(10)
+        grid.setContentsMargins(6, 4, 6, 6)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(4)
 
-        # Query devices
         inputs, outputs = AudioEngine.get_devices()
 
-        # 1. Microphone Input
-        lbl_in = QLabel("<b>1. Ваш микрофон (голос):</b><br><span style='color: #9ca3af; font-size: 11px;'>NVIDIA Broadcast или Вход 1</span>")
+        # 1. Mic
+        lbl_in = QLabel("1. Микрофон:")
+        lbl_in.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(lbl_in, 0, 0)
-        self.combo_in = QComboBox()
+        self.combo_in = NoWheelComboBox()
+        self.combo_in.setFixedHeight(26)
         for idx, name in inputs:
-            self.combo_in.addItem(f"[{idx}] {name}", name)
-        # Select matching
+            label = f"[{idx}] {name}"
+            if "analog 1/2" in name.lower() or "broadcast" in name.lower():
+                label = f"[{idx}] ⭐ [Topping] {name}"
+            self.combo_in.addItem(label, name)
         cur_in = self.cfg.get("audio", {}).get("input_device", "NVIDIA Broadcast")
         for i in range(self.combo_in.count()):
             if cur_in.lower() in self.combo_in.itemText(i).lower():
@@ -384,12 +401,19 @@ class StudioWindow(QMainWindow):
         self.combo_in.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_in, 0, 1)
 
-        # 2. Game Outgoing (Голос ИИ / Playback 3/4)
-        lbl_out = QLabel("<b>2. Канал озвучки (Голос ИИ / Playback 3/4):</b><br><span style='color: #9ca3af; font-size: 11px;'>Куда ИИ отправляет голос. В игре микрофон: ИИ Микрофон</span>")
+        # 2. Out
+        lbl_out = QLabel("2. Канал перевода:")
+        lbl_out.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(lbl_out, 1, 0)
-        self.combo_out = QComboBox()
+        self.combo_out = NoWheelComboBox()
+        self.combo_out.setFixedHeight(26)
         for idx, name in outputs:
-            self.combo_out.addItem(f"[{idx}] {name}", name)
+            label = f"[{idx}] {name}"
+            if "3/4" in name.lower():
+                label = f"[{idx}] ⭐ [Topping: Голос ИИ] {name}"
+            elif "cable" in name.lower():
+                label = f"[{idx}] ⭐ [VB-Cable: Голос ИИ] {name}"
+            self.combo_out.addItem(label, name)
         cur_out = self.cfg.get("audio", {}).get("output_device", "Playback 3/4")
         for i in range(self.combo_out.count()):
             if cur_out.lower() in self.combo_out.itemText(i).lower():
@@ -398,12 +422,19 @@ class StudioWindow(QMainWindow):
         self.combo_out.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_out, 1, 1)
 
-        # 3. Headphones Sidetone (Наушники / Playback 1/2)
-        lbl_side = QLabel("<b>3. Ваши наушники (Наушники / Playback 1/2):</b><br><span style='color: #9ca3af; font-size: 11px;'>Звук игры и самопрослушивание своего перевода</span>")
+        # 3. Sidetone
+        lbl_side = QLabel("3. Наушники:")
+        lbl_side.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(lbl_side, 2, 0)
-        self.combo_side = QComboBox()
+        self.combo_side = NoWheelComboBox()
+        self.combo_side.setFixedHeight(26)
         for idx, name in outputs:
-            self.combo_side.addItem(f"[{idx}] {name}", name)
+            label = f"[{idx}] {name}"
+            if "1/2" in name.lower():
+                label = f"[{idx}] ⭐ [Topping: Наушники] {name}"
+            elif "speaker" in name.lower() or "динамик" in name.lower() or "headphone" in name.lower():
+                label = f"[{idx}] ⭐ [Штатные наушники] {name}"
+            self.combo_side.addItem(label, name)
         cur_side = self.cfg.get("audio", {}).get("sidetone_device", "Playback 1/2")
         for i in range(self.combo_side.count()):
             if cur_side.lower() in self.combo_side.itemText(i).lower():
@@ -414,108 +445,56 @@ class StudioWindow(QMainWindow):
 
         layout.addWidget(grp_devs)
 
-        # 1-Click Auto-Renamer Button & Cheat Sheet
-        cheat_box = QFrame()
-        cheat_box.setStyleSheet("""
-            QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1e1b4b, stop:1 #0f172a);
-                border: 1px solid #4f46e5;
-                border-radius: 8px;
-                padding: 12px;
-            }
-        """)
-        v_cheat = QVBoxLayout(cheat_box)
-        v_cheat.setSpacing(8)
+        # Compact Controls Panel: Options & Volume in ONE horizontal row
+        grp_opts = QGroupBox("Режимы микрофона и самопрослушивание")
+        grp_opts.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_opts = QHBoxLayout(grp_opts)
+        h_opts.setContentsMargins(8, 6, 8, 6)
+        h_opts.setSpacing(14)
 
-        h_title_btn = QHBoxLayout()
-        lbl_cheat_title = QLabel("<b>💡 Короткие имена: ИИ Микрофон | Голос ИИ | Наушники</b>")
-        lbl_cheat_title.setStyleSheet("color: #a5b4fc; font-size: 12px;")
-        h_title_btn.addWidget(lbl_cheat_title)
-        h_title_btn.addStretch()
-
-        self.btn_rename = QPushButton("⚡ Переименовать в Windows в 1 клик")
-        self.btn_rename.setStyleSheet("""
-            QPushButton {
-                background-color: #4f46e5;
-                color: #ffffff;
-                font-weight: bold;
-                font-size: 11px;
-                border-radius: 4px;
-                padding: 4px 10px;
-            }
-            QPushButton:hover { background-color: #6366f1; }
-        """)
-        self.btn_rename.clicked.connect(self._on_run_renamer)
-        h_title_btn.addWidget(self.btn_rename)
-        v_cheat.addLayout(h_title_btn)
-
-        lbl_cheat_body = QLabel(
-            "• <b>Что ставить в Discord / CS2 (Микрофон):</b> выбирайте <b>ИИ Микрофон</b> (он же Loopback 1/2).<br>"
-            "• <b>Что ставить в Windows (Звук):</b> обычные <b>Наушники</b> (Playback 1/2).<br>"
-            "• Нажмите фиолетовую кнопку справа вверху — и Windows сама переименует устройства в эти простые имена!"
-        )
-        lbl_cheat_body.setWordWrap(True)
-        lbl_cheat_body.setStyleSheet("color: #e2e8f0; font-size: 11px; line-height: 1.4;")
-        v_cheat.addWidget(lbl_cheat_body)
-        layout.addWidget(cheat_box)
-
-        # Switches and Sliders
-        grp_opts = QGroupBox("Режимы микрофона и громкость мониторинга")
-        v_opts = QVBoxLayout(grp_opts)
-
-        # Passthrough
-        self.chk_passthrough = QCheckBox("Пропускать живой голос в игру, когда PTT не нажат (Passthrough)")
+        self.chk_passthrough = QCheckBox("Пропускать голос (Passthrough)")
         self.chk_passthrough.setChecked(self.cfg.get("audio", {}).get("passthrough_enabled", True))
         self.chk_passthrough.toggled.connect(self._on_passthrough_toggle)
-        v_opts.addWidget(self.chk_passthrough)
+        h_opts.addWidget(self.chk_passthrough)
 
-        # Sidetone
-        self.chk_sidetone = QCheckBox("Слышать свой английский перевод в наушниках (Sidetone)")
+        self.chk_sidetone = QCheckBox("Слышать перевод (Sidetone)")
         self.chk_sidetone.setChecked(self.cfg.get("audio", {}).get("sidetone_enabled", True))
         self.chk_sidetone.toggled.connect(self._on_sidetone_toggle)
-        v_opts.addWidget(self.chk_sidetone)
+        h_opts.addWidget(self.chk_sidetone)
 
-        # Sidetone Volume Slider
-        h_vol = QHBoxLayout()
-        h_vol.addWidget(QLabel("Громкость перевода в наушниках:"))
+        h_opts.addSpacing(10)
+        lbl_v = QLabel("Громкость:")
+        lbl_v.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_opts.addWidget(lbl_v)
         self.slider_sidetone = QSlider(Qt.Orientation.Horizontal)
         self.slider_sidetone.setRange(0, 100)
         cur_vol = int(self.cfg.get("audio", {}).get("sidetone_volume", 0.70) * 100)
         self.slider_sidetone.setValue(cur_vol)
         self.lbl_sidetone_val = QLabel(f"{cur_vol}%")
+        self.lbl_sidetone_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-family: Consolas, monospace;")
         self.slider_sidetone.valueChanged.connect(self._on_sidetone_slider)
-        h_vol.addWidget(self.slider_sidetone)
-        h_vol.addWidget(self.lbl_sidetone_val)
-        v_opts.addLayout(h_vol)
+        h_opts.addWidget(self.slider_sidetone)
+        h_opts.addWidget(self.lbl_sidetone_val)
 
         layout.addWidget(grp_opts)
 
-        # Educational Topping Diagram Box
-        info_frame = QFrame()
-        info_frame.setStyleSheet("""
+        # Universal Educational Routing Banner (Compact 1-line format)
+        self.info_frame = QFrame()
+        self.info_frame.setStyleSheet("""
             QFrame {
-                background-color: #172554;
-                border: 1px solid #1e40af;
+                background-color: #0f233a;
+                border: 1px solid #1d4ed8;
                 border-radius: 6px;
-                padding: 10px;
+                padding: 4px 8px;
             }
         """)
-        v_info = QVBoxLayout(info_frame)
-        info_title = QLabel("💡 <b>Как Topping E2x2 OTG передает переведенный голос в CS2 и Discord без задержек:</b>")
-        info_title.setStyleSheet("color: #bfdbfe; font-size: 12px;")
-        v_info.addWidget(info_title)
+        v_info = QHBoxLayout(self.info_frame)
+        v_info.setContentsMargins(4, 2, 4, 2)
+        self.info_title = QLabel("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ направлен в Loopback 1+2 (микрофон игры). Наушники: Playback 1/2 (0 ms).")
+        self.info_title.setStyleSheet("color: #93c5fd; font-size: 11px;")
+        v_info.addWidget(self.info_title)
+        layout.addWidget(self.info_frame)
 
-        info_body = QLabel(
-            "1. Студия транслирует клонированный английский голос в канал <b>Playback 3/4</b>.<br>"
-            "2. В микшере Topping этот канал аппаратно направлен в <b>Loopback 1+2</b>.<br>"
-            "3. В настройках звука игры (CS2 / Discord) выбран микрофон <b>«Loopback 1/2»</b>.<br>"
-            "4. Вы слышите чистый звук игры и свой перевод в наушниках (<b>Playback 1/2</b>) без искажений."
-        )
-        info_body.setStyleSheet("color: #93c5fd; font-size: 11px;")
-        v_info.addWidget(info_body)
-        layout.addWidget(info_frame)
-
-        layout.addStretch()
         self._update_profile_buttons_style()
         return w
 
@@ -525,101 +504,91 @@ class StudioWindow(QMainWindow):
     def _create_models_tab(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(8)
 
-        # Master RAM & Load/Unload Bar
-        ram_grp = QGroupBox("Управление моделями в оперативной памяти (RAM)")
+        # Telemetry Summary Bar
+        ram_grp = QGroupBox("📊 Инвентарь нейросетей и потребление памяти")
+        ram_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
         h_ram = QHBoxLayout(ram_grp)
+        h_ram.setContentsMargins(8, 6, 8, 6)
 
-        self.btn_load_all = QPushButton("📥 Загрузить ВСЕ модели в ОЗУ")
-        self.btn_load_all.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; padding: 8px 14px; border-radius: 5px;")
-        self.btn_load_all.clicked.connect(self._on_load_all_models)
-        h_ram.addWidget(self.btn_load_all)
-
-        self.btn_unload_all = QPushButton("🗑 Выгрузить ВСЕ (Освободить RAM)")
-        self.btn_unload_all.setStyleSheet("background-color: #b91c1c; color: #fff; font-weight: bold; padding: 8px 14px; border-radius: 5px;")
-        self.btn_unload_all.clicked.connect(self._on_unload_all_models)
-        h_ram.addWidget(self.btn_unload_all)
-
-        h_ram.addStretch()
-
-        self.lbl_ram_telemetry = QLabel("RAM процесса: 0 MB | VRAM: 0 MB (Strict CPU)")
-        self.lbl_ram_telemetry.setStyleSheet("font-family: Consolas, monospace; font-weight: bold; color: #38bdf8; font-size: 13px;")
+        self.lbl_ram_telemetry = QLabel("ОЗУ всех моделей: ~535 MB | Видеопамять (VRAM): 0 MB (Strict CPU) | Пул инференса: 4T (Zen 4)")
+        self.lbl_ram_telemetry.setStyleSheet("font-family: Consolas, monospace; font-weight: bold; color: #38bdf8; font-size: 12px;")
         h_ram.addWidget(self.lbl_ram_telemetry)
-
+        h_ram.addStretch()
         layout.addWidget(ram_grp)
 
-        # Individual Models Grid
+        # 3 Clean Informational Cards (No broken load/unload buttons)
         models_grid = QGridLayout()
-        models_grid.setSpacing(10)
+        models_grid.setContentsMargins(0, 0, 0, 0)
+        models_grid.setSpacing(8)
 
-        # STT Card
-        stt_box = QGroupBox("1. Распознавание речи (STT / ASR)")
+        # Card 1: STT
+        stt_box = QGroupBox("🎙 1. Распознавание речи (STT / ASR)")
+        stt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
         v_stt = QVBoxLayout(stt_box)
+        v_stt.setContentsMargins(8, 6, 8, 8)
+        v_stt.setSpacing(3)
         v_stt.addWidget(QLabel("<b>Sber GigaAM v3 Conformer CTC</b>"))
-        v_stt.addWidget(QLabel("Движок: Sherpa-ONNX INT8 | Потоков: 2 (Zen 4)"))
-        self.lbl_stt_state = QLabel("Статус: Загружен (~140 MB)")
-        self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold;")
+        v_stt.addWidget(QLabel("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)"))
+        lbl_stt_mem = QLabel("Потребление: <b>~140 МБ ОЗУ</b> | Скорость: <b>~170 мс</b>")
+        lbl_stt_mem.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        v_stt.addWidget(lbl_stt_mem)
+        self.lbl_stt_state = QLabel("🟢 Активна в ОЗУ (Готова к инференсу)")
+        self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
         v_stt.addWidget(self.lbl_stt_state)
-        h_stt_btn = QHBoxLayout()
-        btn_stt_load = QPushButton("Загрузить")
-        btn_stt_load.clicked.connect(lambda: self.mm.load_stt())
-        btn_stt_unload = QPushButton("Выгрузить")
-        btn_stt_unload.clicked.connect(lambda: self.mm.unload_stt())
-        h_stt_btn.addWidget(btn_stt_load)
-        h_stt_btn.addWidget(btn_stt_unload)
-        v_stt.addLayout(h_stt_btn)
         models_grid.addWidget(stt_box, 0, 0)
 
-        # MT Card
-        mt_box = QGroupBox("2. Машинный перевод (MT)")
+        # Card 2: MT
+        mt_box = QGroupBox("🌐 2. Нейроперевод (MT)")
+        mt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
         v_mt = QVBoxLayout(mt_box)
+        v_mt.setContentsMargins(8, 6, 8, 8)
+        v_mt.setSpacing(3)
         v_mt.addWidget(QLabel("<b>Helsinki Opus-MT RU ➔ EN</b>"))
-        v_mt.addWidget(QLabel("Движок: CTranslate2 INT8 | Потоков: 2"))
-        self.lbl_mt_state = QLabel("Статус: Загружен (~75 MB)")
-        self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold;")
+        v_mt.addWidget(QLabel("Движок: CTranslate2 INT8 | 2T (Zen 4)"))
+        lbl_mt_mem = QLabel("Потребление: <b>~75 МБ ОЗУ</b> | Скорость: <b>~15 мс</b>")
+        lbl_mt_mem.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        v_mt.addWidget(lbl_mt_mem)
+        self.lbl_mt_state = QLabel("🟢 Активна в ОЗУ (Готова к переводу)")
+        self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
         v_mt.addWidget(self.lbl_mt_state)
-        h_mt_btn = QHBoxLayout()
-        btn_mt_load = QPushButton("Загрузить")
-        btn_mt_load.clicked.connect(lambda: self.mm.load_mt())
-        btn_mt_unload = QPushButton("Выгрузить")
-        btn_mt_unload.clicked.connect(lambda: self.mm.unload_mt())
-        h_mt_btn.addWidget(btn_mt_load)
-        h_mt_btn.addWidget(btn_mt_unload)
-        v_mt.addLayout(h_mt_btn)
         models_grid.addWidget(mt_box, 0, 1)
 
-        # TTS Card
-        tts_box = QGroupBox("3. Синтез и клонирование голоса (TTS)")
+        # Card 3: TTS & Voice Selector
+        tts_box = QGroupBox("🗣 3. Синтез и клонирование голоса (TTS)")
+        tts_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
         v_tts = QVBoxLayout(tts_box)
-        v_tts.addWidget(QLabel("<b>Kyutai Pocket-TTS (Mimi Codec)</b>"))
-        self.combo_voices = QComboBox()
+        v_tts.setContentsMargins(8, 6, 8, 8)
+        v_tts.setSpacing(4)
+        
+        h_tts_top = QHBoxLayout()
+        h_tts_top.addWidget(QLabel("<b>Kyutai Pocket-TTS 24kHz (Mimi Codec)</b>"))
+        h_tts_top.addStretch()
+        self.lbl_tts_state = QLabel("🟢 Активна в ОЗУ (~320 МБ)")
+        self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        h_tts_top.addWidget(self.lbl_tts_state)
+        v_tts.addLayout(h_tts_top)
+
+        h_voice = QHBoxLayout()
+        lbl_v_sel = QLabel("Выбор тембра голоса:")
+        lbl_v_sel.setStyleSheet("color: #cbd5e1; font-weight: bold;")
+        h_voice.addWidget(lbl_v_sel)
+        self.combo_voices = NoWheelComboBox()
+        self.combo_voices.setFixedHeight(28)
         self.combo_voices.addItem("⭐ Мой клонированный голос (my_pocket_voice)", "my_pocket_voice")
         self.combo_voices.addItem("Juergen (Мужской, уверенный)", "juergen")
         self.combo_voices.addItem("Marius (Мужской, спокойный)", "marius")
         self.combo_voices.addItem("Alba (Женский)", "alba")
         self.combo_voices.addItem("Fantine (Женский)", "fantine")
         self.combo_voices.currentIndexChanged.connect(self._on_voice_changed)
-        v_tts.addWidget(self.combo_voices)
+        h_voice.addWidget(self.combo_voices, stretch=1)
+        v_tts.addLayout(h_voice)
 
-        self.lbl_tts_state = QLabel("Статус: Загружен (~320 MB)")
-        self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold;")
-        v_tts.addWidget(self.lbl_tts_state)
-
-        h_tts_btn = QHBoxLayout()
-        btn_tts_load = QPushButton("Загрузить")
-        btn_tts_load.clicked.connect(lambda: self.mm.load_tts(self.combo_voices.currentData()))
-        btn_tts_unload = QPushButton("Выгрузить")
-        btn_tts_unload.clicked.connect(lambda: self.mm.unload_tts())
-        h_tts_btn.addWidget(btn_tts_load)
-        h_tts_btn.addWidget(btn_tts_unload)
-        v_tts.addLayout(h_tts_btn)
         models_grid.addWidget(tts_box, 1, 0, 1, 2)
-
         layout.addLayout(models_grid)
-        layout.addStretch()
-        self._update_profile_buttons_style()
+
         return w
 
     # =========================================================================
@@ -669,7 +638,7 @@ class StudioWindow(QMainWindow):
             self._last_rendered_master = master_enabled
 
             if not master_enabled:
-                self.ptt_banner.setText("⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F9 для включения)")
+                self.ptt_banner.setText("⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F8 для включения)")
                 self.ptt_banner.setStyleSheet("background-color: #374151; color: #9ca3af; font-weight: bold; border-radius: 6px;")
             elif state == "RECORDING":
                 self.ptt_banner.setText("🔴 ИДЕТ ЗАПИСЬ РЕЧИ (Shift + MMB нажат)...")
@@ -721,10 +690,10 @@ class StudioWindow(QMainWindow):
     def _on_toggle_master(self):
         active = self.engine.toggle_master()
         if active:
-            self.btn_master.setText("🟢 СИСТЕМА АКТИВНА (F9)")
+            self.btn_master.setText("🟢 СИСТЕМА АКТИВНА (F8)")
             self.btn_master.setStyleSheet("background-color: #059669; color: #fff; font-weight: bold; border-radius: 6px;")
         else:
-            self.btn_master.setText("⏸ ПАУЗА (F9)")
+            self.btn_master.setText("⏸ ПАУЗА (F8)")
             self.btn_master.setStyleSheet("background-color: #4b5563; color: #fff; font-weight: bold; border-radius: 6px;")
 
     def _on_device_changed(self):
@@ -755,14 +724,6 @@ class StudioWindow(QMainWindow):
     def _on_sidetone_slider(self, val: int):
         self.lbl_sidetone_val.setText(f"{val}%")
         self.cfg["audio"]["sidetone_volume"] = val / 100.0
-
-    def _on_run_renamer(self):
-        import subprocess
-        from pathlib import Path
-        bat = Path(__file__).resolve().parent.parent.parent / "scripts" / "rename_audio.bat"
-        if bat.is_file():
-            subprocess.Popen(["cmd.exe", "/c", str(bat)])
-        save_settings(self.cfg)
 
     def _update_profile_buttons_style(self):
         mode = self.cfg.get("audio", {}).get("routing_mode", "topping")
@@ -810,7 +771,7 @@ class StudioWindow(QMainWindow):
         if success:
             save_settings(self.cfg)
             self._update_profile_buttons_style()
-            self._refresh_device_combos()
+            self._populate_device_combos()
 
             hw = RoutingPresets.get_hardware_info()
             if mode == "cable" and not hw.get("has_cable", False):
@@ -935,6 +896,7 @@ class StudioWindow(QMainWindow):
                 border: 1px solid #374151;
                 border-radius: 4px;
                 padding: 5px 10px;
+                min-height: 28px;
                 color: #ffffff;
             }
             QComboBox::drop-down {
@@ -965,6 +927,7 @@ class StudioWindow(QMainWindow):
             }
             QCheckBox {
                 spacing: 8px;
+                min-height: 24px;
             }
             QCheckBox::indicator {
                 width: 18px;

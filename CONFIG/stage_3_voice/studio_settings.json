@@ -4,7 +4,7 @@
     "output_device": "Playback 3/4 (6- E2x2 OTG)",
     "sidetone_device": "Playback 1/2 (6- E2x2 OTG)",
     "sidetone_enabled": true,
-    "sidetone_volume": 0.7,
+    "sidetone_volume": 0.66,
     "passthrough_enabled": true,
     "passthrough_volume": 1.0,
     "sample_rate": 48000,

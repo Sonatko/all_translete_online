@@ -28,7 +28,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "ptt": {
         "key": "shift+middle",
         "tail_ms": 200,
-        "master_key": "f9",
+        "master_key": "f8",
     },
     "models": {
         "stt_provider": "gigaam",

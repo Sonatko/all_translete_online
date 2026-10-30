@@ -45,12 +45,23 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_running": "● Работает",
         "status_stopped_pill": "○ Остановлена",
 
+        # Dynamic Latency Monitor
+        "latency_prefix": "⏱ Задержка пайплайна:",
+        "latency_mode_local": "100% Локально",
+        "latency_mode_cloud": "Облачный API",
+
         # Hardware audio selector
-        "hardware_title": "Выходной аудиоканал для перевода голоса:",
+        "hardware_title": "Канал вывода переведенного голоса:",
         "hardware_topping": "🎛 Topping E2x2 (Аппаратный Loopback)",
         "hardware_cable": "🔌 Виртуальный кабель (VB-Audio Cable)",
         "hardware_install_cable": "📥 Установить VB-Cable (1 клик)",
         "btn_open_folder": "📂 Защищенные настройки (CONFIG/)",
+
+        # Audio profile switch feedback
+        "profile_topping_title": "Профиль Topping E2x2 активен",
+        "profile_topping_msg": "Аудиоканал переключен на Topping E2x2!\n\n• Аппаратная петля Topping Loopback: задержка ~0 мс.\n• В Discord, Zoom и звонках выберите микрофон: 'Loopback 1/2'.",
+        "profile_cable_title": "Профиль Виртуального кабеля активен",
+        "profile_cable_msg": "Аудиоканал переключен на Виртуальный Кабель!\n\n• Программа отправляет голос ИИ в: 'CABLE Input'.\n• В Discord, Zoom и звонках выберите микрофон: 'CABLE Output'.",
 
         # Virtual cable prompt dialog
         "cable_not_found_title": "Виртуальный аудиокабель не обнаружен",
@@ -106,12 +117,23 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_running": "● Running",
         "status_stopped_pill": "○ Stopped",
 
+        # Dynamic Latency Monitor
+        "latency_prefix": "⏱ Pipeline Latency:",
+        "latency_mode_local": "100% Offline",
+        "latency_mode_cloud": "Cloud API",
+
         # Hardware audio selector
-        "hardware_title": "Output audio channel for voice translation:",
+        "hardware_title": "Translated voice output audio channel:",
         "hardware_topping": "🎛 Topping E2x2 (Hardware Loopback)",
         "hardware_cable": "🔌 Virtual Cable (VB-Audio Cable)",
         "hardware_install_cable": "📥 Install VB-Cable (1 Click)",
         "btn_open_folder": "📂 Protected Settings (CONFIG/)",
+
+        # Audio profile switch feedback
+        "profile_topping_title": "Topping E2x2 Profile Active",
+        "profile_topping_msg": "Audio channel switched to Topping E2x2!\n\n• Hardware Loopback latency: ~0 ms.\n• In Discord, Zoom and calls select microphone: 'Loopback 1/2'.",
+        "profile_cable_title": "Virtual Cable Profile Active",
+        "profile_cable_msg": "Audio channel switched to Virtual Cable!\n\n• Voice synth outputs to: 'CABLE Input'.\n• In Discord, Zoom and calls select microphone: 'CABLE Output'.",
 
         # Virtual cable prompt dialog
         "cable_not_found_title": "Virtual Audio Cable Not Found",
@@ -167,12 +189,23 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_running": "● 运行中",
         "status_stopped_pill": "○ 已停止",
 
+        # Dynamic Latency Monitor
+        "latency_prefix": "⏱ 流程延迟:",
+        "latency_mode_local": "100% 本地运行",
+        "latency_mode_cloud": "云端 API",
+
         # Hardware audio selector
         "hardware_title": "语音输出虚拟通道路由:",
         "hardware_topping": "🎛 Topping E2x2 (硬件回路)",
         "hardware_cable": "🔌 虚拟音频线 (VB-Audio Cable)",
         "hardware_install_cable": "📥 一键安装虚拟音频线",
         "btn_open_folder": "📂 受保护配置 (CONFIG/)",
+
+        # Audio profile switch feedback
+        "profile_topping_title": "已激活 Topping E2x2 配置文件",
+        "profile_topping_msg": "音频已切换至 Topping E2x2!\n\n• 硬件回路延迟: ~0 毫秒.\n• 在语音软件中选择麦克风: 'Loopback 1/2'.",
+        "profile_cable_title": "已激活虚拟音频线配置文件",
+        "profile_cable_msg": "音频已切换至虚拟音频线!\n\n• 声音输出至: 'CABLE Input'.\n• 在语音软件中选择麦克风: 'CABLE Output'.",
 
         # Virtual cable prompt dialog
         "cable_not_found_title": "未检测到虚拟音频线",

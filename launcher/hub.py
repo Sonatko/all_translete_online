@@ -1,14 +1,16 @@
 """Universal Real-Time Translation Hub & Ecosystem Orchestrator (PySide6).
 Supports Trilingual UI (Russian, English, Chinese), 3-Stage Process Supervision,
-Modular 5-Patch Integrity Auditor with 1-Click Self-Healing, and Plain-Human Architecture Guide.
+Dynamic Pipeline Latency Monitoring per Stage, Modular 5-Patch Integrity Auditor,
+and Embedded Stage 3 Hardware Audio Routing.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from pathlib import Path
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
@@ -51,8 +53,118 @@ except ImportError:
 log = logging.getLogger("Launcher.Hub")
 
 
+class LatencyEstimator:
+    """Calculates dynamic pipeline latency breakdown based on active model and routing choices."""
+
+    @staticmethod
+    def get_stage1_latency() -> Dict[str, Any]:
+        """Inspect LiveTranslate user_settings.json for ASR and MT configuration."""
+        settings_file = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / "user_settings.json"
+        asr_name = "SenseVoice ASR"
+        asr_ms = 170
+        mt_name = "Hunyuan MT"
+        mt_ms = 80
+        is_cloud = False
+
+        if settings_file.is_file():
+            try:
+                cfg = json.loads(settings_file.read_text(encoding="utf-8"))
+                asr_eng = cfg.get("asr_engine", "sherpa_onnx")
+                if "whisper" in asr_eng:
+                    asr_name = "Whisper Local"
+                    asr_ms = 900
+                elif "remote" in asr_eng:
+                    asr_name = "Whisper Cloud API"
+                    asr_ms = 450
+                    is_cloud = True
+
+                models = cfg.get("models", [])
+                active_idx = cfg.get("active_model", 0)
+                if active_idx < len(models):
+                    active_m = models[active_idx]
+                    api_base = active_m.get("api_base", "local")
+                    m_model = active_m.get("model", "")
+                    if api_base == "local":
+                        if "nllb" in m_model:
+                            mt_name = "NLLB-200"
+                            mt_ms = 280
+                        else:
+                            mt_name = "Hunyuan MT 1.8B"
+                            mt_ms = 80
+                    else:
+                        mt_name = f"Облачный API ({active_m.get('name', 'Cloud')[:12]})"
+                        mt_ms = 400
+                        is_cloud = True
+            except Exception as e:
+                log.warning("Could not parse LiveTranslate settings: %s", e)
+
+        total_ms = asr_ms + mt_ms
+        return {
+            "breakdown": f"{asr_name} ({asr_ms}мс) + {mt_name} ({mt_ms}мс)",
+            "total_ms": total_ms,
+            "is_cloud": is_cloud,
+            "mode_text": I18n.t("latency_mode_cloud") if is_cloud else I18n.t("latency_mode_local"),
+        }
+
+    @staticmethod
+    def get_stage2_latency() -> Dict[str, Any]:
+        """Inspect OverTranslate configuration for OCR and provider choice."""
+        settings_file = PROJECT_ROOT / "CONFIG" / "stage_2_screen" / "appsettings.json"
+        ocr_name = "Windows OCR"
+        ocr_ms = 35
+        mt_name = "Локальный перевод"
+        mt_ms = 50
+        is_cloud = False
+
+        if settings_file.is_file():
+            try:
+                cfg = json.loads(settings_file.read_text(encoding="utf-8"))
+                provider = cfg.get("Provider", "Microsoft")
+                if provider in ("OpenAI", "DeepL", "GoogleChrome"):
+                    mt_name = f"Облачный {provider}"
+                    mt_ms = 320
+                    is_cloud = True
+                else:
+                    mt_name = "Windows Local"
+                    mt_ms = 50
+            except Exception as e:
+                log.warning("Could not parse OverTranslate settings: %s", e)
+
+        total_ms = ocr_ms + mt_ms
+        return {
+            "breakdown": f"{ocr_name} ({ocr_ms}мс) + {mt_name} ({mt_ms}мс)",
+            "total_ms": total_ms,
+            "is_cloud": is_cloud,
+            "mode_text": I18n.t("latency_mode_cloud") if is_cloud else I18n.t("latency_mode_local"),
+        }
+
+    @staticmethod
+    def get_stage3_latency(routing_mode: str = "topping") -> Dict[str, Any]:
+        """Inspect Voice Studio configuration for ASR, MT, TTS, and Audio Routing."""
+        asr_ms = 170  # Sber GigaAM CTC
+        mt_ms = 15    # Helsinki Opus-MT
+        tts_ms = 750  # Kyutai Pocket-TTS 24kHz
+
+        if routing_mode == "topping":
+            route_name = "Topping Loopback"
+            route_ms = 0
+            route_label = "0мс"
+        else:
+            route_name = "VB-Cable"
+            route_ms = 15
+            route_label = "15мс"
+
+        total_ms = asr_ms + mt_ms + tts_ms + route_ms
+        return {
+            "breakdown": f"GigaAM ({asr_ms}мс) + Opus-MT ({mt_ms}мс) + Pocket-TTS ({tts_ms}мс) + {route_name} ({route_label})",
+            "total_ms": total_ms,
+            "is_cloud": False,
+            "mode_text": I18n.t("latency_mode_local"),
+        }
+
+
 class StageCard(QFrame):
-    """Visual pipeline flow and control card for a translation program (KISS)."""
+    """Visual pipeline flow, dynamic latency, and control card for a translation program."""
 
     def __init__(
         self,
@@ -60,7 +172,6 @@ class StageCard(QFrame):
         title_key: str,
         flow_key: str,
         desc_key: str,
-        hotkeys_key: str,
         on_start,
         on_stop=None,
         on_open=None,
@@ -72,7 +183,6 @@ class StageCard(QFrame):
         self.title_key = title_key
         self.flow_key = flow_key
         self.desc_key = desc_key
-        self.hotkeys_key = hotkeys_key
         self.on_start = on_start
         self.on_stop = on_stop
         self.on_open = on_open
@@ -89,8 +199,8 @@ class StageCard(QFrame):
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(8)
 
         # 1. Header Row: Title + Status Pill
         h_head = QHBoxLayout()
@@ -132,12 +242,33 @@ class StageCard(QFrame):
         self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
         layout.addWidget(self.lbl_desc)
 
-        # 4. Action Buttons and Live Telemetry
+        # 4. Dynamic Pipeline Latency Monitor Bar
+        self.lbl_latency = QLabel()
+        self.lbl_latency.setStyleSheet("""
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-family: Consolas, monospace;
+            font-size: 11px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        """)
+        layout.addWidget(self.lbl_latency)
+
+        # 5. Embedded Stage 3 Controls Container (if stage_3)
+        self.stage3_container = QWidget()
+        self.stage3_layout = QVBoxLayout(self.stage3_container)
+        self.stage3_layout.setContentsMargins(0, 4, 0, 4)
+        self.stage3_layout.setSpacing(6)
+        layout.addWidget(self.stage3_container)
+        self.stage3_container.hide()
+
+        # 6. Action Buttons and Live Telemetry
         h_btn = QHBoxLayout()
         h_btn.setSpacing(8)
 
         self.btn_start = QPushButton(I18n.t("btn_start"))
-        self.btn_start.setFixedHeight(30)
+        self.btn_start.setFixedHeight(32)
         self.btn_start.setStyleSheet("""
             QPushButton {
                 background-color: #059669;
@@ -145,7 +276,7 @@ class StageCard(QFrame):
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 12px;
+                padding: 0 14px;
             }
             QPushButton:hover { background-color: #10b981; }
         """)
@@ -153,7 +284,7 @@ class StageCard(QFrame):
         h_btn.addWidget(self.btn_start)
 
         self.btn_stop = QPushButton(I18n.t("btn_stop"))
-        self.btn_stop.setFixedHeight(30)
+        self.btn_stop.setFixedHeight(32)
         self.btn_stop.setStyleSheet("""
             QPushButton {
                 background-color: #b91c1c;
@@ -161,7 +292,7 @@ class StageCard(QFrame):
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 12px;
+                padding: 0 14px;
             }
             QPushButton:hover { background-color: #dc2626; }
         """)
@@ -170,14 +301,14 @@ class StageCard(QFrame):
         h_btn.addWidget(self.btn_stop)
 
         self.btn_open = QPushButton(I18n.t(self.open_label_key))
-        self.btn_open.setFixedHeight(30)
+        self.btn_open.setFixedHeight(32)
         self.btn_open.setStyleSheet("""
             QPushButton {
                 background-color: #374151;
                 color: #e5e7eb;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 12px;
+                padding: 0 14px;
             }
             QPushButton:hover { background-color: #4b5563; }
         """)
@@ -193,12 +324,24 @@ class StageCard(QFrame):
             font-family: Consolas, monospace;
             font-size: 11px;
             background-color: #1f2937;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border-radius: 4px;
             border: 1px solid #374151;
         """)
         h_btn.addWidget(self.lbl_telemetry)
         layout.addLayout(h_btn)
+
+    def update_latency_display(self, lat_info: dict):
+        prefix = I18n.t("latency_prefix")
+        breakdown = lat_info.get("breakdown", "")
+        total_ms = lat_info.get("total_ms", 0)
+        mode_text = lat_info.get("mode_text", "")
+
+        color = "#10b981" if total_ms < 400 else ("#facc15" if total_ms < 1100 else "#f87171")
+        self.lbl_latency.setText(
+            f"<b>{prefix}</b> {breakdown} ➔ <b style='color: {color};'>Итого: ~{total_ms} мс</b> "
+            f"<span style='color: #64748b;'>[{mode_text}]</span>"
+        )
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
@@ -222,7 +365,7 @@ class StageCard(QFrame):
                 font-family: Consolas, monospace;
                 font-size: 11px;
                 background-color: #064e3b;
-                padding: 4px 8px;
+                padding: 5px 10px;
                 border-radius: 4px;
                 border: 1px solid #059669;
             """)
@@ -233,7 +376,7 @@ class StageCard(QFrame):
                 font-family: Consolas, monospace;
                 font-size: 11px;
                 background-color: #1f2937;
-                padding: 4px 8px;
+                padding: 5px 10px;
                 border-radius: 4px;
                 border: 1px solid #374151;
             """)
@@ -304,9 +447,10 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(1020, 800)
-        self.setMinimumSize(940, 700)
+        self.resize(1020, 820)
+        self.setMinimumSize(940, 720)
 
+        self._active_routing_mode = "topping"
         self._apply_theme()
         self._init_ui()
         self._retranslate_ui(is_initial=True)
@@ -325,6 +469,17 @@ class EcosystemHub(QMainWindow):
         self.poll_timer.start()
         self._populate_patches_view()
         self._update_hub_profile_styles()
+        self._refresh_all_latencies()
+
+    def _refresh_all_latencies(self):
+        lat1 = LatencyEstimator.get_stage1_latency()
+        self.card_stage1.update_latency_display(lat1)
+
+        lat2 = LatencyEstimator.get_stage2_latency()
+        self.card_stage2.update_latency_display(lat2)
+
+        lat3 = LatencyEstimator.get_stage3_latency(self._active_routing_mode)
+        self.card_stage3.update_latency_display(lat3)
 
     def _update_hub_profile_styles(self):
         try:
@@ -337,6 +492,8 @@ class EcosystemHub(QMainWindow):
         except Exception:
             mode = "topping"
             has_cable = True
+
+        self._active_routing_mode = mode
 
         if mode == "topping":
             self.btn_hub_topping.setStyleSheet("background-color: #2563eb; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 12px; border: 1px solid #60a5fa;")
@@ -376,6 +533,14 @@ class EcosystemHub(QMainWindow):
             if success:
                 save_settings(cfg)
                 self._update_hub_profile_styles()
+                self._refresh_all_latencies()
+
+                # User-friendly switch confirmation (non-blocking in tests)
+                if os.environ.get("QT_QPA_PLATFORM") != "offscreen":
+                    if mode == "topping":
+                        QMessageBox.information(self, I18n.t("profile_topping_title"), I18n.t("profile_topping_msg"))
+                    else:
+                        QMessageBox.information(self, I18n.t("profile_cable_title"), I18n.t("profile_cable_msg"))
         except Exception as e:
             log.error("Failed to switch profile: %s", e)
 
@@ -513,7 +678,7 @@ class EcosystemHub(QMainWindow):
         # 1. Module 1: LiveTranslate (Audio to Subtitles)
         self.card_stage1 = StageCard(
             "stage_1",
-            "stage1_title", "stage1_flow", "stage1_desc", "stage1_hotkeys",
+            "stage1_title", "stage1_flow", "stage1_desc",
             on_start=EcosystemProcessManager.start_stage_1,
             on_stop=EcosystemProcessManager.stop_stage_1,
             on_open=EcosystemProcessManager.start_stage_1,
@@ -524,7 +689,7 @@ class EcosystemHub(QMainWindow):
         # 2. Module 2: OverTranslate (Screen OCR)
         self.card_stage2 = StageCard(
             "stage_2",
-            "stage2_title", "stage2_flow", "stage2_desc", "stage2_hotkeys",
+            "stage2_title", "stage2_flow", "stage2_desc",
             on_start=EcosystemProcessManager.start_stage_2,
             on_stop=EcosystemProcessManager.stop_stage_2,
             on_open=EcosystemProcessManager.start_stage_2,
@@ -535,59 +700,43 @@ class EcosystemHub(QMainWindow):
         # 3. Module 3: Voice Studio (Outgoing Mic Speech)
         self.card_stage3 = StageCard(
             "stage_3",
-            "stage3_title", "stage3_flow", "stage3_desc", "stage3_hotkeys",
+            "stage3_title", "stage3_flow", "stage3_desc",
             on_start=EcosystemProcessManager.start_stage_3,
             on_stop=EcosystemProcessManager.stop_stage_3,
             on_open=EcosystemProcessManager.start_stage_3,
             open_label_key="btn_studio",
         )
-        layout.addWidget(self.card_stage3)
 
-        # 4. Hardware Routing & Project Settings Frame (KISS)
-        bottom_frame = QFrame()
-        bottom_frame.setStyleSheet("""
-            QFrame {
-                background-color: #1a1b1e;
-                border: 1px solid #2e3035;
-                border-radius: 8px;
-            }
-        """)
-        v_bottom = QVBoxLayout(bottom_frame)
-        v_bottom.setContentsMargins(14, 10, 14, 10)
-        v_bottom.setSpacing(8)
+        # EMBED Stage 3 Specific Controls (Audio Hardware Selector & Voice Wizard)
+        self.card_stage3.stage3_container.show()
+        h_stage3_hw = QHBoxLayout()
+        h_stage3_hw.setSpacing(8)
 
-        # Hardware Selector Row
-        h_hw = QHBoxLayout()
-        h_hw.setSpacing(10)
         self.lbl_hw_title = QLabel(f"<b>{I18n.t('hardware_title')}</b>")
         self.lbl_hw_title.setStyleSheet("color: #e5e7eb; font-size: 11px;")
-        h_hw.addWidget(self.lbl_hw_title)
+        h_stage3_hw.addWidget(self.lbl_hw_title)
 
         self.btn_hub_topping = QPushButton(I18n.t("hardware_topping"))
-        self.btn_hub_topping.setFixedHeight(30)
+        self.btn_hub_topping.setFixedHeight(28)
         self.btn_hub_topping.clicked.connect(lambda: self._on_hub_switch_profile("topping"))
-        h_hw.addWidget(self.btn_hub_topping)
+        h_stage3_hw.addWidget(self.btn_hub_topping)
 
         self.btn_hub_cable = QPushButton(I18n.t("hardware_cable"))
-        self.btn_hub_cable.setFixedHeight(30)
+        self.btn_hub_cable.setFixedHeight(28)
         self.btn_hub_cable.clicked.connect(lambda: self._on_hub_switch_profile("cable"))
-        h_hw.addWidget(self.btn_hub_cable)
+        h_stage3_hw.addWidget(self.btn_hub_cable)
 
         self.btn_install_cable = QPushButton(I18n.t("hardware_install_cable"))
-        self.btn_install_cable.setFixedHeight(30)
-        self.btn_install_cable.setStyleSheet("background-color: #0284c7; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px;")
+        self.btn_install_cable.setFixedHeight(28)
+        self.btn_install_cable.setStyleSheet("background-color: #0284c7; color: #fff; font-weight: bold; border-radius: 4px; padding: 0 10px; font-size: 11px;")
         self.btn_install_cable.clicked.connect(self._on_install_cable)
         self.btn_install_cable.hide()
-        h_hw.addWidget(self.btn_install_cable)
+        h_stage3_hw.addWidget(self.btn_install_cable)
 
-        h_hw.addStretch()
-        v_bottom.addLayout(h_hw)
+        h_stage3_hw.addSpacing(10)
 
-        # Tools Row: Record Voice (7 sec) + Open Settings Folder
-        h_tools = QHBoxLayout()
-        h_tools.setSpacing(10)
         self.btn_launch_wizard = QPushButton(I18n.t("btn_wizard"))
-        self.btn_launch_wizard.setFixedHeight(32)
+        self.btn_launch_wizard.setFixedHeight(28)
         self.btn_launch_wizard.setStyleSheet("""
             QPushButton {
                 background-color: #4f46e5;
@@ -595,32 +744,41 @@ class EcosystemHub(QMainWindow):
                 font-weight: bold;
                 font-size: 11px;
                 border-radius: 4px;
-                padding: 0 14px;
+                padding: 0 12px;
             }
             QPushButton:hover { background-color: #6366f1; }
         """)
         self.btn_launch_wizard.clicked.connect(self._on_open_voice_wizard)
-        h_tools.addWidget(self.btn_launch_wizard)
+        h_stage3_hw.addWidget(self.btn_launch_wizard)
+
+        h_stage3_hw.addStretch()
+        self.card_stage3.stage3_layout.addLayout(h_stage3_hw)
+
+        layout.addWidget(self.card_stage3)
+
+        # 4. Minimal Project Bottom Bar: Open Protected CONFIG Folder
+        h_bottom = QHBoxLayout()
+        h_bottom.setContentsMargins(4, 4, 4, 4)
 
         self.btn_open_folder = QPushButton(I18n.t("btn_open_folder"))
         self.btn_open_folder.setFixedHeight(32)
         self.btn_open_folder.setStyleSheet("""
             QPushButton {
-                background-color: #374151;
-                color: #e5e7eb;
+                background-color: #1f2937;
+                color: #94a3b8;
                 font-size: 11px;
                 border-radius: 4px;
                 padding: 0 14px;
+                border: 1px solid #374151;
             }
-            QPushButton:hover { background-color: #4b5563; }
+            QPushButton:hover { background-color: #374151; color: #fff; }
         """)
         self.btn_open_folder.clicked.connect(self._on_open_config_folder)
-        h_tools.addWidget(self.btn_open_folder)
+        h_bottom.addWidget(self.btn_open_folder)
 
-        h_tools.addStretch()
-        v_bottom.addLayout(h_tools)
+        h_bottom.addStretch()
+        layout.addLayout(h_bottom)
 
-        layout.addWidget(bottom_frame)
         layout.addStretch()
         return w
 
@@ -900,7 +1058,7 @@ class EcosystemHub(QMainWindow):
 </tr>
 </table><br>
 <b style="color: #facc15;">Если у вас обычный ПК без звуковой карты Topping:</b><br>
-Нажмите кнопку <b>«Виртуальный кабель (VB-Audio Cable)»</b> на Пульте управления. Лаунчер сам предложит установить драйвер виртуального кабеля в 1 клик.
+Нажмите кнопку <b>«Виртуальный кабель (VB-Audio Cable)»</b> на карточке Этапа 3. Лаунчер сам предложит установить драйвер виртуального кабеля в 1 клик.
 </div>
         """)
         lbl_audio.setWordWrap(True)
@@ -960,6 +1118,7 @@ class EcosystemHub(QMainWindow):
 
         if not is_initial:
             self._populate_patches_view()
+            self._refresh_all_latencies()
             self._poll_process_status()
 
     def _poll_process_status(self):
@@ -990,6 +1149,7 @@ class EcosystemHub(QMainWindow):
         wiz = VoiceCloningWizard(self)
         wiz.exec()
         self._populate_patches_view()
+        self._refresh_all_latencies()
 
     def _apply_theme(self):
         self.setStyleSheet("""

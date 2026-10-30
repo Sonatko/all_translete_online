@@ -6,9 +6,10 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+import platform
 import subprocess
 import sys
-from typing import Dict
+from typing import Any, Dict, Optional
 
 import psutil
 
@@ -19,17 +20,44 @@ PYTHON_EXE = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / ".venv" / "Scripts" / 
 PYTHONW_EXE = PROJECT_ROOT / "stage_3_voice" / "Dizcord" / ".venv" / "Scripts" / "pythonw.exe"
 PYTHONW_STAGE1 = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / ".venv" / "Scripts" / "pythonw.exe"
 
+_CPU_HARDWARE_INFO: Optional[Dict[str, Any]] = None
+
+
+def get_cpu_hardware_info() -> Dict[str, Any]:
+    """Retrieve tangible CPU processor details (model, physical cores, logical threads)."""
+    global _CPU_HARDWARE_INFO
+    if _CPU_HARDWARE_INFO is None:
+        cpu_name = platform.processor()
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
+            cpu_name, _ = winreg.QueryValueEx(key, "ProcessorNameString")
+            cpu_name = cpu_name.strip()
+        except Exception:
+            pass
+        phys = psutil.cpu_count(logical=False) or 8
+        logi = psutil.cpu_count(logical=True) or 16
+        _CPU_HARDWARE_INFO = {
+            "name": cpu_name,
+            "physical_cores": phys,
+            "logical_cores": logi,
+            "summary": f"{cpu_name} ({phys} Cores / {logi} Threads)",
+        }
+    return _CPU_HARDWARE_INFO
+
 
 class EcosystemProcessManager:
     """Monitors and controls the lifecycle of all stages."""
 
-    @staticmethod
-    def get_stage_status() -> Dict[str, Any]:
+    @classmethod
+    def get_stage_status(cls) -> Dict[str, Any]:
         """Check whether each stage is currently running and collect live resource telemetry."""
+        cpu_info = get_cpu_hardware_info()
         status = {
             "stage_1": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
             "stage_2": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
             "stage_3": {"running": False, "pid": None, "ram_mb": 0.0, "cpu_pct": 0.0, "breakdown": []},
+            "cpu_hardware": cpu_info,
             "total_ram_mb": 0.0,
             "total_cpu_pct": 0.0,
             "running_count": 0,
@@ -68,17 +96,30 @@ class EcosystemProcessManager:
                                 total_cpu_val += proc.cpu_percent(interval=None)
                                 p_mb = round(proc_mem / (1024.0 * 1024.0), 1)
                                 cmd_str = " ".join(proc.cmdline() or []).lower()
+                                threads_cnt = proc.num_threads()
                                 if "spawn_main" in cmd_str:
                                     comp_name = "SenseVoice INT8 ASR (Распознавание)"
+                                    allocated_t = 4
                                 elif p_mb > 1000:
                                     comp_name = "Tencent HY-MT1.5 (Нейроперевод)"
+                                    allocated_t = 2
                                 elif "overtranslate" in cmd_str or "overtranslate" in (proc.name() or "").lower():
                                     comp_name = "OverTranslate OCR"
+                                    allocated_t = 4
                                 elif "studio" in cmd_str or "pocket" in cmd_str:
                                     comp_name = "Voice Studio Engine"
+                                    allocated_t = 4
                                 else:
                                     comp_name = "Оболочка / GUI Оркестратор"
-                                breakdown.append({"name": comp_name, "pid": proc.pid, "ram_mb": p_mb})
+                                    allocated_t = 1
+
+                                breakdown.append({
+                                    "name": comp_name,
+                                    "pid": proc.pid,
+                                    "ram_mb": p_mb,
+                                    "threads": threads_cnt,
+                                    "allocated_threads": allocated_t,
+                                })
                             except (psutil.NoSuchProcess, psutil.AccessDenied):
                                 pass
 

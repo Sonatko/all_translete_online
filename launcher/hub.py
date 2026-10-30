@@ -467,25 +467,25 @@ class StageCard(QFrame):
             if lang == "ru":
                 return [
                     ("1", "Аудиозахват", "WASAPI Loopback", "Системный звук"),
-                    ("2", "Детектор речи", "Silero VAD", "In-Process CPU"),
-                    ("3", "Распознавание", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
-                    ("4", "Нейроперевод", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("2", "Детектор речи", "Silero VAD", "In-Process (1T)"),
+                    ("3", "Распознавание", "SenseVoice INT8", "Sherpa-ONNX (4T)"),
+                    ("4", "Нейроперевод", "Tencent HY-MT1.5", "CPU GGUF (2T)"),
                     ("5", "Субтитры", "Always-on-Top", "DirectX DWM"),
                 ]
             elif lang == "zh":
                 return [
                     ("1", "音频捕获", "WASAPI Loopback", "系统音频"),
-                    ("2", "语音检测", "Silero VAD", "In-Process CPU"),
-                    ("3", "语音识别", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
-                    ("4", "神经翻译", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("2", "语音检测", "Silero VAD", "In-Process (1T)"),
+                    ("3", "语音识别", "SenseVoice INT8", "Sherpa-ONNX (4T)"),
+                    ("4", "神经翻译", "Tencent HY-MT1.5", "CPU GGUF (2T)"),
                     ("5", "字幕输出", "Always-on-Top", "DirectX DWM"),
                 ]
             else:
                 return [
                     ("1", "Audio Capture", "WASAPI Loopback", "System Audio"),
-                    ("2", "Voice Activity", "Silero VAD", "In-Process CPU"),
-                    ("3", "Speech-to-Text", "SenseVoice INT8", "Sherpa-ONNX (CPU)"),
-                    ("4", "Neural MT", "Tencent HY-MT1.5", "CPU / GGUF"),
+                    ("2", "Voice Activity", "Silero VAD", "In-Process (1T)"),
+                    ("3", "Speech-to-Text", "SenseVoice INT8", "Sherpa-ONNX (4T)"),
+                    ("4", "Neural MT", "Tencent HY-MT1.5", "CPU GGUF (2T)"),
                     ("5", "Subtitles", "Always-on-Top", "DirectX DWM"),
                 ]
 
@@ -583,8 +583,8 @@ class StageCard(QFrame):
                     elif "tencent" in name_lower or "mt" in name_lower or b["ram_mb"] > 1000:
                         mt_mb = b["ram_mb"]
 
-                asr_sub = f"{act_dev.upper()} ONNX | {asr_mb} MB" if asr_mb else f"{act_dev.upper()} ONNX"
-                mt_sub = f"CPU / GGUF | {mt_mb} MB" if mt_mb else "CPU / GGUF"
+                asr_sub = f"{act_dev.upper()} ONNX (4T) | {asr_mb} MB" if asr_mb else f"{act_dev.upper()} ONNX (4T)"
+                mt_sub = f"CPU GGUF (2T) | {mt_mb} MB" if mt_mb else "CPU GGUF (2T)"
 
                 if len(self.nodes) >= 5:
                     self.nodes[0].update_node(backend=audio_dev)
@@ -609,8 +609,8 @@ class StageCard(QFrame):
                         self.nodes[4].update_node(active=True, metric="Live")
 
                     self.lbl_mon_state.setText(
-                        f"⏱ <b>Инференс сегмента:</b> <span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ "
-                        f"<span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ "
+                        f"⏱ <b>Инференс сегмента:</b> <span style='color: #38bdf8;'>ASR: {asr_ms} мс (4T)</span> ➔ "
+                        f"<span style='color: #c084fc;'>MT: {tl_ms} мс (2T)</span> ➔ "
                         f"<span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | "
                         f"💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
                     )
@@ -620,7 +620,7 @@ class StageCard(QFrame):
                         self.nodes[2].update_node(active=False, metric=f"{asr_mb} MB" if asr_mb else None)
                         self.nodes[3].update_node(active=False, metric=f"{mt_mb} MB" if mt_mb else None)
                         self.nodes[4].update_node(active=False, metric=None)
-                    self.lbl_mon_state.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Порог: 50%)")
+                    self.lbl_mon_state.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности | <b>Пул ЦП:</b> 6 потоков (ASR: 4T, MT: 2T) | 10T свободно для системы")
 
                 if live_data.get("error_msg"):
                     self.lbl_mon_alert.setText(f"🛑 <b>Сбой конвейера [Pipeline Failure]:</b> {live_data['error_msg']}")
@@ -688,9 +688,11 @@ class StageCard(QFrame):
                 border: 1px solid #059669;
             """)
             if breakdown:
-                lines = [f"📊 Использование памяти ({ram} МБ):"]
+                lines = [f"📊 Ресурсы процесса ({ram} МБ, ЦП: {cpu}%):"]
                 for b in breakdown:
-                    lines.append(f"  • {b['name']}: {b['ram_mb']} МБ (PID {b['pid']})")
+                    alloc_t = b.get("allocated_threads")
+                    t_str = f" | {alloc_t}T инференса" if alloc_t else ""
+                    lines.append(f"  • {b['name']}: {b['ram_mb']} МБ (PID {b['pid']}{t_str})")
                 self.lbl_telemetry.setToolTip("\n".join(lines))
             else:
                 self.lbl_telemetry.setToolTip("")
@@ -1728,14 +1730,23 @@ class EcosystemHub(QMainWindow):
             self.lbl_system_summary.setText(I18n.t("status_stopped"))
             self.lbl_system_summary.setStyleSheet("color: #9ca3af; font-weight: bold; background-color: #1f2937; padding: 8px 12px; border-radius: 6px;")
 
-        # Rich memory & process breakdown tooltip on master header badge
-        sys_tooltip = [f"📊 Общее потребление ресурсов: ОЗУ {total_ram} МБ, ЦП {total_cpu}%"]
+        # Rich memory, CPU cores & process breakdown tooltip on master header badge
+        cpu_hw = status.get("cpu_hardware", {})
+        cpu_name = cpu_hw.get("name", "AMD Processor")
+        phys = cpu_hw.get("physical_cores", 8)
+        logi = cpu_hw.get("logical_cores", 16)
+        sys_tooltip = [
+            f"💻 Аппаратный процессор: {cpu_name} ({phys} ядер / {logi} потоков)",
+            f"📊 Общее потребление: ОЗУ {total_ram} МБ, ЦП {total_cpu}%",
+        ]
         for st_id, st_name in [("stage_1", "Этап 1: LiveTranslate"), ("stage_2", "Этап 2: OverTranslate"), ("stage_3", "Этап 3: Voice Studio")]:
             st_info = status.get(st_id, {})
             if st_info.get("running"):
                 sys_tooltip.append(f"\n{st_name} (PID {st_info.get('pid')}) — {st_info.get('ram_mb')} МБ:")
                 for b in st_info.get("breakdown", []):
-                    sys_tooltip.append(f"  • {b['name']}: {b['ram_mb']} МБ")
+                    alloc_t = b.get("allocated_threads")
+                    t_str = f" [Выделено: {alloc_t}T]" if alloc_t else ""
+                    sys_tooltip.append(f"  • {b['name']}: {b['ram_mb']} МБ{t_str}")
         self.lbl_system_summary.setToolTip("\n".join(sys_tooltip))
 
     def _on_open_voice_wizard(self):

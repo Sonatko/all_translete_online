@@ -123,3 +123,4 @@ class Stage1Telemetry:
             log.warning("Telemetry log scan failed: %s", e)
 
         return result
+

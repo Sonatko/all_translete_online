@@ -275,50 +275,35 @@ class StageCard(QFrame):
         self.lbl_desc.setStyleSheet("color: #9ca3af; font-size: 11px; line-height: 1.3;")
         layout.addWidget(self.lbl_desc)
 
-        # 4. Dynamic Pipeline Latency Chips Bar (NO PARENTHESES, CLEAN PILLS)
-        self.latency_frame = QFrame()
-        self.latency_frame.setStyleSheet("""
-            QFrame {
-                background-color: #0f172a;
-                border-radius: 6px;
-                border: 1px solid #1e293b;
-            }
-        """)
-        self.h_latency = QHBoxLayout(self.latency_frame)
-        self.h_latency.setContentsMargins(8, 4, 8, 4)
-        self.h_latency.setSpacing(6)
-        layout.addWidget(self.latency_frame)
-
-        # 4b. Live Telemetry & Error Diagnostic Monitor Box (Real Hardware & Inference)
-        self.live_diag_frame = QFrame()
-        self.live_diag_frame.setStyleSheet("""
+        # 4. Professional Hardware & Inference Telemetry Monitor (Clean, strict, real-time)
+        self.monitor_frame = QFrame()
+        self.monitor_frame.setStyleSheet("""
             QFrame {
                 background-color: #0b1120;
                 border-radius: 6px;
                 border: 1px solid #1e293b;
             }
         """)
-        self.v_diag = QVBoxLayout(self.live_diag_frame)
-        self.v_diag.setContentsMargins(10, 6, 10, 6)
-        self.v_diag.setSpacing(5)
+        self.v_monitor = QVBoxLayout(self.monitor_frame)
+        self.v_monitor.setContentsMargins(10, 8, 10, 8)
+        self.v_monitor.setSpacing(5)
 
-        self.lbl_diag_hw = QLabel()
-        self.lbl_diag_hw.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        self.v_diag.addWidget(self.lbl_diag_hw)
+        self.lbl_mon_hw = QLabel()
+        self.lbl_mon_hw.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        self.v_monitor.addWidget(self.lbl_mon_hw)
 
-        self.lbl_diag_live = QLabel()
-        self.lbl_diag_live.setStyleSheet("color: #e2e8f0; font-size: 11px;")
-        self.lbl_diag_live.setWordWrap(True)
-        self.v_diag.addWidget(self.lbl_diag_live)
+        self.lbl_mon_state = QLabel()
+        self.lbl_mon_state.setStyleSheet("color: #e2e8f0; font-size: 11px;")
+        self.lbl_mon_state.setWordWrap(True)
+        self.v_monitor.addWidget(self.lbl_mon_state)
 
-        self.lbl_diag_alert = QLabel()
-        self.lbl_diag_alert.setStyleSheet("font-size: 11px; padding: 3px 8px; border-radius: 4px;")
-        self.lbl_diag_alert.setWordWrap(True)
-        self.lbl_diag_alert.hide()
-        self.v_diag.addWidget(self.lbl_diag_alert)
+        self.lbl_mon_alert = QLabel()
+        self.lbl_mon_alert.setStyleSheet("font-size: 11px; padding: 4px 8px; border-radius: 4px;")
+        self.lbl_mon_alert.setWordWrap(True)
+        self.lbl_mon_alert.hide()
+        self.v_monitor.addWidget(self.lbl_mon_alert)
 
-        self.live_diag_frame.hide()
-        layout.addWidget(self.live_diag_frame)
+        layout.addWidget(self.monitor_frame)
 
         # 5. Embedded Stage 3 Controls Container (if stage_3)
         self.stage3_container = QWidget()
@@ -396,70 +381,64 @@ class StageCard(QFrame):
         h_btn.addWidget(self.lbl_telemetry)
         layout.addLayout(h_btn)
 
-    def update_latency_display(self, lat_info: dict):
-        """Render distinct latency chips for each pipeline step (no parentheses)."""
-        while self.h_latency.count():
-            child = self.h_latency.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+    def update_card_monitor(self, live_data: dict = None):
+        """Update hardware context, signal path, and live inference metrics."""
+        if self.stage_id == "stage_1":
+            if self._is_running and live_data and live_data.get("has_session"):
+                audio_dev = live_data.get("audio_device") or "WASAPI Loopback (Default Output)"
+                req_dev = str(live_data.get("asr_device_requested", "cpu")).strip()
+                act_dev = str(live_data.get("asr_device_actual", "cpu")).strip()
+                mt_name = live_data.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
 
-        lbl_lead = QLabel(f"<b>{I18n.t('latency_prefix')}</b>")
-        lbl_lead.setStyleSheet("color: #64748b; font-size: 11px;")
-        self.h_latency.addWidget(lbl_lead)
+                self.lbl_mon_hw.setText(
+                    f"🎛 <b>Сигнальный тракт:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice INT8 [<b>{act_dev.upper()} Execution Provider</b>] | 🧠 <b>MT:</b> {mt_name} [<b>CPU / GGUF</b>]"
+                )
+                if live_data.get("last_original") and live_data.get("last_asr_ms") is not None:
+                    asr_ms = live_data.get("last_asr_ms", 0)
+                    tl_ms = live_data.get("last_tl_ms", 0)
+                    tot_ms = live_data.get("last_total_ms", asr_ms + tl_ms)
+                    orig = live_data.get("last_original", "")
+                    if len(orig) > 55:
+                        orig = orig[:52] + "..."
+                    trans = live_data.get("last_translation", "")
+                    if len(trans) > 55:
+                        trans = trans[:52] + "..."
+                    self.lbl_mon_state.setText(
+                        f"⏱ <b>Инференс сегмента:</b> <span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ <span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ <span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | 💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
+                    )
+                else:
+                    self.lbl_mon_state.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Порог: 50%)")
 
-        steps = lat_info.get("steps", [])
-        for i, step in enumerate(steps):
-            if i > 0:
-                arr = QLabel("➔")
-                arr.setStyleSheet("color: #475569; font-weight: bold; font-size: 11px;")
-                self.h_latency.addWidget(arr)
+                if live_data.get("error_msg"):
+                    self.lbl_mon_alert.setText(f"🛑 <b>Сбой конвейера [Pipeline Failure]:</b> {live_data['error_msg']}")
+                    self.lbl_mon_alert.setStyleSheet("background-color: #450a0a; color: #fca5a5; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #dc2626;")
+                    self.lbl_mon_alert.show()
+                elif "cuda" in req_dev.lower() and act_dev == "cpu":
+                    self.lbl_mon_alert.setText(f"ℹ️ <b>Аппаратный контекст:</b> В интерфейсе запрошен бэкенд <b>{req_dev} (RTX 5070)</b> ➔ Для SenseVoice активен <b>CPU Execution Provider</b> (рантайм sherpa-onnx скомпилирован без CUDA). Для запуска нейросетей на RTX 5070 можно подключить бэкенд Ollama / vLLM.")
+                    self.lbl_mon_alert.setStyleSheet("background-color: #172554; color: #93c5fd; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #3b82f6;")
+                    self.lbl_mon_alert.show()
+                else:
+                    self.lbl_mon_alert.hide()
+            else:
+                self.lbl_mon_hw.setText("🎛 <b>Конфигурация тракта:</b> WASAPI Loopback ➔ Silero VAD ➔ Sherpa-ONNX SenseVoice INT8 (CPU) ➔ Tencent HY-MT1.5 (In-Process CPU)")
+                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Тракт готов к приёму системного аудиопотока")
+                self.lbl_mon_alert.hide()
 
-            chip = QLabel(f"{step['icon']} {step['name']}: <b style='color: #38bdf8;'>{step['ms']} мс</b>")
-            chip.setStyleSheet("""
-                background-color: #1e293b;
-                color: #cbd5e1;
-                padding: 3px 8px;
-                border-radius: 4px;
-                font-size: 11px;
-                border: 1px solid #334155;
-            """)
-            self.h_latency.addWidget(chip)
+        elif self.stage_id == "stage_2":
+            self.lbl_mon_hw.setText("🖼 <b>Оптический тракт:</b> Screen Grab (GDI/DirectX) ➔ RapidOcrNet ONNX (PP-OCRv6) ➔ Microsoft MT (Облачный API)")
+            if self._is_running:
+                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна в системном трее | Горячие клавиши: Ctrl + Alt + A (Область) | Ctrl + C + C (Буфер)")
+            else:
+                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Перехват экрана по комбинации Ctrl + Alt + A")
+            self.lbl_mon_alert.hide()
 
-        # Arrow before total
-        eq = QLabel("➔")
-        eq.setStyleSheet("color: #475569; font-weight: bold; font-size: 11px;")
-        self.h_latency.addWidget(eq)
-
-        # Highlighted total chip
-        total_ms = lat_info.get("total_ms", 0)
-        tot_color = "#34d399" if total_ms < 500 else ("#facc15" if total_ms < 1100 else "#f87171")
-        tot_chip = QLabel(f"⚡ <b>Итого:</b> <b style='color: {tot_color};'>~{total_ms} мс</b>")
-        tot_chip.setStyleSheet("""
-            background-color: #064e3b;
-            color: #ffffff;
-            padding: 3px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            border: 1px solid #059669;
-        """)
-        self.h_latency.addWidget(tot_chip)
-
-        # Mode badge (Local vs Cloud API)
-        is_cloud = lat_info.get("is_cloud", False)
-        mode_text = lat_info.get("mode_text", "")
-        mode_border = "#0284c7" if not is_cloud else "#d97706"
-        mode_chip = QLabel(f"<b>{mode_text}</b>")
-        mode_chip.setStyleSheet(f"""
-            background-color: #172554;
-            color: #93c5fd;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            border: 1px solid {mode_border};
-        """)
-        self.h_latency.addWidget(mode_chip)
-
-        self.h_latency.addStretch()
+        elif self.stage_id == "stage_3":
+            self.lbl_mon_hw.setText("🎙 <b>Речевой тракт:</b> WASAPI Input (Микрофон) ➔ GigaAM CTC ➔ Opus-MT ➔ Pocket-TTS 24kHz ➔ Loopback Out")
+            if self._is_running:
+                self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна | Режим рации: Shift + Колесико мыши (Push-To-Talk) ➔ Голос синтезируется в выходной канал")
+            else:
+                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Акустический профиль my_pocket_voice.safetensors загружен")
+            self.lbl_mon_alert.hide()
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
@@ -468,6 +447,7 @@ class StageCard(QFrame):
         self.btn_start.setText(I18n.t("btn_start"))
         self.btn_stop.setText(I18n.t("btn_stop"))
         self.btn_open.setText(I18n.t(self.open_label_key))
+        self.update_card_monitor()
         self.set_running(self._is_running, force=True)
 
     def update_telemetry(self, data: dict, force: bool = False):
@@ -499,58 +479,6 @@ class StageCard(QFrame):
                 border: 1px solid #374151;
             """)
 
-    def update_stage1_live_telemetry(self, m: dict):
-        """Display real physical inference latency, hardware fallback alerts, and live audio capture."""
-        if not self._is_running:
-            self.live_diag_frame.hide()
-            return
-
-        self.live_diag_frame.show()
-
-        # 1. Hardware & Audio Signal Path
-        audio_dev = m.get("audio_device") or "WASAPI Loopback (Default Output)"
-        req_dev = str(m.get("asr_device_requested", "cpu")).strip()
-        act_dev = str(m.get("asr_device_actual", "cpu")).strip()
-        mt_name = m.get("mt_model", "Hunyuan MT 1.8B").split("(")[0].strip()
-
-        hw_text = f"🎛 <b>Сигнальный тракт:</b> {audio_dev} | 🎙 <b>ASR:</b> SenseVoice INT8 [<b>{act_dev.upper()} Execution Provider</b>] | 🧠 <b>MT:</b> {mt_name} [<b>CPU / GGUF</b>]"
-        self.lbl_diag_hw.setText(hw_text)
-
-        # 2. Live Inference Segment Telemetry
-        if m.get("last_original") and m.get("last_asr_ms") is not None:
-            asr_ms = m.get("last_asr_ms", 0)
-            tl_ms = m.get("last_tl_ms", 0)
-            tot_ms = m.get("last_total_ms", asr_ms + tl_ms)
-            orig = m.get("last_original", "")
-            if len(orig) > 55:
-                orig = orig[:52] + "..."
-            trans = m.get("last_translation", "")
-            if len(trans) > 55:
-                trans = trans[:52] + "..."
-            
-            live_text = (
-                f"⏱ <b>Инференс сегмента:</b> "
-                f"<span style='color: #38bdf8;'>ASR: {asr_ms} мс</span> ➔ "
-                f"<span style='color: #c084fc;'>MT: {tl_ms} мс</span> ➔ "
-                f"<span style='color: #34d399;'>Сквозная (E2E): {tot_ms} мс</span> | "
-                f"💬 <i>\"{orig}\"</i> ➔ <b>\"{trans}\"</b>"
-            )
-            self.lbl_diag_live.setText(live_text)
-        else:
-            self.lbl_diag_live.setText("📡 <b>Состояние VAD:</b> Ожидание речевой активности (VAD Standby / Сигнал ниже порога детекции)")
-
-        # 3. Diagnostic Context & Pipeline Alerts
-        if m.get("error_msg"):
-            self.lbl_diag_alert.setText(f"🛑 <b>Сбой конвейера [Pipeline Failure]:</b> {m['error_msg']}")
-            self.lbl_diag_alert.setStyleSheet("background-color: #450a0a; color: #fca5a5; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #dc2626;")
-            self.lbl_diag_alert.show()
-        elif "cuda" in req_dev.lower() and act_dev == "cpu":
-            self.lbl_diag_alert.setText(f"⚠️ <b>Аппаратный контекст:</b> В интерфейсе запрошен бэкенд <b>{req_dev} (RTX 5070)</b> ➔ Активен <b>CPU Execution Provider</b> (библиотека sherpa-onnx собрана без рантайма CUDA). Видеопамять (VRAM) на 100% свободна под игры.")
-            self.lbl_diag_alert.setStyleSheet("background-color: #172554; color: #93c5fd; font-size: 11px; padding: 4px 8px; border-radius: 4px; border: 1px solid #3b82f6;")
-            self.lbl_diag_alert.show()
-        else:
-            self.lbl_diag_alert.hide()
-
     def set_running(self, running: bool, force: bool = False):
         if not force and self._is_running == running:
             return
@@ -578,7 +506,7 @@ class StageCard(QFrame):
             if self.on_open:
                 self.btn_open.show()
         else:
-            self.live_diag_frame.hide()
+            self.update_card_monitor()
             self.setStyleSheet("""
                 StageCard {
                     background-color: #1a1b1e;
@@ -644,14 +572,16 @@ class EcosystemHub(QMainWindow):
         self._refresh_all_latencies()
 
     def _refresh_all_latencies(self):
-        lat1 = LatencyEstimator.get_stage1_latency()
-        self.card_stage1.update_latency_display(lat1)
-
-        lat2 = LatencyEstimator.get_stage2_latency()
-        self.card_stage2.update_latency_display(lat2)
-
-        lat3 = LatencyEstimator.get_stage3_latency(self._active_routing_mode)
-        self.card_stage3.update_latency_display(lat3)
+        m1 = None
+        if self.card_stage1._is_running:
+            try:
+                from launcher.telemetry import Stage1Telemetry
+                m1 = Stage1Telemetry.get_live_metrics()
+            except Exception:
+                pass
+        self.card_stage1.update_card_monitor(m1)
+        self.card_stage2.update_card_monitor()
+        self.card_stage3.update_card_monitor()
 
     def _check_and_refresh_latencies_on_change(self):
         """Detect live changes in LiveTranslate or OverTranslate configs and hot-reload pipeline latency chips."""
@@ -1197,7 +1127,7 @@ class EcosystemHub(QMainWindow):
 </tr>
 <tr style="background-color: #1e293b; border-radius: 6px;">
     <td style="width: 28%; font-weight: bold; color: #fbbf24; font-size: 12px;">
-        🖼 2. Экранный текст<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Игры, Документы, Картинки)</span>
+        🖼 2. Экранный текст<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Интерфейсы, Документы, Графика)</span>
     </td>
     <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
         <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Рамка Ctrl+Alt+A</span> ➔
@@ -1246,7 +1176,7 @@ class EcosystemHub(QMainWindow):
         v_m1 = QVBoxLayout(box_m1)
         lbl_m1 = QLabel("""
 <div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Перехват английской/иностранной речи из наушников и вывод перевода поверх игр, YouTube, лекций и Discord.<br><br>
+<b>Назначение:</b> Перехват иностранной речи из аудиопотока и вывод субтитров поверх любых окон (видео, лекции, конференции, звонки).<br><br>
 
 <b style="color: #38bdf8;">Архитектурные доработки под капотом (Почему работает быстро и без зависаний):</b>
 <ul style="margin: 6px 0 10px 18px; padding: 0;">
@@ -1259,7 +1189,7 @@ class EcosystemHub(QMainWindow):
 <b style="color: #facc15;">Горячие клавиши управления:</b><br>
 <div style="margin-top: 6px;">
 • <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">F9</kbd> — <b>Единый рубильник:</b> мгновенно скрывает субтитры и ставит транскрипцию на паузу (нулевая нагрузка на CPU в тишине).<br>
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">2x Колесико мыши</kbd> — <b>Клик сквозь окно:</b> субтитры перестают реагировать на мышь и не мешают нажимать кнопки в игре под ними.<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">2x Колесико мыши</kbd> — <b>Клик сквозь окно:</b> субтитры перестают реагировать на курсор мыши и не блокируют элементы управления окон под ними.<br>
 • <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">Зажать колесико мыши</kbd> — Свободное перемещение субтитров по экрану без риска случайно кликнуть ЛКМ.
 </div>
 </div>
@@ -1286,7 +1216,7 @@ class EcosystemHub(QMainWindow):
         v_m2 = QVBoxLayout(box_m2)
         lbl_m2 = QLabel("""
 <div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Мгновенный перевод невыделяемого текста с картинок, комиксов, интерфейсов программ и игровых диалогов с заменой текста на картинке (In-Place эффект).<br><br>
+<b>Назначение:</b> Мгновенный перевод невыделяемого текста с изображений, документации, диалоговых окон и интерфейсов сторонних программ с заменой текста на картинке (In-Place эффект).<br><br>
 
 <b style="color: #fbbf24;">Архитектура и устраненный баг:</b>
 <ul style="margin: 6px 0 10px 18px; padding: 0;">
@@ -1324,7 +1254,7 @@ class EcosystemHub(QMainWindow):
         v_m3 = QVBoxLayout(box_m3)
         lbl_m3 = QLabel("""
 <div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Вы говорите в микрофон по-русски — иностранные собеседники в Discord, Zoom или игре слышат плавную английскую речь вашим клонированным голосом.<br><br>
+<b>Назначение:</b> Вы говорите в микрофон по-русски — собеседники в Discord, Zoom, Telegram и веб-конференциях слышат плавную английскую речь вашим клонированным голосом.<br><br>
 
 <b style="color: #a78bfa;">Конвейер синтеза речи (100% собственный автономный код):</b>
 <ol style="margin: 6px 0 10px 18px; padding: 0;">
@@ -1372,7 +1302,7 @@ class EcosystemHub(QMainWindow):
 <tr>
     <td><b>1. Windows звук</b></td>
     <td><code style="color: #38bdf8; font-weight: bold;">Playback 1/2</code></td>
-    <td>Ваши обычные наушники (музыка, игры, речь собеседников).</td>
+    <td>Ваши обычные наушники (системный звук, медиа, речь собеседников).</td>
 </tr>
 <tr style="background-color: #161e2e;">
     <td><b>2. Наш Лаунчер</b></td>
@@ -1469,14 +1399,17 @@ class EcosystemHub(QMainWindow):
         self.card_stage2.update_telemetry(status["stage_2"])
         self.card_stage3.update_telemetry(status["stage_3"])
 
-        # 2. Live telemetry & diagnostic polling for Stage 1 (Real ASR/MT ms, hardware status & errors)
+        # 2. Update real hardware & inference telemetry monitors for all modules
+        m1 = None
         if status["stage_1"]["running"]:
             try:
                 from launcher.telemetry import Stage1Telemetry
                 m1 = Stage1Telemetry.get_live_metrics()
-                self.card_stage1.update_stage1_live_telemetry(m1)
             except Exception as e:
                 log.debug("Telemetry error: %s", e)
+        self.card_stage1.update_card_monitor(m1)
+        self.card_stage2.update_card_monitor()
+        self.card_stage3.update_card_monitor()
 
         running_count = status.get("running_count", 0)
         total_ram = status.get("total_ram_mb", 0.0)

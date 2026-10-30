@@ -18,21 +18,21 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_stopped": "⚪ Все программы остановлены",
 
         # Module 1: Audio to Subtitles (LiveTranslate)
-        "stage1_title": "1. Синхронные субтитры (LiveTranslate)",
-        "stage1_flow": "Схема: 🔊 Системный звук  ➔  ✂ Silero VAD  ➔  🎙 SenseVoice INT8  ➔  🧠 Hunyuan MT 1.8B  ➔  📺 Субтитры",
-        "stage1_desc": "Захватывает системный звук (видео, медиа, онлайн-звонки, браузер), делит на фразы в паузах речи и выводит перевод поверхностными субтитрами поверх всех окон.",
-        "stage1_hotkeys": "F9 — Вкл/Пауза и скрыть субтитры | 2x MMB — Клик сквозь окно | MMB Drag — Перемещение",
+        "stage1_title": "1. Потоковое распознавание и перевод аудио (LiveTranslate)",
+        "stage1_flow": "Конвейер: 🔊 WASAPI Loopback ➔ ✂ Silero VAD ➔ 🎙 SenseVoice INT8 ➔ 🧠 Tencent HY-MT1.5 ➔ 📺 Overlay",
+        "stage1_desc": "Низколатентный захват системного аудиопотока через WASAPI Loopback, сегментация речи через нейросетевой VAD, акустическое распознавание ASR и синхронный машинный перевод в оверлей субтитров.",
+        "stage1_hotkeys": "F9 — Master Toggle (Вкл/Пауза) | 2x MMB — Click-Through (Сквозной клик) | MMB Drag — Перемещение окна",
 
         # Module 2: Screen OCR (OverTranslate)
-        "stage2_title": "2. Экранный переводчик (OverTranslate)",
-        "stage2_flow": "Схема: 🖼 Рамка на экране  ➔  🔍 RapidOcr ONNX  ➔  🌐 Microsoft MT  ➔  📝 Окно с текстом",
-        "stage2_desc": "Оптическое распознавание невыделяемого текста с экрана в заданной прямоугольной рамке (документы, графика, интерфейсы) с мгновенным переводом.",
-        "stage2_hotkeys": "Ctrl + Alt + A — Выделить рамкой | Ctrl + C + C — Быстрый перевод из буфера",
+        "stage2_title": "2. Оптическое распознавание и перевод с экрана (OverTranslate)",
+        "stage2_flow": "Конвейер: 🖼 Экранный захват ➔ 🔍 RapidOcrNet ONNX ➔ 🌐 Microsoft MT ➔ 📝 Оверлей перевода",
+        "stage2_desc": "Оптический захват невыделяемых экранных областей (OCR PP-OCRv6 ONNX) и перехват буфера обмена Windows с автоматической заменой текста на перевод.",
+        "stage2_hotkeys": "Ctrl + Alt + A — Выделение прямоугольной области | Ctrl + C + C — Перевод выделенного текста из буфера",
 
         # Module 3: Outgoing Voice Studio
-        "stage3_title": "3. Голосовой переводчик (Voice Studio)",
-        "stage3_flow": "Схема: 🎙 Микрофон (RU)  ➔  ✂ VAD + Пунктуация  ➔  🧠 GigaAM CTC  ➔  📝 Opus-MT  ➔  🗣 Pocket-TTS Клон  ➔  🔊 Выход (EN)",
-        "stage3_desc": "Вы говорите в микрофон по-русски — программа переводит и синтезирует английскую речь вашим клонированным тембром в выходной микрофонный канал.",
+        "stage3_title": "3. Синхронный перевод речи и нейросинтез тембра (Voice Studio)",
+        "stage3_flow": "Конвейер: 🎙 Входной микрофон (RU) ➔ ✂ VAD ➔ 🧠 GigaAM CTC ➔ 📝 Opus-MT ➔ 🗣 Pocket-TTS ➔ 🔊 Выходной аудиоканал",
+        "stage3_desc": "Потоковый конвейер Speech-to-Speech: акустическое распознавание русской речи (GigaAM), машинный перевод (Opus-MT) и синтез английской речи клонированным голосом (Pocket-TTS) в виртуальный микрофонный канал.",
         "stage3_hotkeys": "Shift + Колесико мыши — Активация рации (Push-To-Talk / PTT)",
 
         "btn_start": "▶ Запустить",
@@ -95,22 +95,22 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "status_stopped": "⚪ All programs stopped",
 
         # Module 1: Audio to Subtitles (LiveTranslate)
-        "stage1_title": "1. Synchronous Subtitles (LiveTranslate)",
-        "stage1_flow": "Pipeline: 🔊 PC Audio  ➔  ✂ Silero VAD  ➔  🎙 SenseVoice INT8  ➔  🧠 Hunyuan MT 1.8B  ➔  📺 Screen Subtitles",
-        "stage1_desc": "Captures system audio (video, media streams, conference calls, browser), segments speech in natural pauses, and displays real-time subtitles overlay.",
-        "stage1_hotkeys": "F9 — Run/Pause & Hide Subtitles | 2x MMB — Click-through Lock | MMB Drag — Move Window",
+        "stage1_title": "1. Streaming Audio Transcription & Translation (LiveTranslate)",
+        "stage1_flow": "Pipeline: 🔊 WASAPI Loopback ➔ ✂ Silero VAD ➔ 🎙 SenseVoice INT8 ➔ 🧠 Tencent HY-MT1.5 ➔ 📺 Overlay",
+        "stage1_desc": "Low-latency system audio ingestion via WASAPI Loopback, speech segmentation via neural VAD, ASR acoustic decoding, and synchronous MT overlay.",
+        "stage1_hotkeys": "F9 — Master Toggle (Run/Pause) | 2x MMB — Click-Through Lock | MMB Drag — Move Window",
 
         # Module 2: Screen OCR (OverTranslate)
-        "stage2_title": "2. Screen Text Translator (OverTranslate)",
-        "stage2_flow": "Pipeline: 🖼 Screen Box  ➔  🔍 RapidOcr ONNX  ➔  🌐 Microsoft MT  ➔  📝 Result Window",
-        "stage2_desc": "Optical character recognition (OCR) of non-selectable screen text in a bounding box (documents, UI dialogues, images) with instant translation.",
-        "stage2_hotkeys": "Ctrl + Alt + A — Box OCR | Ctrl + C + C — Quick Clipboard Translate",
+        "stage2_title": "2. Optical Character Recognition & Screen Translation (OverTranslate)",
+        "stage2_flow": "Pipeline: 🖼 Screen Capture ➔ 🔍 RapidOcrNet ONNX ➔ 🌐 Microsoft MT ➔ 📝 Translation Overlay",
+        "stage2_desc": "Bounding-box screen OCR (PP-OCRv6 ONNX) and clipboard interceptor with in-place translation replacement.",
+        "stage2_hotkeys": "Ctrl + Alt + A — Bounding Box OCR | Ctrl + C + C — Clipboard Text Translation",
 
         # Module 3: Outgoing Voice Studio
-        "stage3_title": "3. Voice Translator (Voice Studio)",
-        "stage3_flow": "Pipeline: 🎙 Mic Input (RU)  ➔  ✂ VAD + Punctuation  ➔  🧠 GigaAM CTC  ➔  📝 Opus-MT  ➔  🗣 Pocket-TTS Clone  ➔  🔊 Output (EN)",
-        "stage3_desc": "Speak Russian into your mic — converts and synthesizes real-time English speech with your cloned timbre into the chosen virtual microphone output.",
-        "stage3_hotkeys": "Shift + Mouse Wheel Click — Push-To-Talk Voice Translation",
+        "stage3_title": "3. Synchronous Speech Translation & Timbre Cloning (Voice Studio)",
+        "stage3_flow": "Pipeline: 🎙 Mic Input (RU) ➔ ✂ VAD ➔ 🧠 GigaAM CTC ➔ 📝 Opus-MT ➔ 🗣 Pocket-TTS ➔ 🔊 Output Channel",
+        "stage3_desc": "Real-time Speech-to-Speech pipeline: Russian ASR (GigaAM), neural translation (Opus-MT), and voice cloning synthesis (Pocket-TTS) into virtual mic.",
+        "stage3_hotkeys": "Shift + Mouse Wheel — Push-To-Talk (PTT)",
 
         "btn_start": "▶ Launch",
         "btn_stop": "⏹ Stop",

@@ -42,3 +42,4 @@ set "TEST_RES=1"
 echo.
 if not "%1"=="--no-pause" pause
 exit /b %TEST_RES%
+

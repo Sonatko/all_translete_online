@@ -1,10 +1,18 @@
 """Patch, Version & Health Integrity Auditor for Translation Ecosystem.
-Audits all architectural engineering patches across Module 1, Module 2, and Module 3:
-1. Module 1: Sherpa-ONNX SenseVoice INT8 ASR, in-process Hunyuan MT 1.8B GGUF (no server),
-   Sherpa/Silero VAD chunking, in-process NLLB-200, Golden Window Controls (F9, 2x MMB, Drag, Alpha 1/255),
-   and Vocab Highlighter.
-2. Module 2: OverTranslate.patched.dll (offline Windows OCR, no telemetry) and QuickTranslate clipboard fix.
-3. Module 3: Clean in-process GigaAM + Opus-MT + Pocket-TTS pipeline and cloned voice profile.
+Audits the physical engineering modifications across all modules:
+1. Module 1 (LiveTranslate):
+   - asr_sherpa.py (Sherpa-ONNX SenseVoice INT8 ASR acceleration via AVX-512)
+   - hymt_engine.py (In-process Tencent Hunyuan MT 1.8B GGUF via llama-cpp, no server)
+   - vad_sherpa.py / vad_processor.py (Silero / Sherpa VAD speech chunking)
+   - nllb_engine.py (In-process CTranslate2 NLLB-200 without server.py on port 8080)
+   - subtitle_window.py + main.py (Golden Controls: F9 Master Toggle, 2x MMB, Drag, Alpha 1/255)
+   - vocab_highlighter.py (Vocabulary learning & bilingual subtitles)
+2. Module 2 (OverTranslate):
+   - OverTranslate.patched.dll (CIL patch in SelectionReplacer.TryPut: fixes Win11 clipboard crash 0x800401D0)
+   - appsettings.json (Bilingual Mutual Translation RU <-> EN)
+3. Module 3 (Voice Studio):
+   - Clean in-process Python pipeline (GigaAM CTC + Opus-MT + Pocket-TTS)
+   - Cloned voice profile (my_pocket_voice.safetensors)
 4. CONFIG Vault: Protected golden copies for 1-click self-healing against upstream overwrites.
 """
 from __future__ import annotations
@@ -57,12 +65,12 @@ class PatchIntegrityChecker:
 
     @classmethod
     def audit_all(cls) -> Dict[str, Any]:
-        """Perform full diagnostic audit grouped by Module 1, Module 2, Module 3, and CONFIG Vault."""
+        """Perform verified diagnostic audit grounded strictly in real files on disk."""
         modules_report: Dict[str, Dict[str, Any]] = {}
         all_items: List[Dict[str, Any]] = []
 
         # =============================================================
-        # MODULE 1: LiveTranslate (6 Engineering Patches + Runtime)
+        # MODULE 1: LiveTranslate (6 Verified Code Patches + Config)
         # =============================================================
         m1_items = []
 
@@ -81,7 +89,7 @@ class PatchIntegrityChecker:
             "category": "ONNX Runtime",
             "is_ok": sherpa_ok,
             "status_text": "Активен (170 мс, замена Whisper)" if sherpa_ok else "СЛЕТЕЛ (Требуется восстановление)",
-            "desc": "Ускорение распознавания в 5 раз на CPU (AVX-512) вместо тяжелого Whisper.",
+            "desc": "Ускорение распознавания речи в 5 раз на CPU (AVX-512) без тяжелого Whisper.",
         })
 
         # 2. In-Process Tencent Hunyuan MT 1.8B GGUF Patch (No Server)
@@ -99,7 +107,7 @@ class PatchIntegrityChecker:
             "category": "Локальная LLM",
             "is_ok": hymt_ok,
             "status_text": "Активен (80 мс, прямо в процессе)" if hymt_ok else "СЛЕТЕЛ (Требуется восстановление)",
-            "desc": "Вшитая модель перевода: прямое исполнение через llama-cpp без внешнего сервера Ollama/портов.",
+            "desc": "Вшитая языковая модель: прямое исполнение через llama-cpp без стороннего сервера Ollama и портов.",
         })
 
         # 3. Sherpa / Silero VAD Fast Phrase Chunking Patch
@@ -167,7 +175,7 @@ class PatchIntegrityChecker:
             "desc": "Подсветка ключевых слов и параллельный вывод оригинала и перевода для изучения языка.",
         })
 
-        # Runtime files check
+        # Runtime configuration check
         lt_runtime_ok = cls.MAIN_PY.is_file() and cls.SETTINGS_JSON.is_file()
         m1_items.append({
             "stage_id": "stage_1",
@@ -187,7 +195,7 @@ class PatchIntegrityChecker:
         all_items.extend(m1_items)
 
         # =============================================================
-        # MODULE 2: OverTranslate (2 Patches + Executable)
+        # MODULE 2: OverTranslate (1 Verified Binary CIL Patch + Config)
         # =============================================================
         m2_items = []
         ot_dll_ok = False
@@ -204,24 +212,23 @@ class PatchIntegrityChecker:
         m2_items.append({
             "stage_id": "stage_2",
             "stage_name": "Модуль 2: Экранный переводчик (OverTranslate)",
-            "name": "Патч 7: OverTranslate.patched.dll (Автономный офлайн)",
+            "name": "Патч 7: OverTranslate.patched.dll (CIL-патч буфера обмена)",
             "category": "Патч бинарника",
             "is_ok": ot_dll_ok,
-            "status_text": "Активен (Офлайн Windows OCR)" if ot_dll_ok else "СЛЕТЕЛ (Требуется восстановление)",
-            "desc": "Разблокирован локальный автономный OCR без обращения к китайским облакам.",
+            "status_text": "Активен (Фикс 0x800401D0)" if ot_dll_ok else "СЛЕТЕЛ (Требуется восстановление)",
+            "desc": "Устранен системный сбой буфера обмена в Windows 11 при быстром переводе выделенного текста (Ctrl+C+C).",
         })
 
-        # QuickTranslate Clipboard Crash Fix (Day 22 IL Patch)
         ot_cfg_file = cls.CONFIG_DIR / "stage_2_screen" / "appsettings.json"
         ot_cfg_ok = ot_cfg_file.is_file()
         m2_items.append({
             "stage_id": "stage_2",
             "stage_name": "Модуль 2: Экранный переводчик (OverTranslate)",
-            "name": "Патч 8: QuickTranslate CIL-патч буфера обмена",
-            "category": "Win32 OLE патч",
-            "is_ok": ot_dll_ok and ot_cfg_ok,
-            "status_text": "Активен (Фикс 0x800401D0)" if (ot_dll_ok and ot_cfg_ok) else "СЛЕТЕЛ",
-            "desc": "Устранен краш буфера обмена в Windows 11 при мгновенном переводе выделенного текста.",
+            "name": "Конфигурация OverTranslate (appsettings.json)",
+            "category": "Настройки",
+            "is_ok": ot_cfg_ok,
+            "status_text": "Готов (Двуязычный режим RU ⇄ EN)" if ot_cfg_ok else "Файл не найден",
+            "desc": "Настройки OCR (RapidOcrNet ONNX) и взаимного двуязычного перевода по выделению.",
         })
 
         ot_exe_ok = cls.OT_EXE.is_file()
@@ -232,7 +239,7 @@ class PatchIntegrityChecker:
             "category": "Файл программы",
             "is_ok": ot_exe_ok,
             "status_text": "Готов к запуску" if ot_exe_ok else "Файл не найден",
-            "desc": "Быстрое оптическое распознавание текста (OCR) по рамке на экране.",
+            "desc": "Оптическое распознавание текста (RapidOcrNet) по рамке на экране.",
         })
 
         modules_report["stage_2"] = {
@@ -250,11 +257,11 @@ class PatchIntegrityChecker:
         m3_items.append({
             "stage_id": "stage_3",
             "stage_name": "Модуль 3: Голосовой переводчик (Voice Studio)",
-            "name": "Компонент 9: Движок Voice Studio (GigaAM + Opus-MT + Pocket-TTS)",
+            "name": "Собственный движок: Sber GigaAM + Opus-MT + Pocket-TTS",
             "category": "100% Собственный код",
             "is_ok": studio_engine_ok,
             "status_text": "Готов (Сторонние патчи не требуются)" if studio_engine_ok else "ОТСУТСТВУЕТ",
-            "desc": "Автономный голосовой конвейер без облаков: распознавание Sber GigaAM + перевод + синтез речи.",
+            "desc": "Автономный голосовой конвейер без облаков: распознавание микрофона + перевод + синтез речи.",
         })
 
         voice_clone_ok = cls.VAULT_VOICE_FILE.is_file()
@@ -262,7 +269,7 @@ class PatchIntegrityChecker:
         m3_items.append({
             "stage_id": "stage_3",
             "stage_name": "Модуль 3: Голосовой переводчик (Voice Studio)",
-            "name": "Компонент 10: Образец вашего голоса (my_pocket_voice)",
+            "name": "Образец вашего голоса (my_pocket_voice.safetensors)",
             "category": "Ваш тембр",
             "is_ok": voice_clone_ok,
             "status_text": f"Сохранён в CONFIG/ ({voice_size_mb} МБ)" if voice_clone_ok else "Не записан (Используется стандартный)",
@@ -284,7 +291,7 @@ class PatchIntegrityChecker:
             {
                 "stage_id": "config",
                 "stage_name": "Защищенное хранилище CONFIG/",
-                "name": "Эталонные копии всех патчей и моделей (custom_modules)",
+                "name": "Эталонные копии всех патчей (custom_modules)",
                 "category": "Резервная копия",
                 "is_ok": vault_modules_ok,
                 "status_text": "Защищено (Все эталоны сохранены)" if vault_modules_ok else "Повреждено",
@@ -298,8 +305,8 @@ class PatchIntegrityChecker:
         }
         all_items.extend(vault_items)
 
-        # Key Engineering Patches List
-        key_patches = [
+        # Strictly the 7 Real Code/Binary Patches (6 in Stage 1 + 1 in Stage 2)
+        real_patches = [
             sherpa_ok,
             hymt_ok,
             vad_ok,
@@ -307,10 +314,9 @@ class PatchIntegrityChecker:
             controls_ok,
             vocab_ok,
             ot_dll_ok,
-            (ot_dll_ok and ot_cfg_ok),
         ]
-        active_patches_count = sum(1 for p in key_patches if p)
-        total_patches_count = len(key_patches)
+        active_patches_count = sum(1 for p in real_patches if p)
+        total_patches_count = len(real_patches)
         patches_ok = (active_patches_count == total_patches_count)
 
         total_items = len(all_items)

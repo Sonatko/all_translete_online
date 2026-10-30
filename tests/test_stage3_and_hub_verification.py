@@ -222,7 +222,7 @@ def test_patch_integrity_checker():
     assert isinstance(audit, dict), "Audit result is not a dictionary"
     assert audit["all_passed"] is True, f"Integrity check failed: {audit}"
     assert audit["patches_ok"] is True, "The engineering patches are not all active"
-    assert audit["total_patches_count"] >= 8, f"Expected at least 8 patches, got {audit['total_patches_count']}"
+    assert audit["total_patches_count"] == 7, f"Expected exactly 7 patches, got {audit['total_patches_count']}"
     assert audit["passed_count"] == audit["total_count"], f"Mismatch: {audit['passed_count']}/{audit['total_count']}"
     assert len(audit["items"]) >= 10, f"Insufficient audit items: {len(audit['items'])}"
     

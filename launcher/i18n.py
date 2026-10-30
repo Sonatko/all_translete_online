@@ -75,8 +75,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_audit_refresh_done": "✓ Проверено: Все патчи на месте!",
         "btn_restore_patches": "🛠 Восстановить все патчи (1 клик)",
         "m1_group_title": "📦 Модуль 1: Синхронные субтитры (LiveTranslate) — 6 инженерных патчей",
-        "m2_group_title": "📦 Модуль 2: Экранный переводчик (OverTranslate) — 2 офлайн-патча",
-        "m3_group_title": "📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Автономный движок",
+        "m2_group_title": "📦 Модуль 2: Экранный переводчик (OverTranslate) — 1 CIL-патч бинарника",
+        "m3_group_title": "📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Собственный движок",
         "vault_group_title": "🔒 Хранилище эталонов (CONFIG/) — Защита от обновлений авторов",
 
         "hotkeys_label": "Клавиши:",
@@ -152,7 +152,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_audit_refresh_done": "✓ Verified: All patches intact!",
         "btn_restore_patches": "🛠 Restore All Patches (1 Click)",
         "m1_group_title": "📦 Module 1: Synchronous Subtitles (LiveTranslate) — 6 Engineering Patches",
-        "m2_group_title": "📦 Module 2: Screen Translator (OverTranslate) — 2 Offline Patches",
+        "m2_group_title": "📦 Module 2: Screen Translator (OverTranslate) — 1 CIL Binary Patch",
         "m3_group_title": "📦 Module 3: Voice Translator (Voice Studio) — 100% In-Process Engine",
         "vault_group_title": "🔒 Vault Storage (CONFIG/) — Protection against upstream updates",
 
@@ -229,8 +229,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "btn_audit_refresh_done": "✓ 已验证: 全部补丁就绪！",
         "btn_restore_patches": "🛠 一键恢复全部补丁",
         "m1_group_title": "📦 模块 1: 同步字幕 (LiveTranslate) — 6 个核心补丁",
-        "m2_group_title": "📦 模块 2: 屏幕翻译 (OverTranslate) — 2 个离线补丁",
-        "m3_group_title": "📦 模块 3: 语音翻译 (Voice Studio) — 100% 本地引擎",
+        "m2_group_title": "📦 模块 2: 屏幕翻译 (OverTranslate) — 1 个 CIL 字节码补丁",
+        "m3_group_title": "📦 模块 3: 语音翻译 (Voice Studio) — 100% 自研本地引擎",
         "vault_group_title": "🔒 备份金库 (CONFIG/) — 防止作者更新覆盖",
 
         "hotkeys_label": "快捷键:",

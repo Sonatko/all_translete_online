@@ -92,25 +92,13 @@ class StageCard(QFrame):
         layout.setContentsMargins(14, 10, 14, 10)
         layout.setSpacing(6)
 
-        # 1. Header Row: Title + Hotkey Badge + Status Pill
+        # 1. Header Row: Title + Status Pill
         h_head = QHBoxLayout()
         self.lbl_title = QLabel(f"<b>{I18n.t(self.title_key)}</b>")
         self.lbl_title.setStyleSheet("font-size: 13px; color: #ffffff;")
         h_head.addWidget(self.lbl_title)
 
         h_head.addStretch()
-
-        self.lbl_hotkey_badge = QLabel(I18n.t(self.hotkeys_key))
-        self.lbl_hotkey_badge.setStyleSheet("""
-            background-color: #1e293b;
-            color: #93c5fd;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-family: Consolas, monospace;
-            border: 1px solid #3b82f6;
-        """)
-        h_head.addWidget(self.lbl_hotkey_badge)
 
         self.status_pill = QLabel(I18n.t("status_stopped_pill"))
         self.status_pill.setStyleSheet("""
@@ -214,7 +202,6 @@ class StageCard(QFrame):
 
     def retranslate(self):
         self.lbl_title.setText(f"<b>{I18n.t(self.title_key)}</b>")
-        self.lbl_hotkey_badge.setText(I18n.t(self.hotkeys_key))
         self.lbl_flow.setText(I18n.t(self.flow_key))
         self.lbl_desc.setText(I18n.t(self.desc_key))
         self.btn_start.setText(I18n.t("btn_start"))

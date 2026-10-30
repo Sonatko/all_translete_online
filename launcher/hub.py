@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -214,6 +215,8 @@ class PipelineNodeWidget(QFrame):
             }
         """)
         self.setMinimumWidth(110)
+        self.setMinimumHeight(56)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
@@ -297,6 +300,7 @@ class StageCard(QFrame):
         self._is_running = False
 
         self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.setStyleSheet("""
             StageCard {
                 background-color: #1a1b1e;
@@ -746,8 +750,8 @@ class EcosystemHub(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.resize(1140, 890)
-        self.setMinimumSize(980, 750)
+        self.resize(1140, 840)
+        self.setMinimumSize(960, 580)
 
         self._active_routing_mode = "topping"
         self._last_settings_mtimes: Dict[str, float] = {}
@@ -1019,7 +1023,33 @@ class EcosystemHub(QMainWindow):
     # Tab 1: Ecosystem Dashboard & Pipeline Flow Map (KISS)
     # =========================================================================
     def _create_dashboard_tab(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: #16171a;
+            }
+            QScrollBar:vertical {
+                background: #111827;
+                width: 10px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical {
+                background: #374151;
+                border-radius: 5px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #4b5563;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
         w = QWidget()
+        w.setStyleSheet("background-color: #16171a;")
         layout = QVBoxLayout(w)
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(10)
@@ -1115,7 +1145,8 @@ class EcosystemHub(QMainWindow):
 
         layout.addWidget(self.card_stage3)
         layout.addStretch()
-        return w
+        scroll.setWidget(w)
+        return scroll
 
     # =========================================================================
     # Tab 2: System Health, Patches Grouped by Module & CONFIG Vault
@@ -1689,6 +1720,10 @@ class EcosystemHub(QMainWindow):
                 border: 1px solid #2e3035;
                 background-color: #16171a;
                 border-radius: 6px;
+            }
+            QScrollArea {
+                border: none;
+                background-color: #16171a;
             }
             QTabBar::tab {
                 background-color: #1f2125;

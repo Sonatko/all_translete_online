@@ -12,6 +12,8 @@ from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+import psutil
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (

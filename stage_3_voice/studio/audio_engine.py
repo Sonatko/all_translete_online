@@ -30,6 +30,7 @@ class AudioEngine:
     def __init__(self, model_manager: ModelManager, config: Dict):
         self.mm = model_manager
         self.config = config
+        self.mm.tts_speed = float(self.config.get('models', {}).get('tts_speed', 0.92))
 
         # Audio streams
         self._in_stream: Optional[sd.InputStream] = None

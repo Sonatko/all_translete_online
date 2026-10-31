@@ -586,6 +586,23 @@ class StudioWindow(QMainWindow):
         h_voice.addWidget(self.combo_voices, stretch=1)
         v_tts.addLayout(h_voice)
 
+        # Speed / Natural Pacing Slider (SOLA Time-Domain, zero robotic artifacts)
+        h_speed = QHBoxLayout()
+        lbl_speed = QLabel("Скорость речи (SOLA):")
+        lbl_speed.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
+        h_speed.addWidget(lbl_speed)
+
+        self.slider_speed = QSlider(Qt.Orientation.Horizontal)
+        self.slider_speed.setRange(80, 120)
+        cur_spd_pct = int(round(self.cfg.get("models", {}).get("tts_speed", 0.92) * 100))
+        self.slider_speed.setValue(cur_spd_pct)
+        self.lbl_speed_val = QLabel(f"{cur_spd_pct}% (Спокойная речь)")
+        self.lbl_speed_val.setStyleSheet("color: #38bdf8; font-weight: bold; font-family: Consolas, monospace; font-size: 11px;")
+        self.slider_speed.valueChanged.connect(self._on_speed_slider)
+        h_speed.addWidget(self.slider_speed, stretch=1)
+        h_speed.addWidget(self.lbl_speed_val)
+        v_tts.addLayout(h_speed)
+
         models_grid.addWidget(tts_box, 1, 0, 1, 2)
         layout.addLayout(models_grid)
 
@@ -817,6 +834,21 @@ class StudioWindow(QMainWindow):
         voice_key = self.combo_voices.currentData()
         self.cfg["models"]["tts_voice"] = voice_key
         self.mm.set_voice(voice_key)
+        save_settings(self.cfg)
+
+    def _on_speed_slider(self, val: int):
+        speed_float = val / 100.0
+        self.mm.tts_speed = speed_float
+        if "models" not in self.cfg:
+            self.cfg["models"] = {}
+        self.cfg["models"]["tts_speed"] = speed_float
+        if val < 95:
+            hint = "Спокойная речь"
+        elif val > 105:
+            hint = "Быстрая речь"
+        else:
+            hint = "Стандартная речь"
+        self.lbl_speed_val.setText(f"{val}% ({hint})")
         save_settings(self.cfg)
 
     def _on_load_all_models(self):

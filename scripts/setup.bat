@@ -31,7 +31,7 @@ if not defined SYS_PY (
     set "SYS_PY=python"
 )
 
-echo [1/3] Python detected: !SYS_PY!
+echo [1/4] Python detected: !SYS_PY!
 
 :: 2. Create or Repair Virtual Environment
 set "ROOT_DIR=%~dp0.."
@@ -39,7 +39,7 @@ set "VENV_DIR=%ROOT_DIR%\stage_3_voice\.venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (
-    echo [2/3] Creating isolated virtual environment in stage_3_voice\.venv...
+    echo [2/4] Creating isolated virtual environment in stage_3_voice\.venv...
     !SYS_PY! -m venv "%VENV_DIR%"
     if %errorlevel% neq 0 (
         echo [ERROR] Failed to create virtual environment.
@@ -47,11 +47,11 @@ if not exist "%VENV_PY%" (
         exit /b 1
     )
 ) else (
-    echo [2/3] Virtual environment exists, verifying dependencies...
+    echo [2/4] Virtual environment exists, verifying dependencies...
 )
 
 :: 3. Install Requirements
-echo [3/3] Installing core libraries (PySide6, Sherpa-ONNX, CTranslate2, Pocket-TTS)...
+echo [3/4] Installing core libraries (PySide6, Sherpa-ONNX, CTranslate2, Pocket-TTS)...
 "%VENV_PY%" -m pip --version >nul 2>&1
 if !errorlevel! neq 0 (
     echo [*] Bootstrapping pip into virtual environment...
@@ -60,10 +60,19 @@ if !errorlevel! neq 0 (
 "%VENV_PY%" -m pip install --upgrade pip >nul 2>&1
 "%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\requirements.txt"
 
+:: 4. Orchestrate Ecosystem & Inject Patches
+echo.
+echo [4/4] Orchestrating stages and injecting authoritative patches...
+"%VENV_PY%" "%ROOT_DIR%\scripts\bootstrap_ecosystem.py"
+if %errorlevel% neq 0 (
+    echo [ERROR] Ecosystem bootstrap failed.
+    pause
+    exit /b 1
+)
+
 echo.
 echo ======================================================================
 echo  [SUCCESS] ECOSYSTEM CONFIGURED AND READY TO RUN ON THIS PC!
 echo ======================================================================
 echo.
 exit /b 0
-

@@ -7,6 +7,7 @@ set "VENV_PYW=%~dp0stage_3_voice\.venv\Scripts\pythonw.exe"
 set "HUB_SCRIPT=%~dp0launcher\hub.py"
 
 if not exist "%VENV_PY%" goto need_setup
+if not exist "%~dp0stage_2_screen\OverTranslate\current\OverTranslate.exe" goto need_setup
 "%VENV_PY%" -c "exit(0)" >nul 2>&1
 if not errorlevel 1 goto launch_hub
 
@@ -15,7 +16,7 @@ echo ======================================================================
 echo  FIRST-TIME SETUP / NEW PC DETECTED: AUTO-PREPARING ENVIRONMENT
 echo ======================================================================
 echo.
-echo Virtual environment missing or copied from another machine.
+echo Components missing or environment not initialized.
 echo Running automatic bootstrap setup (takes ~1 minute)...
 echo.
 call "%~dp0scripts\setup.bat"
@@ -26,13 +27,25 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:launch_hub
-if "%1"=="--debug" (
-    echo [INFO] Starting Translation Ecosystem Hub in console debug mode...
-    "%VENV_PY%" "%HUB_SCRIPT%"
-    if errorlevel 1 pause
-    exit /b %errorlevel%
-)
 
-start "" "%VENV_PYW%" "%HUB_SCRIPT%"
-exit /b 0
+
+
+
+
+
+on Ecosystem Hub in console debug mode...
+
+
+
+
+
+
+
+
+
+
+
+%"
+
+
+

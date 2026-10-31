@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import Dict, Optional
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QLinearGradient
+from PySide6.QtCore import Qt, QTimer, QEvent, QRectF
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QLinearGradient
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -20,12 +21,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenu,
     QProgressBar,
     QPushButton,
     QScrollArea,
     QSlider,
     QSpinBox,
     QSplitter,
+    QSystemTrayIcon,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -179,8 +182,15 @@ class StudioWindow(QMainWindow):
                     self.cfg.get("ui", {}).get("window_height", 640))
         self.setMinimumSize(820, 560)
 
+        self.tray_icon: Optional[QSystemTrayIcon] = None
+        self._tray_hint_shown = False
         self._apply_dark_style()
         self._init_ui()
+        self._init_system_tray()
+
+        app = QApplication.instance()
+        if app:
+            app.aboutToQuit.connect(self._cleanup_tray)
 
         # Cache last state to avoid redundant Qt stylesheet re-parsing at 30 FPS
         self._last_rendered_state = None
@@ -196,8 +206,138 @@ class StudioWindow(QMainWindow):
         self.ui_timer.timeout.connect(self._update_telemetry)
         self.ui_timer.start()
 
+    def _create_tray_icon_fallback(self) -> QIcon:
+        """Render a crisp, modern vector-sharp 64x64 tray icon for Stage 3."""
+        icon_path = Path("CONFIG/icons/stage3_tray_icon.png")
+        if icon_path.is_file():
+            return QIcon(str(icon_path))
+        pix = QPixmap(64, 64)
+        pix.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pix)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QBrush(QColor("#0f172a")))
+        painter.setPen(QPen(QColor("#7c3aed"), 4))
+        painter.drawRoundedRect(QRectF(4, 4, 56, 56), 14, 14)
+        painter.setPen(QColor("#c084fc"))
+        font = QFont("Segoe UI Emoji", 24)
+        painter.setFont(font)
+        painter.drawText(QRectF(0, 0, 64, 64), Qt.AlignmentFlag.AlignCenter, "🎙")
+        painter.end()
+        return QIcon(pix)
+
+    def _init_system_tray(self):
+        """Initialize system tray integration with instant restore and pause controls."""
+        icon = self._create_tray_icon_fallback()
+        self.setWindowIcon(icon)
+
+        self.tray_icon = QSystemTrayIcon(icon, self)
+        self.tray_icon.setToolTip("Stage 3: Voice Translation Studio (S2ST)")
+
+        tray_menu = QMenu()
+        tray_menu.setStyleSheet("""
+            QMenu {
+                background-color: #1e293b;
+                color: #f1f5f9;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 20px;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QMenu::item:selected {
+                background-color: #7c3aed;
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #334155;
+                margin: 4px 8px;
+            }
+        """)
+
+        self.action_tray_restore = QAction("🎙 Развернуть Voice Studio", self)
+        self.action_tray_restore.triggered.connect(self._restore_from_tray)
+        tray_menu.addAction(self.action_tray_restore)
+
+        tray_menu.addSeparator()
+
+        self.action_tray_toggle = QAction("⏸ Приостановить / Возобновить перевод", self)
+        self.action_tray_toggle.triggered.connect(self._on_toggle_master)
+        tray_menu.addAction(self.action_tray_toggle)
+
+        tray_menu.addSeparator()
+
+        self.action_tray_quit = QAction("❌ Закрыть Voice Studio", self)
+        self.action_tray_quit.triggered.connect(self._quit_application)
+        tray_menu.addAction(self.action_tray_quit)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self._on_tray_activated)
+        try:
+            self.tray_icon.show()
+        except Exception:
+            pass
+
+    def _on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason):
+        """Single or double click toggles window visibility."""
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
+            if self.isVisible() and not self.isMinimized() and self.isActiveWindow():
+                self._minimize_to_tray()
+            else:
+                self._restore_from_tray()
+
+    def _minimize_to_tray(self):
+        """Minimize window cleanly into system tray."""
+        self.hide()
+        if hasattr(self, "tray_icon") and self.tray_icon and self.tray_icon.isVisible():
+            if not getattr(self, "_tray_hint_shown", False):
+                self._tray_hint_shown = True
+                self.tray_icon.showMessage(
+                    "Voice Studio свёрнута",
+                    "Голосовой перевод активен в фоне. Кликните по иконке в трее, чтобы открыть.",
+                    QSystemTrayIcon.MessageIcon.Information,
+                    2000,
+                )
+
+    def _restore_from_tray(self):
+        """Restore window from tray to foreground."""
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def _quit_application(self):
+        """Exit the application cleanly and ensure zero ghost tray icons."""
+        self._cleanup_tray()
+        self.close()
+        app = QApplication.instance()
+        if app:
+            app.quit()
+
+    def _cleanup_tray(self):
+        """Guarantee tray icon unregistration from Windows Explorer."""
+        if hasattr(self, "tray_icon") and self.tray_icon:
+            try:
+                self.tray_icon.hide()
+                self.tray_icon.deleteLater()
+            except Exception:
+                pass
+            self.tray_icon = None
+
+    def changeEvent(self, event):
+        """Intercept window minimize to send window to tray instead of taskbar clutter."""
+        if event.type() == QEvent.Type.WindowStateChange:
+            if self.isMinimized():
+                event.ignore()
+                QTimer.singleShot(0, self._minimize_to_tray)
+                return
+        super().changeEvent(event)
+
     def closeEvent(self, event):
         """Clean shutdown when user closes window."""
+        self._cleanup_tray()
         self.ui_timer.stop()
         self.engine.stop()
         save_settings(self.cfg)
@@ -282,6 +422,25 @@ class StudioWindow(QMainWindow):
             }
         """)
         h.addWidget(self.total_badge)
+
+        # Minimize to Tray Button
+        self.btn_tray = QPushButton("📥 В трей")
+        self.btn_tray.setFixedHeight(42)
+        self.btn_tray.setStyleSheet("""
+            QPushButton {
+                background-color: #1f2937;
+                color: #c084fc;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 12px;
+                border: 1px solid #7c3aed;
+            }
+            QPushButton:hover { background-color: #111827; }
+        """)
+        self.btn_tray.clicked.connect(self._minimize_to_tray)
+        h.addWidget(self.btn_tray)
 
         return h
 

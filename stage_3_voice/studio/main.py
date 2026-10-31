@@ -84,6 +84,7 @@ def main():
     # 6. Run GUI Event Loop
     app = QApplication(sys.argv)
     app.setApplicationName("Voice Translation Studio")
+    app.setQuitOnLastWindowClosed(False)
 
     win = StudioWindow(engine, mm)
     win.show()

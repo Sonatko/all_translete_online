@@ -15,3 +15,4 @@ Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     Write-Host "Stopping process: $($_.Name) (PID $($_.ProcessId))"
     Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
 }
+

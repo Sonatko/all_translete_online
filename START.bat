@@ -27,25 +27,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:launch_hub
+if "%1"=="--debug" (
+    echo [INFO] Starting Translation Ecosystem Hub in console debug mode...
+    "%VENV_PY%" "%HUB_SCRIPT%"
+    if errorlevel 1 pause
+    exit /b %errorlevel%
+)
 
-
-
-
-
-
-on Ecosystem Hub in console debug mode...
-
-
-
-
-
-
-
-
-
-
-
-%"
-
-
-
+start "" "%VENV_PYW%" "%HUB_SCRIPT%"
+exit /b 0

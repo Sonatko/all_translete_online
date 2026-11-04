@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 
-from PySide6.QtCore import Qt, QTimer, QEvent, QRectF
+from PySide6.QtCore import Qt, QTimer, QEvent, QRectF, QThread, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QLinearGradient
 from PySide6.QtWidgets import (
     QApplication,
@@ -116,10 +116,6 @@ class ChainNode(QFrame):
         self.sub_lbl.setWordWrap(True)
         layout.addWidget(self.sub_lbl)
 
-    def update_info(self, title: str, subtitle: str):
-        self.title_lbl.setText(title)
-        self.sub_lbl.setText(subtitle)
-
         # Latency / Status Badge
         self.badge_lbl = QLabel("Готов (0 ms)")
         self.badge_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -134,6 +130,10 @@ class ChainNode(QFrame):
             border: 1px solid #2e3035;
         """)
         layout.addWidget(self.badge_lbl)
+
+    def update_info(self, title: str, subtitle: str):
+        self.title_lbl.setText(title)
+        self.sub_lbl.setText(subtitle)
 
     def set_telemetry(self, status_text: str, latency_ms: float = 0.0, is_active: bool = False):
         if is_active:
@@ -176,6 +176,31 @@ class ChainNode(QFrame):
                 border: 1px solid #2e3035;
             """)
             self.badge_lbl.setText(f"{status_text} ({latency_ms:.0f} ms)" if latency_ms > 0 else status_text)
+
+
+class ModelLoaderWorker(QThread):
+    """Background asynchronous loader for neural networks to keep GUI 100% fluid."""
+    sig_status = Signal(str, str)
+    sig_finished = Signal(bool)
+
+    def __init__(self, mm, parent=None):
+        super().__init__(parent)
+        self.mm = mm
+
+    def run(self):
+        pipe = getattr(self.mm, "pipeline", "ru_en")
+        pipe_label = "🇨🇳 Chinese" if pipe == "zh_en" else "🇷🇺 Russian"
+
+        self.sig_status.emit(f"⏳ [1/3] Загрузка STT ({pipe_label} распознавание)...", "#38bdf8")
+        ok_stt = self.mm.load_stt()
+
+        self.sig_status.emit(f"⏳ [2/3] Загрузка MT ({pipe_label} нейроперевод)...", "#38bdf8")
+        ok_mt = self.mm.load_mt()
+
+        self.sig_status.emit("⏳ [3/3] Загрузка TTS (Pocket-TTS нейросинтез)...", "#38bdf8")
+        ok_tts = self.mm.load_tts()
+
+        self.sig_finished.emit(ok_stt and ok_mt and ok_tts)
 
 
 class StudioWindow(QMainWindow):
@@ -389,6 +414,9 @@ class StudioWindow(QMainWindow):
         tabs.addTab(self._create_models_tab(), "🧠 Модели и Управление памятью")
         tabs.addTab(self._create_transcript_tab(), "📜 Живой журнал перевода")
         root_layout.addWidget(tabs, stretch=1)
+
+        # Synchronize UI with active pipeline (RU vs ZH) and audit disk models at boot
+        self._update_pipeline_ui()
 
     def _create_header(self) -> QHBoxLayout:
         h = QHBoxLayout()
@@ -835,6 +863,8 @@ class StudioWindow(QMainWindow):
         self.chk_china_mirror = QCheckBox("🇨🇳 国内镜像加速 (China Mirror: hf-mirror.com)")
         self.chk_china_mirror.setStyleSheet("color: #38bdf8; font-weight: bold;")
         self.chk_china_mirror.setToolTip("Включает загрузку через китайский узел hf-mirror.com для максимальной скорости внутри КНР")
+        if getattr(self.mm, "pipeline", "ru_en") == "zh_en":
+            self.chk_china_mirror.setChecked(True)
         h_dl_ctrl.addWidget(self.chk_china_mirror)
 
         h_dl_ctrl.addStretch()
@@ -1302,6 +1332,8 @@ class StudioWindow(QMainWindow):
         pipe = getattr(self.mm, "pipeline", "ru_en")
         self._update_pipeline_buttons_style()
         if pipe == "zh_en":
+            if hasattr(self, "chk_china_mirror"):
+                self.chk_china_mirror.setChecked(True)
             if hasattr(self, "node_stt"):
                 self.node_stt.update_info("STT (ASR / 识别)", "SenseVoice Chinese (INT8)")
             if hasattr(self, "node_mt"):
@@ -1421,15 +1453,32 @@ class StudioWindow(QMainWindow):
         self.btn_download_models.setText("📥 Повторить загрузку / 重试下载")
 
     def _on_reload_models(self):
-        """Attempt loading downloaded models into RAM."""
-        self.lbl_download_status.setText("⏳ Загрузка моделей в память процессора (RAM)...")
+        """Asynchronously load downloaded models into RAM without freezing the GUI."""
+        if hasattr(self, "_load_worker") and self._load_worker and self._load_worker.isRunning():
+            return
+        if hasattr(self, "btn_reload_models"):
+            self.btn_reload_models.setEnabled(False)
+        self.btn_download_models.setEnabled(False)
+        self.lbl_download_status.setText("⏳ Подготовка к загрузке нейросетей в память (RAM)...")
         self.lbl_download_status.setStyleSheet("color: #f59e0b; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
-        QApplication.processEvents()
-        ok = self.mm.load_all()
-        if ok:
+
+        self._load_worker = ModelLoaderWorker(self.mm, parent=self)
+        self._load_worker.sig_status.connect(self._on_model_load_status)
+        self._load_worker.sig_finished.connect(self._on_model_load_finished)
+        self._load_worker.start()
+
+    def _on_model_load_status(self, text: str, color: str):
+        self.lbl_download_status.setText(text)
+        self.lbl_download_status.setStyleSheet(f"color: {color}; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+
+    def _on_model_load_finished(self, success: bool):
+        if hasattr(self, "btn_reload_models"):
+            self.btn_reload_models.setEnabled(True)
+        self.btn_download_models.setEnabled(True)
+        if success:
             self.lbl_download_status.setText("🟢 Все модели успешно загружены в ОЗУ и готовы к инференсу!")
             self.lbl_download_status.setStyleSheet("color: #10b981; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
         else:
-            self.lbl_download_status.setText("⚠️ Некоторые модели не удалось загрузить. Проверьте файлы.")
+            self.lbl_download_status.setText("⚠️ Некоторые модели не удалось загрузить. Проверьте файлы на диске.")
             self.lbl_download_status.setStyleSheet("color: #ef4444; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
         self._refresh_models_tab()

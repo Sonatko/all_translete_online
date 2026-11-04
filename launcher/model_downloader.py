@@ -113,57 +113,125 @@ def download_single_file(
     expected_size: int = 0,
     progress_cb: Optional[Callable[[int, int, float], None]] = None,
     stop_check: Optional[Callable[[], bool]] = None,
+    max_retries_per_url: int = 3,
 ) -> bool:
-    """Download single file with chunked streaming, speed telemetry, and atomic move."""
+    """Download single file with chunked streaming, HTTP Range (206 Partial Content) resume,
+    speed telemetry, automatic retry on network drops, and atomic destination swap.
+    Retains partial .part downloads so subsequent retries resume rather than restart.
+    """
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = dest_path.with_suffix(dest_path.suffix + f".tmp_{os.getpid()}")
+    part_path = dest_path.with_suffix(dest_path.suffix + ".part")
 
     chunk_size = 64 * 1024  # 64 KB chunks
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    base_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    }
 
     for url in urls:
         if stop_check and stop_check():
             return False
-        try:
-            log.info("Downloading %s from %s ...", dest_path.name, url)
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                total_bytes = int(resp.headers.get("Content-Length", 0)) or expected_size
-                downloaded_bytes = 0
-                t_start = time.perf_counter()
-                last_update = t_start
 
-                with open(tmp_path, "wb") as f_out:
-                    while True:
-                        if stop_check and stop_check():
-                            tmp_path.unlink(missing_ok=True)
-                            return False
+        for attempt in range(1, max_retries_per_url + 1):
+            if stop_check and stop_check():
+                return False
 
-                        chunk = resp.read(chunk_size)
-                        if not chunk:
-                            break
-                        f_out.write(chunk)
-                        downloaded_bytes += len(chunk)
+            existing_bytes = part_path.stat().st_size if part_path.is_file() else 0
+            headers = dict(base_headers)
 
-                        now = time.perf_counter()
-                        if now - last_update >= 0.15:  # Update UI every 150ms
-                            duration = now - t_start
-                            speed_mbps = (downloaded_bytes / (1024.0 * 1024.0)) / max(duration, 0.001)
-                            if progress_cb:
-                                progress_cb(downloaded_bytes, total_bytes, speed_mbps)
-                            last_update = now
+            if existing_bytes > 0:
+                headers["Range"] = f"bytes={existing_bytes}-"
+                log.info("Resuming %s from byte %d (attempt %d/%d) via %s", dest_path.name, existing_bytes, attempt, max_retries_per_url, url)
+            else:
+                log.info("Downloading %s from byte 0 (attempt %d/%d) via %s", dest_path.name, attempt, max_retries_per_url, url)
 
-            if tmp_path.is_file() and (expected_size == 0 or tmp_path.stat().st_size > 1024):
-                # Atomic rename
-                if dest_path.exists():
-                    dest_path.unlink()
-                shutil.move(tmp_path, dest_path)
-                log.info("Successfully downloaded %s (%d bytes)", dest_path.name, dest_path.stat().st_size)
-                return True
-        except Exception as e:
-            log.warning("Download from %s failed: %s. Trying next mirror...", url, e)
-            if tmp_path.exists():
-                tmp_path.unlink(missing_ok=True)
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    status = getattr(resp, "status", 200)
+
+                    if status == 206:
+                        # Server honored Range request (Partial Content)
+                        mode = "ab"
+                        downloaded_bytes = existing_bytes
+                        cr = resp.headers.get("Content-Range", "")
+                        if "/" in cr:
+                            try:
+                                total_bytes = int(cr.split("/")[-1])
+                            except ValueError:
+                                total_bytes = existing_bytes + int(resp.headers.get("Content-Length", 0))
+                        else:
+                            total_bytes = existing_bytes + int(resp.headers.get("Content-Length", 0))
+                    else:
+                        # Full response (status 200) - starting from 0 or server ignored Range
+                        mode = "wb"
+                        downloaded_bytes = 0
+                        total_bytes = int(resp.headers.get("Content-Length", 0)) or expected_size
+
+                    # Immediate UI update showing resume starting point
+                    if progress_cb:
+                        progress_cb(downloaded_bytes, total_bytes, 0.0)
+
+                    t_start = time.perf_counter()
+                    last_update = t_start
+                    session_bytes_start = downloaded_bytes
+
+                    with open(part_path, mode) as f_out:
+                        while True:
+                            if stop_check and stop_check():
+                                return False
+
+                            chunk = resp.read(chunk_size)
+                            if not chunk:
+                                break
+                            f_out.write(chunk)
+                            downloaded_bytes += len(chunk)
+
+                            now = time.perf_counter()
+                            if now - last_update >= 0.15:
+                                duration = now - t_start
+                                session_bytes = downloaded_bytes - session_bytes_start
+                                speed_mbps = (session_bytes / (1024.0 * 1024.0)) / max(duration, 0.001)
+                                if progress_cb:
+                                    progress_cb(downloaded_bytes, total_bytes, speed_mbps)
+                                last_update = now
+
+                # Verify downloaded file
+                actual_size = part_path.stat().st_size if part_path.is_file() else 0
+                if (expected_size == 0 and actual_size > 1024) or (expected_size > 0 and actual_size >= min(expected_size * 0.8, 1024)):
+                    if dest_path.exists():
+                        dest_path.unlink()
+                    shutil.move(part_path, dest_path)
+                    log.info("Successfully completed download of %s (%d bytes)", dest_path.name, dest_path.stat().st_size)
+                    if progress_cb:
+                        progress_cb(dest_path.stat().st_size, dest_path.stat().st_size, 0.0)
+                    return True
+
+            except urllib.error.HTTPError as e:
+                if e.code == 416:
+                    # HTTP 416 Range Not Satisfiable: file might already be complete
+                    actual_size = part_path.stat().st_size if part_path.is_file() else 0
+                    if expected_size > 0 and actual_size >= min(expected_size * 0.8, 1024):
+                        if dest_path.exists():
+                            dest_path.unlink()
+                        shutil.move(part_path, dest_path)
+                        log.info("File %s is already complete (%d bytes), finalized", dest_path.name, actual_size)
+                        if progress_cb:
+                            progress_cb(dest_path.stat().st_size, dest_path.stat().st_size, 0.0)
+                        return True
+                    else:
+                        log.warning("HTTP 416 on %s (size %d): resetting .part file", url, actual_size)
+                        part_path.unlink(missing_ok=True)
+                else:
+                    log.warning("HTTP %d error from %s (attempt %d/%d): %s", e.code, url, attempt, max_retries_per_url, e.reason)
+            except Exception as e:
+                log.warning("Download error from %s (attempt %d/%d): %s", url, attempt, max_retries_per_url, e)
+
+            # Wait before in-mirror retry (2 seconds)
+            if attempt < max_retries_per_url:
+                for _ in range(20):
+                    if stop_check and stop_check():
+                        return False
+                    time.sleep(0.1)
 
     return False
 

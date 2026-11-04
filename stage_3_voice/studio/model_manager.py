@@ -227,29 +227,118 @@ class ModelManager:
     # =========================================================================
     # TTS: Kyutai Pocket-TTS (Mimi Codec + Flow Matching)
     # =========================================================================
+    @staticmethod
+    def _ensure_pocket_tts_config(models_dir: Path, config_dir: Path) -> Path:
+        """Ensure tokenizer.json and offline config.yaml exist for 100% offline Pocket-TTS."""
+        tts_dir = models_dir / "pocket_tts"
+        tts_dir.mkdir(parents=True, exist_ok=True)
+        local_tok = tts_dir / "tokenizer.json"
+        if not local_tok.is_file():
+            config_tok = config_dir / "tokenizer.json"
+            if config_tok.is_file():
+                import shutil
+                shutil.copy(config_tok, local_tok)
+                log.info("Provisioned tokenizer.json from CONFIG to %s", local_tok)
+
+        weights_file = tts_dir / "model.safetensors"
+        cfg_path = tts_dir / "config.yaml"
+        if not cfg_path.is_file() and weights_file.is_file() and local_tok.is_file():
+            w_posix = weights_file.resolve().as_posix()
+            t_posix = local_tok.resolve().as_posix()
+            yaml_content = f"""weights_path: {w_posix}
+default_temperature: 0.3
+
+replace_characters:
+  '’': "'"
+  '‘': "'"
+
+flow_lm:
+  insert_bos_before_voice: true
+  dtype: float32
+  flow:
+    depth: 6
+    dim: 512
+  transformer:
+    d_model: 1024
+    hidden_scale: 4
+    max_period: 10000
+    num_heads: 16
+    num_layers: 6
+  lookup_table:
+    dim: 1024
+    n_bins: 4000
+    tokenizer: tokenizers
+    tokenizer_path: {t_posix}
+
+mimi:
+  dtype: float32
+  sample_rate: 24000
+  inner_dim: 32
+  outer_dim: 512
+  channels: 1
+  frame_rate: 12.5
+  seanet:
+    dimension: 512
+    channels: 1
+    n_filters: 64
+    n_residual_layers: 1
+    ratios:
+    - 6
+    - 5
+    - 4
+    kernel_size: 7
+    residual_kernel_size: 3
+    last_kernel_size: 3
+    dilation_base: 2
+    pad_mode: constant
+    compress: 2
+  transformer:
+    d_model: 512
+    num_heads: 8
+    num_layers: 2
+    layer_scale: 0.01
+    context: 250
+    dim_feedforward: 2048
+    input_dimension: 512
+    output_dimensions:
+    - 512
+  quantizer:
+    dimension: 32
+    output_dimension: 512
+"""
+            cfg_path.write_text(yaml_content, encoding="utf-8")
+            log.info("Created offline Pocket-TTS config.yaml at %s", cfg_path)
+        return cfg_path
+
     def load_tts(self, voice_name: str = "my_pocket_voice") -> bool:
-        """Load Pocket-TTS model and prepare voice state."""
+        """Load Pocket-TTS model and prepare voice state with 100% offline support."""
         self._tts_status = "loading"
         self._tts_current_voice = voice_name
         try:
             import pocket_tts
-            from huggingface_hub import hf_hub_download
             import safetensors.torch
+            from huggingface_hub import hf_hub_download
 
             local_weights = MODELS_DIR / "pocket_tts" / "model.safetensors"
-            if local_weights.is_file():
-                log.info("Loading Pocket-TTS backbone weights from local SSD (%s)...", local_weights)
-                weights_file = str(local_weights)
+            cfg_path = self._ensure_pocket_tts_config(MODELS_DIR, CONFIG_DIR)
+
+            if cfg_path.is_file() and local_weights.is_file():
+                log.info("Loading Pocket-TTS 100% offline from local config: %s", cfg_path)
+                model = pocket_tts.TTSModel.load_model(config=cfg_path)
+                model.origin = pocket_tts.models.tts_model.CONFIGS_DIR / "english.yaml" 
             else:
-                log.info("Loading Pocket-TTS backbone weights from cache...")
+                log.info("Loading Pocket-TTS from HF cache...")
+                if os.environ.get("USE_CHINA_MIRROR") == "1" or "zh" in os.environ.get("LANG", "").lower():
+                    os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
                 weights_file = hf_hub_download(
                     "latent-variable/pocket-tts-cloning-en",
                     "languages/english/model.safetensors",
-                    local_files_only=True,
+                    local_files_only=False,
                 )
-            model = pocket_tts.TTSModel.load_model()
-            state = safetensors.torch.load_file(weights_file)
-            model.load_state_dict(state, strict=True)
+                model = pocket_tts.TTSModel.load_model()
+                state = safetensors.torch.load_file(weights_file)
+                model.load_state_dict(state, strict=True)
+
             model.has_voice_cloning = True
             self._tts_model = model
 
@@ -275,22 +364,27 @@ class ModelManager:
 
             self._tts_current_voice = voice_name
             if voice_name == "my_pocket_voice":
-                # Check permanent CONFIG or local models
                 clone_path = CONFIG_DIR / "my_pocket_voice.safetensors"
                 if not clone_path.is_file():
                     clone_path = MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"
-                if not clone_path.is_file():
-                    raise FileNotFoundError(f"Voice clone file not found at {clone_path}")
+                if clone_path.is_file():
+                    self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
+                        str(clone_path), self._tts_model.device
+                    )
+                    log.info("Voice state loaded from user clone: %s", clone_path)
+                    return True
+                else:
+                    log.warning("Voice clone file not found at %s, falling back to stock voice 'alba'", clone_path)
+                    voice_name = "alba"
 
-                self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
-                    str(clone_path), self._tts_model.device
-                )
-                log.info("Voice state loaded from user clone: %s", clone_path)
-            elif voice_name in ("alba", "marius", "juergen", "fantine", "paul", "charles", "george", "michael"):
-                self._tts_voice_state = self._tts_model.get_state_for_audio_prompt(voice_name)
-                log.info("Voice state loaded from stock voice: %s", voice_name)
-            else:
-                self._tts_voice_state = self._tts_model.get_state_for_audio_prompt("alba")
+            if voice_name in ("alba", "marius", "juergen", "fantine", "paul", "charles", "george", "michael"):
+                try:
+                    self._tts_voice_state = self._tts_model.get_state_for_audio_prompt(voice_name)
+                    log.info("Voice state loaded from stock voice: %s", voice_name)
+                    return True
+                except Exception as ve:
+                    log.warning("Stock voice '%s' unavailable offline: %s", voice_name, ve)
+                    return False
             return True
         except Exception as e:
             log.error("Failed to set voice '%s': %s", voice_name, e)

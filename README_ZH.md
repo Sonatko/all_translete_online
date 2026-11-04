@@ -56,3 +56,4 @@
   👉 **`CABLE Output (VB-Audio Virtual Cable)`**
 * **说话快捷键（Push-to-Talk）：**  
   按住 **`Shift + 鼠标中键（按下滚轮）`** 说话，说完松开，系统即刻在游戏频道中播报纯正英文！
+

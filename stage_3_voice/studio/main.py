@@ -46,8 +46,9 @@ def main():
     # 1. Load Settings
     cfg = load_settings()
 
-    # 2. Initialize Model Manager
-    mm = ModelManager()
+    # 2. Initialize Model Manager (Pipeline: ru_en or zh_en)
+    pipeline = cfg.get("models", {}).get("pipeline", "ru_en")
+    mm = ModelManager(pipeline=pipeline)
 
     # 3. Initialize Audio Engine
     engine = AudioEngine(mm, cfg)

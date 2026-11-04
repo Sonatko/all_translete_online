@@ -1,5 +1,7 @@
 # Universal Real-Time Translation & Subtitle Ecosystem (Windows)
 
+**[English / Русский (README.md)](README.md)** | **[简体中文指南 (README_ZH.md)](README_ZH.md)**
+
 A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC) integrating battle-tested open-source engines into a unified, zero-latency bilingual/trilingual translation ecosystem for games (CS2), live streams, Discord, and desktop applications.
 
 ---

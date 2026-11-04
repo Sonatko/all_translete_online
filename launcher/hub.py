@@ -658,7 +658,7 @@ class StageCard(QFrame):
                 self.lbl_mon_state.setText("🟢 <b>Статус службы:</b> Активна | Перевод речи в микрофонный канал готов")
             else:
                 self._retranslate_nodes()
-                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена | Акустический профиль my_pocket_voice.safetensors загружен")
+                self.lbl_mon_state.setText("⚪ <b>Статус службы:</b> Остановлена (Готова к запуску)")
             self.lbl_mon_alert.hide()
 
     def retranslate(self):

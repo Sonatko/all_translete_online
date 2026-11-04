@@ -23,13 +23,16 @@ CONFIG_DIR = PROJECT_ROOT / "CONFIG" / "stage_3_voice"
 class ModelManager:
     """Manages the lifecycle of STT, MT, and TTS models on CPU."""
 
-    def __init__(self):
-        # STT (GigaAM)
+    def __init__(self, pipeline: str = "ru_en"):
+        # Pipeline Selection: "ru_en" (Russian -> English) or "zh_en" (Chinese -> English)
+        self.pipeline: str = pipeline
+
+        # STT (GigaAM for RU, SenseVoice for ZH)
         self._stt_model = None
         self._stt_status: str = "unloaded"  # unloaded, loading, ready, error
         self._stt_error: str = ""
 
-        # MT (Opus-MT INT8)
+        # MT (Opus-MT INT8: RU->EN or ZH->EN)
         self._mt_translator = None
         self._mt_sp_src = None
         self._mt_sp_tgt = None
@@ -43,6 +46,23 @@ class ModelManager:
         self._tts_status: str = "unloaded"
         self._tts_error: str = ""
         self.tts_speed: float = 0.92  # Natural speech pacing (8% deceleration, zero robotic artifacts)
+
+    def set_pipeline(self, pipeline: str, auto_reload: bool = False) -> bool:
+        """Switch language pipeline between "ru_en" and "zh_en"."""
+        if pipeline not in ("ru_en", "zh_en"):
+            log.warning("Unknown pipeline '%s', defaulting to 'ru_en'", pipeline)
+            pipeline = "ru_en"
+        if self.pipeline == pipeline and self._stt_status == "ready" and self._mt_status == "ready":
+            return True
+        log.info("Switching pipeline from '%s' to '%s' (auto_reload=%s)...", self.pipeline, pipeline, auto_reload)
+        self.pipeline = pipeline
+        self.unload_stt()
+        self.unload_mt()
+        if auto_reload:
+            ok_stt = self.load_stt()
+            ok_mt = self.load_mt()
+            return ok_stt and ok_mt
+        return True
 
     # =========================================================================
     # RAM Telemetry
@@ -64,8 +84,9 @@ class ModelManager:
             return cls._cached_ram_mb
 
     def get_status_summary(self) -> Dict[str, Any]:
-        """Return live status and memory footprint."""
+        """Return live status, active pipeline, and memory footprint."""
         return {
+            "pipeline": self.pipeline,
             "stt": self._stt_status,
             "mt": self._mt_status,
             "tts": self._tts_status,
@@ -77,32 +98,45 @@ class ModelManager:
     # STT: Sber GigaAM v3 CTC (Sherpa-ONNX INT8)
     # =========================================================================
     def load_stt(self, cpu_threads: int = 2) -> bool:
-        """Load Sber GigaAM CTC model into RAM."""
+        """Load STT model into RAM according to active pipeline (GigaAM or SenseVoice)."""
         self._stt_status = "loading"
         try:
             import sherpa_onnx
 
-            model_path = MODELS_DIR / "giga-am-v3" / "model.int8.onnx"
-            tokens_path = MODELS_DIR / "giga-am-v3" / "tokens.txt"
-
-            if not model_path.is_file() or not tokens_path.is_file():
-                raise FileNotFoundError(f"GigaAM files not found at {model_path}")
-
-            log.info("Loading GigaAM STT from %s (threads=%d)...", model_path, cpu_threads)
-            self._stt_model = sherpa_onnx.OfflineRecognizer.from_nemo_ctc(
-                model=str(model_path),
-                tokens=str(tokens_path),
-                num_threads=cpu_threads,
-                provider="cpu",
-            )
+            if self.pipeline == "zh_en":
+                model_path = MODELS_DIR / "sensevoice" / "model.int8.onnx"
+                tokens_path = MODELS_DIR / "sensevoice" / "tokens.txt"
+                if not model_path.is_file() or not tokens_path.is_file():
+                    raise FileNotFoundError(f"SenseVoice Chinese ASR not found at {model_path}")
+                log.info("Loading SenseVoice Chinese STT from %s (threads=%d)...", model_path, cpu_threads)
+                self._stt_model = sherpa_onnx.OfflineRecognizer.from_sense_voice(
+                    model=str(model_path),
+                    tokens=str(tokens_path),
+                    language="zh",
+                    use_itn=True,
+                    num_threads=cpu_threads,
+                    provider="cpu",
+                )
+            else:
+                model_path = MODELS_DIR / "giga-am-v3" / "model.int8.onnx"
+                tokens_path = MODELS_DIR / "giga-am-v3" / "tokens.txt"
+                if not model_path.is_file() or not tokens_path.is_file():
+                    raise FileNotFoundError(f"GigaAM Russian STT not found at {model_path}")
+                log.info("Loading GigaAM Russian STT from %s (threads=%d)...", model_path, cpu_threads)
+                self._stt_model = sherpa_onnx.OfflineRecognizer.from_nemo_ctc(
+                    model=str(model_path),
+                    tokens=str(tokens_path),
+                    num_threads=cpu_threads,
+                    provider="cpu",
+                )
             self._stt_status = "ready"
             self._stt_error = ""
-            log.info("GigaAM STT loaded successfully.")
+            log.info("STT (%s) loaded successfully.", self.pipeline)
             return True
         except Exception as e:
             self._stt_status = "error"
             self._stt_error = str(e)
-            log.error("Failed to load GigaAM STT: %s", e)
+            log.error("Failed to load STT (%s): %s", self.pipeline, e)
             return False
 
     def unload_stt(self) -> None:
@@ -129,17 +163,21 @@ class ModelManager:
     # MT: Helsinki Opus-MT RU->EN (CTranslate2 INT8)
     # =========================================================================
     def load_mt(self, cpu_threads: int = 2) -> bool:
-        """Load Opus-MT INT8 translation model."""
+        """Load Opus-MT INT8 translation model (RU->EN or ZH->EN)."""
         self._mt_status = "loading"
         try:
             import ctranslate2
             import sentencepiece as spm
 
-            model_dir = MODELS_DIR / "opus-mt-ru-en-ct2"
-            if not (model_dir / "model.bin").is_file():
-                raise FileNotFoundError(f"Opus-MT not found at {model_dir}")
+            if self.pipeline == "zh_en":
+                model_dir = MODELS_DIR / "opus-mt-zh-en-ct2"
+            else:
+                model_dir = MODELS_DIR / "opus-mt-ru-en-ct2"
 
-            log.info("Loading Opus-MT from %s...", model_dir)
+            if not (model_dir / "model.bin").is_file():
+                raise FileNotFoundError(f"Opus-MT ({self.pipeline}) not found at {model_dir}")
+
+            log.info("Loading Opus-MT (%s) from %s...", self.pipeline, model_dir)
             self._mt_translator = ctranslate2.Translator(
                 str(model_dir),
                 device="cpu",
@@ -151,12 +189,12 @@ class ModelManager:
             self._mt_sp_tgt = spm.SentencePieceProcessor(str(model_dir / "target.spm"))
             self._mt_status = "ready"
             self._mt_error = ""
-            log.info("Opus-MT loaded successfully.")
+            log.info("Opus-MT (%s) loaded successfully.", self.pipeline)
             return True
         except Exception as e:
             self._mt_status = "error"
             self._mt_error = str(e)
-            log.error("Failed to load Opus-MT: %s", e)
+            log.error("Failed to load Opus-MT (%s): %s", self.pipeline, e)
             return False
 
     def unload_mt(self) -> None:

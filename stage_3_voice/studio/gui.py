@@ -39,6 +39,12 @@ from PySide6.QtWidgets import (
 
 from .audio_engine import AudioEngine
 from .config import load_settings, save_settings
+import sys
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from launcher.model_downloader import ModelDownloadWorker, check_spec_status, get_pipeline_specs
 from .model_manager import ModelManager
 from .routing_presets import RoutingPresets
 
@@ -109,6 +115,10 @@ class ChainNode(QFrame):
         self.sub_lbl.setStyleSheet("color: #9ca3af; font-size: 11px;")
         self.sub_lbl.setWordWrap(True)
         layout.addWidget(self.sub_lbl)
+
+    def update_info(self, title: str, subtitle: str):
+        self.title_lbl.setText(title)
+        self.sub_lbl.setText(subtitle)
 
         # Latency / Status Badge
         self.badge_lbl = QLabel("Готов (0 ms)")
@@ -447,8 +457,34 @@ class StudioWindow(QMainWindow):
     def _create_signal_chain_monitor(self) -> QGroupBox:
         grp = QGroupBox("Интерактивная цепочка звука (Audio Signal Chain & Real-Time Monitors)")
         grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
-        layout = QHBoxLayout(grp)
-        layout.setContentsMargins(8, 6, 8, 6)
+        main_v = QVBoxLayout(grp)
+        main_v.setContentsMargins(8, 6, 8, 6)
+        main_v.setSpacing(6)
+
+        # Pipeline selector bar
+        h_pipe = QHBoxLayout()
+        h_pipe.setContentsMargins(0, 0, 0, 4)
+        lbl_pipe = QLabel("Языковой конвейер (Language Pipeline):")
+        lbl_pipe.setStyleSheet("color: #94a3b8; font-weight: bold; font-size: 11px;")
+        h_pipe.addWidget(lbl_pipe)
+
+        self.btn_pipe_ru = QPushButton("🇷🇺 Русский профиль (RU➔EN: GigaAM + Opus-MT)")
+        self.btn_pipe_ru.setFixedHeight(26)
+        self.btn_pipe_ru.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_pipe_ru.clicked.connect(lambda: self._on_switch_pipeline("ru_en"))
+        h_pipe.addWidget(self.btn_pipe_ru)
+
+        self.btn_pipe_zh = QPushButton("🇨🇳 中文配置 / Китайский (ZH➔EN: SenseVoice + Opus-MT)")
+        self.btn_pipe_zh.setFixedHeight(26)
+        self.btn_pipe_zh.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_pipe_zh.clicked.connect(lambda: self._on_switch_pipeline("zh_en"))
+        h_pipe.addWidget(self.btn_pipe_zh)
+
+        h_pipe.addStretch()
+        main_v.addLayout(h_pipe)
+
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
         # Node 1: Input Mic
@@ -464,7 +500,7 @@ class StudioWindow(QMainWindow):
         arrow1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(arrow1)
 
-        # Node 2: STT (GigaAM)
+        # Node 2: STT (GigaAM or SenseVoice)
         self.node_stt = ChainNode("2", "STT (ASR)", "Sber GigaAM v3 CTC")
         layout.addWidget(self.node_stt, stretch=1)
 
@@ -473,7 +509,7 @@ class StudioWindow(QMainWindow):
         arrow2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(arrow2)
 
-        # Node 3: MT (Opus-MT)
+        # Node 3: MT (Opus-MT RU or ZH)
         self.node_mt = ChainNode("3", "MT (ПЕРЕВОД)", "Opus-MT RU➔EN")
         layout.addWidget(self.node_mt, stretch=1)
 
@@ -499,6 +535,8 @@ class StudioWindow(QMainWindow):
         v5.addWidget(self.meter_out)
         layout.addLayout(v5, stretch=1)
 
+        main_v.addLayout(layout)
+        self._update_pipeline_buttons_style()
         return grp
 
     # =========================================================================
@@ -678,42 +716,46 @@ class StudioWindow(QMainWindow):
         h_ram.addStretch()
         layout.addWidget(ram_grp)
 
-        # 3 Clean Informational Cards (No broken load/unload buttons)
+        # Informational Dynamic Cards
         models_grid = QGridLayout()
         models_grid.setContentsMargins(0, 0, 0, 0)
         models_grid.setSpacing(8)
 
         # Card 1: STT
-        stt_box = QGroupBox("🎙 1. Распознавание речи (STT / ASR)")
-        stt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        v_stt = QVBoxLayout(stt_box)
+        self.stt_box = QGroupBox("🎙 1. Распознавание речи (STT / ASR)")
+        self.stt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        v_stt = QVBoxLayout(self.stt_box)
         v_stt.setContentsMargins(8, 6, 8, 8)
         v_stt.setSpacing(3)
-        v_stt.addWidget(QLabel("<b>Sber GigaAM v3 Conformer CTC</b>"))
-        v_stt.addWidget(QLabel("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)"))
-        lbl_stt_mem = QLabel("Потребление: <b>~140 МБ ОЗУ</b> | Скорость: <b>~170 мс</b>")
-        lbl_stt_mem.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        v_stt.addWidget(lbl_stt_mem)
-        self.lbl_stt_state = QLabel("🟢 Активна в ОЗУ (Готова к инференсу)")
-        self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        self.lbl_stt_title = QLabel("<b>Sber GigaAM v3 Conformer CTC</b>")
+        v_stt.addWidget(self.lbl_stt_title)
+        self.lbl_stt_engine = QLabel("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)")
+        v_stt.addWidget(self.lbl_stt_engine)
+        self.lbl_stt_disk = QLabel("Размер на диске: 0 МБ")
+        self.lbl_stt_disk.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        v_stt.addWidget(self.lbl_stt_disk)
+        self.lbl_stt_state = QLabel("⚪ Не проверено")
+        self.lbl_stt_state.setStyleSheet("font-weight: bold; font-size: 11px;")
         v_stt.addWidget(self.lbl_stt_state)
-        models_grid.addWidget(stt_box, 0, 0)
+        models_grid.addWidget(self.stt_box, 0, 0)
 
         # Card 2: MT
-        mt_box = QGroupBox("🌐 2. Нейроперевод (MT)")
-        mt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        v_mt = QVBoxLayout(mt_box)
+        self.mt_box = QGroupBox("🌐 2. Нейроперевод (MT)")
+        self.mt_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        v_mt = QVBoxLayout(self.mt_box)
         v_mt.setContentsMargins(8, 6, 8, 8)
         v_mt.setSpacing(3)
-        v_mt.addWidget(QLabel("<b>Helsinki Opus-MT RU ➔ EN</b>"))
-        v_mt.addWidget(QLabel("Движок: CTranslate2 INT8 | 2T (Zen 4)"))
-        lbl_mt_mem = QLabel("Потребление: <b>~75 МБ ОЗУ</b> | Скорость: <b>~15 мс</b>")
-        lbl_mt_mem.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        v_mt.addWidget(lbl_mt_mem)
-        self.lbl_mt_state = QLabel("🟢 Активна в ОЗУ (Готова к переводу)")
-        self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        self.lbl_mt_title = QLabel("<b>Helsinki Opus-MT RU ➔ EN</b>")
+        v_mt.addWidget(self.lbl_mt_title)
+        self.lbl_mt_engine = QLabel("Движок: CTranslate2 INT8 | 2T (Zen 4)")
+        v_mt.addWidget(self.lbl_mt_engine)
+        self.lbl_mt_disk = QLabel("Размер на диске: 0 МБ")
+        self.lbl_mt_disk.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        v_mt.addWidget(self.lbl_mt_disk)
+        self.lbl_mt_state = QLabel("⚪ Не проверено")
+        self.lbl_mt_state.setStyleSheet("font-weight: bold; font-size: 11px;")
         v_mt.addWidget(self.lbl_mt_state)
-        models_grid.addWidget(mt_box, 0, 1)
+        models_grid.addWidget(self.mt_box, 0, 1)
 
         # Card 3: TTS & Voice Selector
         tts_box = QGroupBox("🗣 3. Синтез и клонирование голоса (TTS)")
@@ -721,12 +763,15 @@ class StudioWindow(QMainWindow):
         v_tts = QVBoxLayout(tts_box)
         v_tts.setContentsMargins(8, 6, 8, 8)
         v_tts.setSpacing(4)
-        
+
         h_tts_top = QHBoxLayout()
         h_tts_top.addWidget(QLabel("<b>Kyutai Pocket-TTS 24kHz (Mimi Codec)</b>"))
         h_tts_top.addStretch()
-        self.lbl_tts_state = QLabel("🟢 Активна в ОЗУ (~320 МБ)")
-        self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        self.lbl_tts_disk = QLabel("Диск: 0 МБ")
+        self.lbl_tts_disk.setStyleSheet("color: #94a3b8; font-size: 11px; margin-right: 8px;")
+        h_tts_top.addWidget(self.lbl_tts_disk)
+        self.lbl_tts_state = QLabel("⚪ Не проверено")
+        self.lbl_tts_state.setStyleSheet("font-weight: bold; font-size: 11px;")
         h_tts_top.addWidget(self.lbl_tts_state)
         v_tts.addLayout(h_tts_top)
 
@@ -745,7 +790,7 @@ class StudioWindow(QMainWindow):
         h_voice.addWidget(self.combo_voices, stretch=1)
         v_tts.addLayout(h_voice)
 
-        # Speed / Natural Pacing Slider (SOLA Time-Domain, zero robotic artifacts)
+        # Speed / Natural Pacing Slider
         h_speed = QHBoxLayout()
         lbl_speed = QLabel("Скорость речи (SOLA):")
         lbl_speed.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
@@ -765,6 +810,83 @@ class StudioWindow(QMainWindow):
         models_grid.addWidget(tts_box, 1, 0, 1, 2)
         layout.addLayout(models_grid)
 
+        # Dedicated Honest Downloader Card (Zero Fake UI)
+        grp_dl = QGroupBox("📥 Менеджер загрузки моделей / 模型下载器 (Zero-Fake Downloader)")
+        grp_dl.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        v_dl = QVBoxLayout(grp_dl)
+        v_dl.setContentsMargins(10, 8, 10, 10)
+        v_dl.setSpacing(8)
+
+        h_dl_ctrl = QHBoxLayout()
+        self.chk_china_mirror = QCheckBox("🇨🇳 国内镜像加速 (China Mirror: hf-mirror.com)")
+        self.chk_china_mirror.setStyleSheet("color: #38bdf8; font-weight: bold;")
+        self.chk_china_mirror.setToolTip("Включает загрузку через китайский узел hf-mirror.com для максимальной скорости внутри КНР")
+        h_dl_ctrl.addWidget(self.chk_china_mirror)
+
+        h_dl_ctrl.addStretch()
+
+        self.btn_download_models = QPushButton("📥 一键下载所需模型 / Скачать недостающие модели")
+        self.btn_download_models.setFixedHeight(32)
+        self.btn_download_models.setStyleSheet("""
+            QPushButton {
+                background-color: #2563eb;
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 16px;
+            }
+            QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton:disabled { background-color: #374151; color: #9ca3af; }
+        """)
+        self.btn_download_models.clicked.connect(self._on_start_download_models)
+        h_dl_ctrl.addWidget(self.btn_download_models)
+
+        self.btn_reload_models = QPushButton("⚡ Загрузить в память (Load in RAM)")
+        self.btn_reload_models.setFixedHeight(32)
+        self.btn_reload_models.setStyleSheet("""
+            QPushButton {
+                background-color: #059669;
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 14px;
+            }
+            QPushButton:hover { background-color: #047857; }
+        """)
+        self.btn_reload_models.clicked.connect(self._on_reload_models)
+        h_dl_ctrl.addWidget(self.btn_reload_models)
+
+        v_dl.addLayout(h_dl_ctrl)
+
+        # Progress bar & real telemetry
+        self.download_progress = QProgressBar()
+        self.download_progress.setRange(0, 100)
+        self.download_progress.setValue(0)
+        self.download_progress.setFixedHeight(18)
+        self.download_progress.setTextVisible(True)
+        self.download_progress.setStyleSheet("""
+            QProgressBar {
+                background-color: #1e293b;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                text-align: center;
+                color: #ffffff;
+                font-size: 11px;
+                font-family: Consolas, monospace;
+            }
+            QProgressBar::chunk {
+                background-color: #3b82f6;
+                border-radius: 3px;
+            }
+        """)
+        v_dl.addWidget(self.download_progress)
+
+        self.lbl_download_status = QLabel("Статус загрузки: Все файлы проверены на диске")
+        self.lbl_download_status.setStyleSheet("color: #94a3b8; font-size: 11px; font-family: Consolas, monospace;")
+        v_dl.addWidget(self.lbl_download_status)
+
+        layout.addWidget(grp_dl)
+        self._refresh_models_tab()
         return w
 
     # =========================================================================
@@ -1126,3 +1248,174 @@ class StudioWindow(QMainWindow):
             }
         """)
 
+
+
+    # =========================================================================
+    # Pipeline Switching & Model Downloader Handlers
+    # =========================================================================
+    def _update_pipeline_buttons_style(self):
+        """Update active/inactive highlighting on pipeline buttons."""
+        if not hasattr(self, "btn_pipe_ru") or not hasattr(self, "btn_pipe_zh"):
+            return
+        pipe = getattr(self.mm, "pipeline", "ru_en")
+        if pipe == "zh_en":
+            self.btn_pipe_zh.setStyleSheet(
+                "background-color: #059669; color: #ffffff; font-weight: bold; border-radius: 4px; padding: 2px 10px;"
+            )
+            self.btn_pipe_ru.setStyleSheet(
+                "background-color: #1f2937; color: #9ca3af; font-weight: normal; border: 1px solid #374151; border-radius: 4px; padding: 2px 10px;"
+            )
+        else:
+            self.btn_pipe_ru.setStyleSheet(
+                "background-color: #059669; color: #ffffff; font-weight: bold; border-radius: 4px; padding: 2px 10px;"
+            )
+            self.btn_pipe_zh.setStyleSheet(
+                "background-color: #1f2937; color: #9ca3af; font-weight: normal; border: 1px solid #374151; border-radius: 4px; padding: 2px 10px;"
+            )
+
+    def _on_switch_pipeline(self, pipeline: str):
+        """Handle user clicking language pipeline button."""
+        if self.mm.pipeline == pipeline and self.mm._stt_status == "ready":
+            return
+        log.info("User requested pipeline switch to '%s'", pipeline)
+        self.mm.set_pipeline(pipeline, auto_reload=False)
+        self.cfg.setdefault("models", {})["pipeline"] = pipeline
+        save_settings(self.cfg)
+        self._update_pipeline_ui()
+
+    def _update_pipeline_ui(self):
+        """Update chain node titles and subtitles based on active pipeline."""
+        pipe = getattr(self.mm, "pipeline", "ru_en")
+        self._update_pipeline_buttons_style()
+        if pipe == "zh_en":
+            if hasattr(self, "node_stt"):
+                self.node_stt.update_info("STT (ASR / 识别)", "SenseVoice Chinese (INT8)")
+            if hasattr(self, "node_mt"):
+                self.node_mt.update_info("MT (翻译 / ZH➔EN)", "Opus-MT ZH➔EN (INT8)")
+        else:
+            if hasattr(self, "node_stt"):
+                self.node_stt.update_info("STT (ASR)", "Sber GigaAM v3 CTC")
+            if hasattr(self, "node_mt"):
+                self.node_mt.update_info("MT (ПЕРЕВОД)", "Opus-MT RU➔EN")
+        self._refresh_models_tab()
+
+    def _refresh_models_tab(self):
+        """Audit disk files and memory presence for active pipeline."""
+        if not hasattr(self, "lbl_stt_title"):
+            return
+        pipe = getattr(self.mm, "pipeline", "ru_en")
+        if pipe == "zh_en":
+            stt_key = "sensevoice_zh"
+            mt_key = "opus_mt_zh_en"
+            self.lbl_stt_title.setText("<b>SenseVoiceSmall Chinese ASR (INT8)</b>")
+            self.lbl_stt_engine.setText("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)")
+            self.lbl_mt_title.setText("<b>Helsinki Opus-MT ZH ➔ EN (INT8)</b>")
+            self.lbl_mt_engine.setText("Движок: CTranslate2 INT8 | 2T (Zen 4)")
+        else:
+            stt_key = "giga_am_ru"
+            mt_key = "opus_mt_ru_en"
+            self.lbl_stt_title.setText("<b>Sber GigaAM v3 Conformer CTC</b>")
+            self.lbl_stt_engine.setText("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)")
+            self.lbl_mt_title.setText("<b>Helsinki Opus-MT RU ➔ EN</b>")
+            self.lbl_mt_engine.setText("Движок: CTranslate2 INT8 | 2T (Zen 4)")
+
+        # Audit STT
+        stt_stat = check_spec_status(stt_key)
+        self.lbl_stt_disk.setText(f"Размер на диске: <b>{stt_stat['size_mb']} МБ</b>")
+        if self.mm._stt_status == "ready":
+            self.lbl_stt_state.setText("🟢 Активна в ОЗУ (Готова к работе)")
+            self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        elif stt_stat["is_ready"]:
+            self.lbl_stt_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_stt_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
+        else:
+            self.lbl_stt_state.setText("❌ Не скачано (Файлы отсутствуют)")
+            self.lbl_stt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
+
+        # Audit MT
+        mt_stat = check_spec_status(mt_key)
+        self.lbl_mt_disk.setText(f"Размер на диске: <b>{mt_stat['size_mb']} МБ</b>")
+        if self.mm._mt_status == "ready":
+            self.lbl_mt_state.setText("🟢 Активна в ОЗУ (Готова к работе)")
+            self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        elif mt_stat["is_ready"]:
+            self.lbl_mt_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_mt_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
+        else:
+            self.lbl_mt_state.setText("❌ Не скачано (Файлы отсутствуют)")
+            self.lbl_mt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
+
+        # Audit TTS
+        tts_stat = check_spec_status("pocket_tts_en")
+        self.lbl_tts_disk.setText(f"Диск: <b>{tts_stat['size_mb']} МБ</b>")
+        if self.mm._tts_status == "ready":
+            self.lbl_tts_state.setText("🟢 Активна в ОЗУ (~320 МБ)")
+            self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        elif tts_stat["is_ready"]:
+            self.lbl_tts_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_tts_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
+        else:
+            self.lbl_tts_state.setText("❌ Не скачано")
+            self.lbl_tts_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
+
+    def _on_start_download_models(self):
+        """Launch background async download worker with China mirror support."""
+        if hasattr(self, "_dl_worker") and self._dl_worker and self._dl_worker.isRunning():
+            return
+        self.btn_download_models.setEnabled(False)
+        self.btn_download_models.setText("⏳ Идет загрузка... (Downloading)")
+        self.download_progress.setValue(0)
+        self.lbl_download_status.setText("Подключение к серверам моделей...")
+        self.lbl_download_status.setStyleSheet("color: #38bdf8; font-size: 11px; font-family: Consolas, monospace;")
+
+        self._dl_worker = ModelDownloadWorker(
+            pipeline=self.mm.pipeline,
+            china_mirror=self.chk_china_mirror.isChecked(),
+            parent=self,
+        )
+        self._dl_worker.sig_progress.connect(self._on_dl_progress)
+        self._dl_worker.sig_file_completed.connect(self._on_dl_file_completed)
+        self._dl_worker.sig_all_completed.connect(self._on_dl_all_completed)
+        self._dl_worker.sig_error.connect(self._on_dl_error)
+        self._dl_worker.start()
+
+    def _on_dl_progress(self, filename: str, down: int, total: int, speed_mbps: float):
+        pct = int((down / max(total, 1)) * 100)
+        self.download_progress.setValue(pct)
+        down_mb = down / (1024.0 * 1024.0)
+        tot_mb = total / (1024.0 * 1024.0)
+        self.lbl_download_status.setText(
+            f"Загрузка: {filename} [{down_mb:.1f} MB / {tot_mb:.1f} MB] ({pct}%) | Скорость: {speed_mbps:.2f} MB/s"
+        )
+
+    def _on_dl_file_completed(self, filename: str):
+        log.info("File completed: %s", filename)
+        self._refresh_models_tab()
+
+    def _on_dl_all_completed(self):
+        self.download_progress.setValue(100)
+        self.lbl_download_status.setText("✅ Все модели успешно скачаны и верифицированы! Загружаем в ОЗУ...")
+        self.lbl_download_status.setStyleSheet("color: #10b981; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+        self.btn_download_models.setEnabled(True)
+        self.btn_download_models.setText("📥 一键下载所需模型 / Скачать недостающие модели")
+        self._on_reload_models()
+
+    def _on_dl_error(self, item: str, err: str):
+        self.lbl_download_status.setText(f"❌ Ошибка загрузки {item}: {err}")
+        self.lbl_download_status.setStyleSheet("color: #ef4444; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+        self.btn_download_models.setEnabled(True)
+        self.btn_download_models.setText("📥 Повторить загрузку / 重试下载")
+
+    def _on_reload_models(self):
+        """Attempt loading downloaded models into RAM."""
+        self.lbl_download_status.setText("⏳ Загрузка моделей в память процессора (RAM)...")
+        self.lbl_download_status.setStyleSheet("color: #f59e0b; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+        QApplication.processEvents()
+        ok = self.mm.load_all()
+        if ok:
+            self.lbl_download_status.setText("🟢 Все модели успешно загружены в ОЗУ и готовы к инференсу!")
+            self.lbl_download_status.setStyleSheet("color: #10b981; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+        else:
+            self.lbl_download_status.setText("⚠️ Некоторые модели не удалось загрузить. Проверьте файлы.")
+            self.lbl_download_status.setStyleSheet("color: #ef4444; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
+        self._refresh_models_tab()

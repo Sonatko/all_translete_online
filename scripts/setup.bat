@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 title Translation Ecosystem - Setup Wizard
@@ -50,7 +51,7 @@ if not exist "%VENV_PY%" (
     echo [2/4] Virtual environment exists, verifying dependencies...
 )
 
-:: 3. Install Requirements
+:: 3. Install Requirements (with high-speed mirror fallback)
 echo [3/4] Installing core libraries (PySide6, Sherpa-ONNX, CTranslate2, Pocket-TTS)...
 "%VENV_PY%" -m pip --version >nul 2>&1
 if !errorlevel! neq 0 (
@@ -58,7 +59,7 @@ if !errorlevel! neq 0 (
     "%VENV_PY%" -m ensurepip --upgrade >nul 2>&1
 )
 "%VENV_PY%" -m pip install --upgrade pip >nul 2>&1
-"%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\requirements.txt"
+"%VENV_PY%" -m pip install -r "%ROOT_DIR%\stage_3_voice\requirements.txt" -i https://pypi.tuna.tsinghua.edu.cn/simple --extra-index-url https://pypi.org/simple
 
 :: 4. Orchestrate Ecosystem & Inject Patches
 echo.

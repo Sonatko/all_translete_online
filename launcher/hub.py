@@ -1189,6 +1189,25 @@ class EcosystemHub(QMainWindow):
         self.combo_lang.addItem("🇷🇺 Русский", "ru")
         self.combo_lang.addItem("🇬🇧 English", "en")
         self.combo_lang.addItem("🇨🇳 中文", "zh")
+
+        # Auto-detect system locale on first launch (Chinese, Russian, or English)
+        import locale
+        try:
+            sys_loc = (locale.getdefaultlocale()[0] or "").lower()
+        except Exception:
+            sys_loc = ""
+        if "zh" in sys_loc or "cn" in sys_loc:
+            default_idx = 2  # Chinese
+        elif "ru" in sys_loc or "be" in sys_loc:
+            default_idx = 0  # Russian
+        else:
+            default_idx = 1  # English
+
+        self.combo_lang.blockSignals(True)
+        self.combo_lang.setCurrentIndex(default_idx)
+        I18n.set_language(self.combo_lang.currentData())
+        self.combo_lang.blockSignals(False)
+
         self.combo_lang.currentIndexChanged.connect(self._on_language_changed)
         h_lang.addWidget(self.combo_lang)
         h.addLayout(h_lang)

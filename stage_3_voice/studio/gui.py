@@ -194,6 +194,20 @@ class StudioWindow(QMainWindow):
 
         self.tray_icon: Optional[QSystemTrayIcon] = None
         self._tray_hint_shown = False
+
+        # Auto-select Chinese pipeline if system locale is Chinese or Chinese models are present on disk
+        configured_pipe = self.cfg.get("models", {}).get("pipeline")
+        if not configured_pipe:
+            import locale
+            try:
+                sys_loc = (locale.getdefaultlocale()[0] or "").lower()
+            except Exception:
+                sys_loc = ""
+            sv_path = Path("stage_3_voice/models/sensevoice/model.int8.onnx")
+            ga_path = Path("stage_3_voice/models/gigaam/model.int8.onnx")
+            if "zh" in sys_loc or "cn" in sys_loc or (sv_path.is_file() and not ga_path.is_file()):
+                self.mm.set_pipeline("zh_en", auto_reload=False)
+
         self._apply_dark_style()
         self._init_ui()
         self._init_system_tray()

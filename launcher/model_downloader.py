@@ -53,6 +53,9 @@ MODEL_SPECS: Dict[str, Dict] = {
             ("source.spm", 1_080_169),
             ("target.spm", 802_781),
             ("shared_vocabulary.json", 2_300_269),
+            ("vocab.json", 2_601_758),
+            ("config.json", 215),
+            ("generation_config.json", 293),
         ],
     },
 
@@ -79,6 +82,9 @@ MODEL_SPECS: Dict[str, Dict] = {
             ("source.spm", 804_677),
             ("target.spm", 806_530),
             ("shared_vocabulary.json", 1_303_998),
+            ("vocab.json", 1_617_902),
+            ("config.json", 215),
+            ("generation_config.json", 293),
         ],
     },
 

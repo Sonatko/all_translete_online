@@ -112,34 +112,42 @@ def setup_stage_1_livetranslate() -> bool:
     """Ensure LiveTranslate base files are present and all 14 custom modules injected."""
     log.info("--- [2/2] Verifying Stage 1 (LiveTranslate & 7 Patches) ---")
 
-    # If base files missing, download upstream repo
+    # If base files missing, unpack local offline base bundle from CONFIG vault
     core_file = LIVETRANSLATE_DIR / "audio_capture.py"
     if not core_file.is_file():
-        log.info("LiveTranslate upstream missing. Downloading base repository...")
-        zip_path = PROJECT_ROOT / "stage_1_audio" / "livetranslate_upstream.zip"
-        urls = [
-            "https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip",
-            "https://ghproxy.net/https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip",
-        ]
-        if download_with_fallback(urls, zip_path):
-            log.info("Extracting LiveTranslate upstream...")
+        local_base = CONFIG_DIR / "stage_1_audio" / "livetranslate_base.zip"
+        if local_base.is_file():
+            log.info("Provisioning LiveTranslate upstream 100% offline from CONFIG vault: %s", local_base)
             LIVETRANSLATE_DIR.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(zip_path, "r") as zf:
-                for member in zf.namelist():
-                    parts = member.split("/", 1)
-                    if len(parts) > 1 and parts[1]:
-                        target = LIVETRANSLATE_DIR / parts[1]
-                        if member.endswith("/"):
-                            target.mkdir(parents=True, exist_ok=True)
-                        else:
-                            target.parent.mkdir(parents=True, exist_ok=True)
-                            with zf.open(member) as src, open(target, "wb") as dst:
-                                shutil.copyfileobj(src, dst)
-            try:
-                zip_path.unlink()
-            except Exception:
-                pass
-            log.info("LiveTranslate upstream extracted successfully.")
+            with zipfile.ZipFile(local_base, "r") as zf:
+                zf.extractall(LIVETRANSLATE_DIR)
+            log.info("LiveTranslate upstream extracted from local vault successfully.")
+        else:
+            log.info("LiveTranslate upstream missing. Downloading base repository...")
+            zip_path = PROJECT_ROOT / "stage_1_audio" / "livetranslate_upstream.zip"
+            urls = [
+                "https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip",
+                "https://ghproxy.net/https://github.com/TheDeathDragon/LiveTranslate/archive/refs/heads/main.zip",
+            ]
+            if download_with_fallback(urls, zip_path):
+                log.info("Extracting LiveTranslate upstream...")
+                LIVETRANSLATE_DIR.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(zip_path, "r") as zf:
+                    for member in zf.namelist():
+                        parts = member.split("/", 1)
+                        if len(parts) > 1 and parts[1]:
+                            target = LIVETRANSLATE_DIR / parts[1]
+                            if member.endswith("/"):
+                                target.mkdir(parents=True, exist_ok=True)
+                            else:
+                                target.parent.mkdir(parents=True, exist_ok=True)
+                                with zf.open(member) as src, open(target, "wb") as dst:
+                                    shutil.copyfileobj(src, dst)
+                try:
+                    zip_path.unlink()
+                except Exception:
+                    pass
+                log.info("LiveTranslate upstream extracted successfully.")
 
     # Apply all authoritative custom modules from CONFIG/stage_1_audio/custom_modules
     apply_script = CONFIG_DIR / "stage_1_audio" / "apply_patches.py"

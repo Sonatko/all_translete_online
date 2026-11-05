@@ -38,20 +38,21 @@ MODEL_SPECS: Dict[str, Dict] = {
         "repo": "csukuangfj/sherpa-onnx-nemo-ctc-giga-am-russian-2024-10-24",
         "dest_dir": MODELS_DIR / "giga-am-v3",
         "files": [
-            ("model.int8.onnx", 224_721_476),
+            ("model.int8.onnx", 274_808_098),
             ("tokens.txt", 196),
         ],
     },
     "opus_mt_ru_en": {
-        "name": "Helsinki Opus-MT RU➔EN (CTranslate2 INT8)",
+        "name": "Helsinki Opus-MT RU->EN (CTranslate2 INT8)",
         "pipeline": "ru_en",
         "task": "MT (Перевод)",
         "repo": "gaudi/opus-mt-ru-en-ctranslate2",
         "dest_dir": MODELS_DIR / "opus-mt-ru-en-ct2",
         "files": [
-            ("model.bin", 152_000_000),
-            ("source.spm", 1_500_000),
-            ("target.spm", 1_500_000),
+            ("model.bin", 152_955_057),
+            ("source.spm", 1_080_169),
+            ("target.spm", 802_781),
+            ("shared_vocabulary.json", 2_300_269),
         ],
     },
 
@@ -63,20 +64,21 @@ MODEL_SPECS: Dict[str, Dict] = {
         "repo": "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17",
         "dest_dir": MODELS_DIR / "sensevoice",
         "files": [
-            ("model.int8.onnx", 232_000_000),
-            ("tokens.txt", 1_500_000),
+            ("model.int8.onnx", 239_233_841),
+            ("tokens.txt", 315_894),
         ],
     },
     "opus_mt_zh_en": {
-        "name": "Helsinki Opus-MT ZH➔EN (CTranslate2 INT8)",
+        "name": "Helsinki Opus-MT ZH->EN (CTranslate2 INT8)",
         "pipeline": "zh_en",
         "task": "MT (Перевод)",
         "repo": "gaudi/opus-mt-zh-en-ctranslate2",
         "dest_dir": MODELS_DIR / "opus-mt-zh-en-ct2",
         "files": [
-            ("model.bin", 152_000_000),
-            ("source.spm", 1_500_000),
-            ("target.spm", 1_500_000),
+            ("model.bin", 155_502_615),
+            ("source.spm", 804_677),
+            ("target.spm", 806_530),
+            ("shared_vocabulary.json", 1_303_998),
         ],
     },
 
@@ -88,7 +90,7 @@ MODEL_SPECS: Dict[str, Dict] = {
         "repo": "latent-variable/pocket-tts-cloning-en",
         "dest_dir": MODELS_DIR / "pocket_tts",
         "files": [
-            ("languages/english/model.safetensors", 295_000_000, "model.safetensors"),
+            ("languages/english/model.safetensors", 219_029_196, "model.safetensors"),
         ],
     },
 }
@@ -98,9 +100,8 @@ def build_download_urls(repo_id: str, remote_filename: str, china_mirror: bool =
     """Build list of primary and fallback mirror URLs."""
     urls = []
     if china_mirror:
-        # Prioritize Chinese mirror
+        # China-safe: Prioritize fast mirror, never fall back to blocked domains
         urls.append(f"https://hf-mirror.com/{repo_id}/resolve/main/{remote_filename}")
-        urls.append(f"https://huggingface.co/{repo_id}/resolve/main/{remote_filename}")
     else:
         urls.append(f"https://huggingface.co/{repo_id}/resolve/main/{remote_filename}")
         urls.append(f"https://hf-mirror.com/{repo_id}/resolve/main/{remote_filename}")
@@ -113,7 +114,7 @@ def download_single_file(
     expected_size: int = 0,
     progress_cb: Optional[Callable[[int, int, float], None]] = None,
     stop_check: Optional[Callable[[], bool]] = None,
-    max_retries_per_url: int = 3,
+    max_retries_per_url: int = 10,
 ) -> bool:
     """Download single file with chunked streaming, HTTP Range (206 Partial Content) resume,
     speed telemetry, automatic retry on network drops, and atomic destination swap.
@@ -146,7 +147,7 @@ def download_single_file(
 
             try:
                 req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, timeout=30) as resp:
+                with urllib.request.urlopen(req, timeout=45) as resp:
                     status = getattr(resp, "status", 200)
 
                     if status == 206:
@@ -197,7 +198,7 @@ def download_single_file(
 
                 # Verify downloaded file
                 actual_size = part_path.stat().st_size if part_path.is_file() else 0
-                if (expected_size == 0 and actual_size > 1024) or (expected_size > 0 and actual_size >= min(expected_size * 0.8, 1024)):
+                if (expected_size == 0 and actual_size > 1024) or (expected_size > 0 and actual_size >= min(expected_size * 0.7, 100)):
                     if dest_path.exists():
                         dest_path.unlink()
                     shutil.move(part_path, dest_path)
@@ -210,7 +211,7 @@ def download_single_file(
                 if e.code == 416:
                     # HTTP 416 Range Not Satisfiable: file might already be complete
                     actual_size = part_path.stat().st_size if part_path.is_file() else 0
-                    if expected_size > 0 and actual_size >= min(expected_size * 0.8, 1024):
+                    if expected_size > 0 and actual_size >= min(expected_size * 0.7, 100):
                         if dest_path.exists():
                             dest_path.unlink()
                         shutil.move(part_path, dest_path)
@@ -255,7 +256,7 @@ def check_spec_status(spec_key: str) -> Dict:
             exp_size = file_info[1]
 
         target_file = dest_dir / local_name
-        if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.8, 1024):
+        if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.7, 100):
             total_size += target_file.stat().st_size
         else:
             missing.append(local_name)
@@ -322,7 +323,7 @@ if HAS_PYSIDE:
                         local_name = file_info[0]
 
                     target_file = dest_dir / local_name
-                    if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.8, 1024):
+                    if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.7, 100):
                         # File already downloaded
                         self.sig_file_completed.emit(local_name)
                         continue

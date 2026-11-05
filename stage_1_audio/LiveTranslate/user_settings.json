@@ -77,7 +77,7 @@
     "auto_hide_timeout": 5,
     "auto_hide_animation": "none",
     "auto_hide_duration": 400,
-    "click_through": true,
+    "click_through": false,
     "lines": [
       {
         "align": "left",
@@ -117,8 +117,8 @@
         "type": "translation"
       }
     ],
-    "window_x": 762,
-    "window_y": 29
+    "window_x": 684,
+    "window_y": 28
   },
   "overlay_x": 160,
   "overlay_y": 389,

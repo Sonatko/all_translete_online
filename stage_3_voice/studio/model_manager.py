@@ -242,9 +242,21 @@ class ModelManager:
 
         weights_file = tts_dir / "model.safetensors"
         cfg_path = tts_dir / "config.yaml"
-        if not cfg_path.is_file() and weights_file.is_file() and local_tok.is_file():
-            w_posix = weights_file.resolve().as_posix()
-            t_posix = local_tok.resolve().as_posix()
+        w_posix = weights_file.resolve().as_posix()
+        t_posix = local_tok.resolve().as_posix()
+
+        needs_rewrite = True
+        if cfg_path.is_file():
+            try:
+                existing_text = cfg_path.read_text(encoding="utf-8")
+                if f"weights_path: {w_posix}" in existing_text and f"tokenizer_path: {t_posix}" in existing_text:
+                    needs_rewrite = False
+                else:
+                    log.info("Detected outdated or foreign absolute paths in Pocket-TTS config.yaml. Auto-regenerating for current PC...")
+            except Exception:
+                needs_rewrite = True
+
+        if needs_rewrite and weights_file.is_file() and local_tok.is_file():
             yaml_content = f"""weights_path: {w_posix}
 default_temperature: 0.3
 
@@ -322,22 +334,21 @@ mimi:
             local_weights = MODELS_DIR / "pocket_tts" / "model.safetensors"
             cfg_path = self._ensure_pocket_tts_config(MODELS_DIR, CONFIG_DIR)
 
-            if cfg_path.is_file() and local_weights.is_file():
+            if not local_weights.is_file():
+                log.warning("Pocket-TTS weights missing at %s - download required", local_weights)
+                self._tts_status = "not_downloaded"
+                self._tts_error = "Model weights not downloaded. Please click 'Скачать недостающие модели' first."
+                return False
+
+            if cfg_path.is_file():
                 log.info("Loading Pocket-TTS 100% offline from local config: %s", cfg_path)
                 model = pocket_tts.TTSModel.load_model(config=cfg_path)
-                model.origin = pocket_tts.models.tts_model.CONFIGS_DIR / "english.yaml" 
+                model.origin = pocket_tts.models.tts_model.CONFIGS_DIR / "english.yaml"
             else:
-                log.info("Loading Pocket-TTS from HF cache...")
-                if os.environ.get("USE_CHINA_MIRROR") == "1" or "zh" in os.environ.get("LANG", "").lower():
-                    os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
-                weights_file = hf_hub_download(
-                    "latent-variable/pocket-tts-cloning-en",
-                    "languages/english/model.safetensors",
-                    local_files_only=False,
-                )
-                model = pocket_tts.TTSModel.load_model()
-                state = safetensors.torch.load_file(weights_file)
-                model.load_state_dict(state, strict=True)
+                log.error("Pocket-TTS config generation failed at %s", cfg_path)
+                self._tts_status = "error"
+                self._tts_error = f"Config file not found: {cfg_path}"
+                return False
 
             model.has_voice_cloning = True
             self._tts_model = model

@@ -1,0 +1,54 @@
+name: Build Standalone Portable Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for the zip (e.g. v0.3.1)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-portable:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up PowerShell execution policy
+        shell: pwsh
+        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+      - name: Build Portable Release Package
+        shell: pwsh
+        run: |
+          $ver = "${{ github.event.inputs.version }}"
+          if (-not $ver -and "${{ github.ref_type }}" -eq "tag") { $ver = "${{ github.ref_name }}" }
+          if (-not $ver) { $ver = "v0.3.0-portable" }
+          ./scripts/build_full_portable_release.ps1 -Version $ver
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TranslationEcosystem-Portable-Artifact
+          path: release/*.zip
+
+      - name: Publish to GitHub Releases
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.zip
+          tag_name: ${{ github.ref_name || github.event.inputs.version || 'v0.3.0-portable' }}
+          name: Translation Ecosystem ${{ github.ref_name || github.event.inputs.version || 'Portable Standalone Release' }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+

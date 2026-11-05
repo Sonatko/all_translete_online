@@ -23,9 +23,10 @@ __pycache__/
 *.pth
 *.zip
 *.tar.gz
-# LiveTranslate working directory (managed by SETUP_ECOSYSTEM.bat and apply_patches.py)
+# LiveTranslate working directory (100% orchestrated out-of-tree via CONFIG/)
 stage_1_audio/LiveTranslate/
 stage_1_audio/nllb_server/models/
+release/
 stage_1_audio/nllb_server/backends/
 stage_3_voice/models/
 stage_3_voice/scratch/

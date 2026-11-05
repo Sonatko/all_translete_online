@@ -123,7 +123,7 @@ def download_single_file(
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     part_path = dest_path.with_suffix(dest_path.suffix + ".part")
 
-    chunk_size = 64 * 1024  # 64 KB chunks
+    chunk_size = 1024 * 1024  # 64 KB chunks
     base_headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
@@ -198,7 +198,7 @@ def download_single_file(
 
                 # Verify downloaded file
                 actual_size = part_path.stat().st_size if part_path.is_file() else 0
-                if (expected_size == 0 and actual_size > 1024) or (expected_size > 0 and actual_size >= min(expected_size * 0.7, 100)):
+                if (expected_size == 0 and actual_size > 1024) or (expected_size > 0 and actual_size >= max(50, int(expected_size * 0.95))):
                     if dest_path.exists():
                         dest_path.unlink()
                     shutil.move(part_path, dest_path)
@@ -211,7 +211,7 @@ def download_single_file(
                 if e.code == 416:
                     # HTTP 416 Range Not Satisfiable: file might already be complete
                     actual_size = part_path.stat().st_size if part_path.is_file() else 0
-                    if expected_size > 0 and actual_size >= min(expected_size * 0.7, 100):
+                    if expected_size > 0 and actual_size >= max(50, int(expected_size * 0.95)):
                         if dest_path.exists():
                             dest_path.unlink()
                         shutil.move(part_path, dest_path)
@@ -256,7 +256,7 @@ def check_spec_status(spec_key: str) -> Dict:
             exp_size = file_info[1]
 
         target_file = dest_dir / local_name
-        if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.7, 100):
+        if target_file.is_file() and target_file.stat().st_size >= max(50, int(exp_size * 0.95)):
             total_size += target_file.stat().st_size
         else:
             missing.append(local_name)
@@ -323,7 +323,7 @@ if HAS_PYSIDE:
                         local_name = file_info[0]
 
                     target_file = dest_dir / local_name
-                    if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.7, 100):
+                    if target_file.is_file() and target_file.stat().st_size >= max(50, int(exp_size * 0.95)):
                         # File already downloaded
                         self.sig_file_completed.emit(local_name)
                         continue

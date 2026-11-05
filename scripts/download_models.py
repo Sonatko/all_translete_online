@@ -84,7 +84,7 @@ def main():
                 local_name = file_info[0]
 
             target_file = dest_dir / local_name
-            if target_file.is_file() and target_file.stat().st_size >= min(exp_size * 0.7, 100):
+            if target_file.is_file() and target_file.stat().st_size >= max(50, int(exp_size * 0.95)):
                 log.info("  -> %s: [OK] Present (%s)", local_name, format_bytes(target_file.stat().st_size))
                 continue
 

@@ -1384,6 +1384,11 @@ class StudioWindow(QMainWindow):
         if self.mm._mt_status == "ready":
             self.lbl_mt_state.setText("🟢 Активна в ОЗУ (Готова к работе)")
             self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
+        elif getattr(self.mm, "_mt_status", "") == "error":
+            err = getattr(self.mm, "_mt_error", "") or "Ошибка загрузки"
+            self.lbl_mt_state.setText(f"❌ Ошибка ОЗУ: {err[:35]}...")
+            self.lbl_mt_state.setToolTip(err)
+            self.lbl_mt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
         elif mt_stat["is_ready"]:
             self.lbl_mt_state.setText("💾 На диске (ОК, не в ОЗУ)")
             self.lbl_mt_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
@@ -1479,6 +1484,15 @@ class StudioWindow(QMainWindow):
             self.lbl_download_status.setText("🟢 Все модели успешно загружены в ОЗУ и готовы к инференсу!")
             self.lbl_download_status.setStyleSheet("color: #10b981; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
         else:
-            self.lbl_download_status.setText("⚠️ Некоторые модели не удалось загрузить. Проверьте файлы на диске.")
+            errs = []
+            if getattr(self.mm, "_stt_status", "") == "error":
+                errs.append(f"STT: {self.mm._stt_error}")
+            if getattr(self.mm, "_mt_status", "") == "error":
+                errs.append(f"MT: {self.mm._mt_error}")
+            if getattr(self.mm, "_tts_status", "") == "error":
+                errs.append(f"TTS: {self.mm._tts_error}")
+            err_msg = " | ".join(errs) if errs else "Некоторые модели не удалось загрузить. Проверьте файлы на диске."
+            self.lbl_download_status.setText(f"⚠️ {err_msg[:80]}")
+            self.lbl_download_status.setToolTip(err_msg)
             self.lbl_download_status.setStyleSheet("color: #ef4444; font-size: 11px; font-weight: bold; font-family: Consolas, monospace;")
         self._refresh_models_tab()

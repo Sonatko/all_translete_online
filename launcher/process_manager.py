@@ -146,13 +146,38 @@ class EcosystemProcessManager:
 
     @classmethod
     def start_stage_1(cls) -> bool:
-        """Launch Stage 1 LiveTranslate."""
+        """Launch Stage 1 LiveTranslate with auto-recovery and startup log."""
         try:
             app_dir = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate"
+            # 1. Self-healing: if donor files missing, unpack local zip immediately
+            if not (app_dir / "audio_capture.py").is_file():
+                log.warning("LiveTranslate base files missing at %s. Auto-extracting from vault...", app_dir)
+                import zipfile
+                local_base = PROJECT_ROOT / "CONFIG" / "stage_1_audio" / "livetranslate_base.zip"
+                if local_base.is_file():
+                    app_dir.mkdir(parents=True, exist_ok=True)
+                    with zipfile.ZipFile(local_base, "r") as zf:
+                        zf.extractall(app_dir)
+                    log.info("LiveTranslate base files extracted successfully.")
+                apply_script = PROJECT_ROOT / "CONFIG" / "stage_1_audio" / "apply_patches.py"
+                if apply_script.is_file():
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("apply_patches", str(apply_script))
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        if hasattr(mod, "apply_stage1_orchestration"):
+                            mod.apply_stage1_orchestration()
+
             env = dict(os.environ)
             env["LIVETRANSLATE_SETTINGS_FILE"] = str(app_dir / "user_settings.json")
             py = str(PYTHONW_STAGE1) if PYTHONW_STAGE1.is_file() else str(PYTHONW_EXE)
-            subprocess.Popen([py, "main.py"], cwd=str(app_dir), env=env)
+
+            logs_dir = app_dir / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            log_file = open(logs_dir / "startup.log", "w", encoding="utf-8")
+            subprocess.Popen([py, "main.py"], cwd=str(app_dir), env=env, stdout=log_file, stderr=subprocess.STDOUT)
+            log.info("Stage 1 spawned successfully with interpreter: %s", py)
             return True
         except Exception as e:
             log.error("Failed to start Stage 1: %s", e)

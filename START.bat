@@ -9,12 +9,16 @@ set "HUB_SCRIPT=%~dp0launcher\hub.py"
 
 if not exist "%VENV_PY%" goto need_setup
 if not exist "%~dp0stage_2_screen\OverTranslate\current\OverTranslate.exe" goto need_setup
-"%VENV_PY%" -c "exit(0)" >nul 2>&1
-if not errorlevel 1 goto launch_hub
+if not exist "%~dp0stage_1_audio\LiveTranslate\audio_capture.py" goto need_setup
+
+"%VENV_PY%" -c "import PyQt6, pyaudiowpatch, ctranslate2, sherpa_onnx, pocket_tts" >nul 2>&1
+if errorlevel 1 goto need_setup
+
+goto launch_hub
 
 :need_setup
 echo ======================================================================
-echo  FIRST-TIME SETUP / NEW PC DETECTED: AUTO-PREPARING ENVIRONMENT
+echo  FIRST-TIME SETUP / REPAIR: AUTO-PREPARING ENVIRONMENT
 echo ======================================================================
 echo.
 echo Components missing or environment not initialized.

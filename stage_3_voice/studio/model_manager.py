@@ -4,6 +4,7 @@ Provides modular load, unload, status checks, and latency telemetry for STT, MT,
 from __future__ import annotations
 
 import gc
+import json
 import logging
 import os
 from pathlib import Path
@@ -176,6 +177,56 @@ class ModelManager:
 
             if not (model_dir / "model.bin").is_file():
                 raise FileNotFoundError(f"Opus-MT ({self.pipeline}) not found at {model_dir}")
+
+            # Auto-healing: Handle accidental config.json.txt created via Windows Explorer
+            txt_cfg = model_dir / "config.json.txt"
+            cfg_file = model_dir / "config.json"
+            if txt_cfg.is_file() and not cfg_file.is_file():
+                try:
+                    txt_cfg.rename(cfg_file)
+                except Exception:
+                    pass
+
+            # Auto-healing: if config.json missing, 0-byte, or invalid JSON, write authoritative config
+            need_rewrite_cfg = False
+            if not cfg_file.is_file() or cfg_file.stat().st_size < 10:
+                need_rewrite_cfg = True
+            else:
+                try:
+                    json.loads(cfg_file.read_text(encoding="utf-8"))
+                except Exception:
+                    need_rewrite_cfg = True
+
+            if need_rewrite_cfg:
+                log.info("Auto-healing config.json for %s...", model_dir.name)
+                default_cfg = {
+                    "add_source_bos": False,
+                    "add_source_eos": False,
+                    "bos_token": "<s>",
+                    "decoder_start_token": "</s>",
+                    "eos_token": "</s>",
+                    "layer_norm_epsilon": None,
+                    "unk_token": "<unk>",
+                    "model_type": "marian",
+                }
+                cfg_file.write_text(json.dumps(default_cfg, indent=2), encoding="utf-8")
+
+            # Auto-healing: generation_config.json
+            gen_cfg = model_dir / "generation_config.json"
+            if not gen_cfg.is_file() or gen_cfg.stat().st_size < 10:
+                default_gen = {
+                    "bad_words_ids": [[65000]],
+                    "bos_token_id": 0,
+                    "decoder_start_token_id": 65000,
+                    "eos_token_id": 0,
+                    "forced_eos_token_id": 0,
+                    "max_length": 512,
+                    "num_beams": 6,
+                    "pad_token_id": 65000,
+                    "renormalize_logits": True,
+                    "transformers_version": "4.32.0.dev0",
+                }
+                gen_cfg.write_text(json.dumps(default_gen, indent=2), encoding="utf-8")
 
             log.info("Loading Opus-MT (%s) from %s...", self.pipeline, model_dir)
             self._mt_translator = ctranslate2.Translator(

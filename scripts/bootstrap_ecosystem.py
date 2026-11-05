@@ -91,17 +91,59 @@ def setup_stage_2_overtranslate() -> bool:
         else:
             log.info("OverTranslate.patched.dll is already active and verified.")
 
-    # 2. Synchronize appsettings.json and lock SkippedUpdateVersion
+    # 2. Universal Localization & Settings Sync (Auto-adapts to Chinese / Russian / English OS)
     cfg_src = CONFIG_DIR / "stage_2_screen" / "appsettings.json"
     if cfg_src.is_file():
-        cfg_appdata = Path(os.path.expandvars(r"%APPDATA%\OverTranslate\appsettings.json"))
-        cfg_appdata.parent.mkdir(parents=True, exist_ok=True)
-        cfg_dest = OVERTRANSLATE_CURRENT / "appsettings.json"
+        import locale
+        try:
+            loc = (locale.getdefaultlocale()[0] or "").lower()
+        except Exception:
+            loc = ""
+        is_chinese = "zh" in loc or "cn" in loc
+        is_russian = "ru" in loc
 
         try:
-            shutil.copy2(cfg_src, cfg_dest)
-            shutil.copy2(cfg_src, cfg_appdata)
-            log.info("Synchronized authoritative appsettings.json (SkippedUpdateVersion locked to v2.10.0).")
+            data = json.loads(cfg_src.read_text(encoding="utf-8"))
+            if is_chinese:
+                data["TargetLanguage"] = "ZH-CN"
+                data["UiLanguage"] = "zh-CN"
+                if "QuickTranslate" in data:
+                    data["QuickTranslate"]["TargetLanguage"] = "ZH-CN"
+                    data["QuickTranslate"]["BilingualSecondLanguage"] = "ZH-CN"
+                if "QuickLookup" in data:
+                    data["QuickLookup"]["BilingualSecondLanguage"] = "ZH-CN"
+                if "Realtime" in data:
+                    data["Realtime"]["TargetLanguage"] = "ZH-CN"
+            elif is_russian:
+                data["TargetLanguage"] = "RU"
+                data["UiLanguage"] = "ru"
+                if "QuickTranslate" in data:
+                    data["QuickTranslate"]["TargetLanguage"] = "RU"
+                    data["QuickTranslate"]["BilingualSecondLanguage"] = "RU"
+                if "QuickLookup" in data:
+                    data["QuickLookup"]["BilingualSecondLanguage"] = "RU"
+                if "Realtime" in data:
+                    data["Realtime"]["TargetLanguage"] = "RU"
+            else:
+                data["TargetLanguage"] = "EN-US"
+                data["UiLanguage"] = "en"
+                if "QuickTranslate" in data:
+                    data["QuickTranslate"]["TargetLanguage"] = "EN-US"
+                    data["QuickTranslate"]["BilingualSecondLanguage"] = "EN-US"
+                if "QuickLookup" in data:
+                    data["QuickLookup"]["BilingualSecondLanguage"] = "EN-US"
+                if "Realtime" in data:
+                    data["Realtime"]["TargetLanguage"] = "EN-US"
+
+            cfg_appdata = Path(os.path.expandvars(r"%APPDATA%\OverTranslate\appsettings.json"))
+            cfg_appdata.parent.mkdir(parents=True, exist_ok=True)
+            cfg_dest = OVERTRANSLATE_CURRENT / "appsettings.json"
+
+            content_s2 = json.dumps(data, indent=2, ensure_ascii=False)
+            cfg_dest.parent.mkdir(parents=True, exist_ok=True)
+            cfg_dest.write_text(content_s2, encoding="utf-8")
+            cfg_appdata.write_text(content_s2, encoding="utf-8")
+            log.info("Synchronized universal appsettings.json (Target: %s, UI: %s).", data["TargetLanguage"], data["UiLanguage"])
         except Exception as e:
             log.warning("Could not synchronize appsettings.json: %s", e)
 
@@ -159,6 +201,27 @@ def setup_stage_1_livetranslate() -> bool:
             spec.loader.exec_module(mod)
             if hasattr(mod, "apply_stage1_orchestration"):
                 mod.apply_stage1_orchestration()
+
+    # Synchronize Stage 1 target language to OS locale (Chinese -> zh, Russian -> ru)
+    s1_cfg = LIVETRANSLATE_DIR / "user_settings.json"
+    if s1_cfg.is_file():
+        import locale
+        try:
+            loc = (locale.getdefaultlocale()[0] or "").lower()
+        except Exception:
+            loc = ""
+        is_cn = "zh" in loc or "cn" in loc
+        tgt_code = "zh" if is_cn else ("ru" if "ru" in loc else "en")
+        try:
+            s1_data = json.loads(s1_cfg.read_text(encoding="utf-8"))
+            s1_data["target_language"] = tgt_code
+            lines = s1_data.get("subtitle_mode", {}).get("lines", [])
+            if len(lines) > 1:
+                lines[1]["lang"] = tgt_code
+            s1_cfg.write_text(json.dumps(s1_data, indent=2, ensure_ascii=False), encoding="utf-8")
+            log.info("LiveTranslate target language adapted to '%s' (locale: %s)", tgt_code, loc)
+        except Exception as e:
+            log.warning("Could not adapt LiveTranslate user_settings.json: %s", e)
 
     return True
 

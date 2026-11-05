@@ -149,25 +149,12 @@ class EcosystemProcessManager:
         """Launch Stage 1 LiveTranslate with auto-recovery and startup log."""
         try:
             app_dir = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate"
-            # 1. Self-healing: if donor files missing, unpack local zip immediately
-            if not (app_dir / "audio_capture.py").is_file():
-                log.warning("LiveTranslate base files missing at %s. Auto-extracting from vault...", app_dir)
-                import zipfile
-                local_base = PROJECT_ROOT / "CONFIG" / "stage_1_audio" / "livetranslate_base.zip"
-                if local_base.is_file():
-                    app_dir.mkdir(parents=True, exist_ok=True)
-                    with zipfile.ZipFile(local_base, "r") as zf:
-                        zf.extractall(app_dir)
-                    log.info("LiveTranslate base files extracted successfully.")
-                apply_script = PROJECT_ROOT / "CONFIG" / "stage_1_audio" / "apply_patches.py"
-                if apply_script.is_file():
-                    import importlib.util
-                    spec = importlib.util.spec_from_file_location("apply_patches", str(apply_script))
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        if hasattr(mod, "apply_stage1_orchestration"):
-                            mod.apply_stage1_orchestration()
+            # 1. Self-healing & OS Locale Sync: unpack base donor files if needed and sync language
+            try:
+                from scripts.bootstrap_ecosystem import setup_stage_1_livetranslate
+                setup_stage_1_livetranslate()
+            except Exception as bse:
+                log.warning("Notice on Stage 1 bootstrap sync: %s", bse)
 
             env = dict(os.environ)
             env["LIVETRANSLATE_SETTINGS_FILE"] = str(app_dir / "user_settings.json")
@@ -185,12 +172,17 @@ class EcosystemProcessManager:
 
     @classmethod
     def start_stage_2(cls) -> bool:
-        """Launch Stage 2 OverTranslate."""
+        """Launch Stage 2 OverTranslate with universal locale adaptation."""
         try:
             exe = PROJECT_ROOT / "stage_2_screen" / "OverTranslate" / "current" / "OverTranslate.exe"
             if not exe.is_file():
                 log.error("OverTranslate executable not found at %s", exe)
                 return False
+            try:
+                from scripts.bootstrap_ecosystem import setup_stage_2_overtranslate
+                setup_stage_2_overtranslate()
+            except Exception as bse:
+                log.warning("Notice on Stage 2 bootstrap sync: %s", bse)
             subprocess.Popen([str(exe)], cwd=str(exe.parent))
             return True
         except Exception as e:

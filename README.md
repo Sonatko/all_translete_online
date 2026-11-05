@@ -1,12 +1,16 @@
 # Universal Real-Time Translation & Subtitle Ecosystem (Windows)
 
-**[English / Русский (README.md)](README.md)** | **[简体中文操作指南 (README_ZH.md)](README_ZH.md)**
+[![Release](https://img.shields.io/github/v/release/Sonatko/all_translete_online?color=blue&label=Latest%20Release)](https://github.com/Sonatko/all_translete_online/releases)
+[![License](https://img.shields.io/badge/License-MIT%20%2F%20Apache-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20x64-blue.svg)](https://microsoft.com)
 
-A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC) integrating battle-tested open-source engines into a unified, low-latency bilingual/trilingual translation ecosystem for games (CS2, Battlefield), live streams, Discord, and desktop applications.
+**[English & Русский (README.md)](README.md)** | **[简体中文操作指南 (README_ZH.md)](README_ZH.md)**
+
+A production-grade **Hub & Ecosystem Orchestrator** for Windows (PC) integrating battle-tested open-source engines into a unified, low-latency translation and speech ecosystem for games (CS2, Battlefield), live streams, Discord, and desktop applications.
 
 ---
 
-## 🌟 Ecosystem Architecture
+## 🌟 Ecosystem Architecture / Архитектура Экосистемы
 
 ```
 +-----------------------------------------------------------------------------------------+
@@ -21,7 +25,7 @@ A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC
 |              ▼                                                                          |
 |     Always-on-Top Dual Subtitle Overlay:                                                |
 |       Line 1: Original Spoken Audio (English / Chinese / Japanese)                      |
-|       Line 2: Instant Translation (Russian / English)                                   |
+|       Line 2: Instant Translation (Russian / Chinese / English - Auto OS Locale)        |
 |     Controls: F9 Master Toggle | Double-MMB Click-Through | MMB Drag                     |
 +-----------------------------------------------------------------------------------------+
 |  STAGE 2: IN-PLACE SCREEN OCR & VISUAL TRANSLATION (OverTranslate Portable)             |
@@ -29,6 +33,7 @@ A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC
 |              │                                                                          |
 |              ▼                                                                          |
 |     RapidOCR ONNX (PaddleOCR Engine) + Neural In-Place Inpainting Text Replacement      |
+|     Universal Locale: Auto-switches Target to RU, ZH-CN, or EN based on Windows locale   |
 |     Controls: Ctrl + Alt + A (Box OCR) | Ctrl + C + C (Instant Context Lookup)          |
 +-----------------------------------------------------------------------------------------+
 |  STAGE 3: REAL-TIME OUTGOING S2ST VOICE TRANSLATOR (Voice Studio - CS2 & Discord)       |
@@ -37,7 +42,7 @@ A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC
 |              ▼                                                                          |
 |     ASR: Sber GigaAM v3 CTC (RU) / SenseVoice-Small INT8 (ZH) (~170ms)                  |
 |     MT:  Helsinki Opus-MT INT8 (RU->EN / ZH->EN) (~15ms)                                |
-|     TTS: Kyutai Pocket-TTS 24kHz (~800ms) with Cloned Personal Voice Timbre             |
+|     TTS: Kyutai Pocket-TTS 24kHz (~600ms) with Cloned Personal Voice Timbre             |
 |              │                                                                          |
 |              ▼                                                                          |
 |     Routing: Sent to Topping Playback 3/4 (Loopback 1/2) or VB-Audio Virtual Cable      |
@@ -47,59 +52,67 @@ A lightweight, production-grade **Hub & Ecosystem Orchestrator** for Windows (PC
 
 ---
 
-## 📦 Deployment Options
+## 🇷🇺 Русская Инструкция / Russian Guide
 
-### Option A: 1-Click Portable Standalone Release (Zero-Dependency)
-*Recommended for clean PCs, gamers, and secondary laptops without developer tools.*
+### Быстрый старт (1 клик)
+1. Скачайте последний архив из **Releases**:  
+   👉 **`TranslationEcosystem-v0.3.5-Windows-x64.zip`**
+2. Распакуйте в любую папку на быстрый SSD (например, `D:\TranslationEcosystem`).
+3. Запустите **`START.bat`**:
+   - Автоматически проверяет и поднимает изолированное окружение.
+   - За 0.2 секунды открывает единую панель управления (**Universal Hub**).
+   - Все 3 этапа готовы к работе «из коробки» без ручных настроек.
 
-1. Go to the GitHub repository **Releases** page and download:
-   👉 **`TranslationEcosystem-v0.3.1-Windows-x64.zip`**
-2. Extract the archive into any folder on your SSD (e.g. `D:\TranslationEcosystem`).
-3. Double-click **`START.bat`**.
-   - Ships with an embedded `tools/uv.exe` runtime manager.
-   - Automatically bootstraps managed Python 3.12 without requiring system Python, Git, or administrative rights.
-   - Launches the Universal Graphical Hub in under 0.25 seconds.
-
-### Option B: Clone from Git (Developers)
+### Развёртывание из Git (для разработчиков)
 ```bash
-# 1. Clone repository
-git clone https://github.com/SONATO-DESIGN/all_translete_online.git
+# Клонирование репозитория
+git clone https://github.com/Sonatko/all_translete_online.git
 cd all_translete_online
 
-# 2. Run automated setup wizard (auto-configures Tsinghua / PyPI mirrors)
-scripts\setup.bat
+# Для пользователей в Китае (зеркало):
+# git clone https://ghproxy.net/https://github.com/Sonatko/all_translete_online.git
 
-# 3. Launch Universal Hub
+# Запуск единого скрипта (автоматически настроит зависимости и патчи)
 START.bat
 ```
 
+### Основные возможности
+1. **Этап 1: Субтитры системного звука (LiveTranslate)**
+   - Перехватывает речь из Discord, игр и браузера в реальном времени.
+   - Показывает прозрачный баннер поверх всех окон (игры не сворачиваются).
+   - `F9`: вкл/выкл субтитры и прослушивание.
+   - `Двойной клик колесиком мыши (2x MMB)`: включить/выключить кликабельность (Click-Through) сквозь субтитры.
+   - `Зажать колесико мыши (MMB Drag)`: перетащить субтитры в любое место экрана.
+2. **Этап 2: Экранный переводчик игр и картинок (OverTranslate)**
+   - `Ctrl + Alt + A`: выделить прямоугольную область на экране для моментального перевода текста на месте.
+   - `Ctrl + C + C`: двойное нажатие Ctrl+C на любом слове для грамматического разбора и подсказок.
+   - **Универсальность:** автоматически понимает язык системы (переводит на русский в РФ, на китайский в КНР).
+3. **Этап 3: Голосовой переводчик в игру и Discord (Voice Studio)**
+   - Зажмите `Shift + Колесико мыши` и говорите в микрофон на русском или китайском.
+   - При отпускании система клонированным вашим голосом озвучит фразу на английском языке прямо в голосовой чат CS2 / Discord.
+   - Студия клонирования голоса за 7 секунд встроена прямо в интерфейс!
+
 ---
 
-## 🚀 Quickstart & Daily Operations
+## 🇬🇧 English Guide
 
-### 1. Launch the Ecosystem
-- 👉 **`START.bat`**: **The Single 1-Click Entry Point**. Launches the **Universal Graphical Hub (PySide6)**:
-  - Supervised status cards with live RAM / CPU / PID metrics for Stages 1, 2, and 3.
-  - **7-Second Personal Voice Cloning Studio (Wizard)** with instant headphone preview.
-  - **100% Offline AI Models Storage Audit** (all models verified locally on SSD).
-  - Trilingual UI language switch (**Русский / English / 简体中文**).
-  - Interactive **Audio & Signal Flow Guide** explaining Topping DSP Loopback & VB-Cable routing.
+### 1-Click Quickstart
+1. Download the latest release from the **Releases** tab:  
+   👉 **`TranslationEcosystem-v0.3.5-Windows-x64.zip`**
+2. Extract the archive into any folder on an SSD (e.g., `D:\TranslationEcosystem`).
+3. Double-click **`START.bat`**.
+   - Auto-verifies the runtime environment and dependencies.
+   - Launches the **Universal Hub GUI** in ~0.25s.
+   - All three stages are fully wired and operational out of the box.
 
-### 2. Stop the Ecosystem
-- Double-click **`STOP.bat`**: Instantly (<0.25s) terminates all ecosystem processes, audio hooks, and frees sound card streams.
+### Clone from Git
+```bash
+git clone https://github.com/Sonatko/all_translete_online.git
+cd all_translete_online
 
----
-
-## 📥 Model Weights Download (High-Speed China & Global Mirrors)
-
-To maintain a lightweight Git repository, large neural network weights are downloaded on demand:
-
-- **For Mainland China (国内直连加速):**
-  - Run **`scripts\download_models_china.bat`**, or:
-  - In Stage 3 Studio (Tab 2), check `🇨🇳 国内镜像加速 (China Mirror: hf-mirror.com)` and click `一键下载所需模型`.
-  - All downloads utilize resilient chunked streaming, HTTP 206 Range resume, and automated exponential backoff.
-- **For Russia / Global:**
-  - Run **`scripts\download_models_russia.bat`**, or click download directly in Stage 3 Studio.
+# Launch
+START.bat
+```
 
 ---
 
@@ -145,12 +158,17 @@ To maintain a lightweight Git repository, large neural network weights are downl
 
 ---
 
-## 🛡 Out-of-Tree Configuration & Patch Vault (`CONFIG/`)
+## 📥 Model Weights Download (High-Speed China & Global Mirrors)
 
-All critical user profiles, cloned voice weights, and hardware parameters are isolated in **`CONFIG/`**:
-- `CONFIG/stage_1_audio/`: LiveTranslate custom UI presets and patches.
-- `CONFIG/stage_2_screen/`: OverTranslate templates.
-- `CONFIG/stage_3_voice/my_pocket_voice.safetensors`: Your permanent cloned voice conditioning.
-- `CONFIG/stage_3_voice/studio_settings.json`: Audio matrix routing and VAD thresholds.
+- **For Mainland China (国内直连高速镜像):**
+  - Run `scripts\download_models_china.bat`, or:
+  - In Stage 3 Studio (Tab 2), check `🇨🇳 国内镜像加速 (China Mirror: hf-mirror.com)` and click `一键下载所需模型`.
+- **For Russia & Global:**
+  - Run `scripts\download_models_russia.bat`, or click download directly in Stage 3 Studio.
 
-*Upstream updates from donor repositories can never overwrite or erase your personal configurations.*
+---
+
+## 🛑 Stopping the Ecosystem
+
+Double-click **`STOP.bat`**:  
+Instantly terminates all background workers, unhooks audio devices, and frees memory.

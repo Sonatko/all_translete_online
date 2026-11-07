@@ -57,9 +57,11 @@ def main():
         log.warning("Audio engine failed to start all streams (check device availability).")
 
     # 4. Initialize Hotkey Listener
+    ptt_key = cfg.get("ptt", {}).get("key", "shift+middle")
     hotkeys = HotkeyListener(
         on_ptt_change=engine.set_ptt_state,
         on_master_toggle=engine.toggle_master,
+        initial_key=ptt_key,
     )
     hotkeys.start()
 
@@ -87,7 +89,7 @@ def main():
     app.setApplicationName("Voice Translation Studio")
     app.setQuitOnLastWindowClosed(False)
 
-    win = StudioWindow(engine, mm)
+    win = StudioWindow(engine, mm, hotkeys=hotkeys)
     win.show()
 
     # Clean shutdown hook

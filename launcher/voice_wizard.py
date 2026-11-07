@@ -44,8 +44,9 @@ class VoiceCloningWizard(QDialog):
     sig_cloning_finished = Signal(str, float)  # wav_path, latency_s
     sig_error = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, target_voice_name: str = "my_pocket_voice"):
         super().__init__(parent)
+        self.target_voice_name = target_voice_name
         self.setWindowTitle("Студия обучения и клонирования голоса — Kyutai Pocket-TTS")
         self.resize(680, 560)
         self.setMinimumSize(640, 520)
@@ -347,11 +348,23 @@ class VoiceCloningWizard(QDialog):
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-            prof_config = CONFIG_DIR / "my_pocket_voice.safetensors"
-            prof_models = MODELS_DIR / "my_pocket_voice.safetensors"
+            v_name = getattr(self, "target_voice_name", "my_pocket_voice").strip() or "my_pocket_voice"
+            if not v_name.endswith(".safetensors"):
+                v_filename = f"{v_name}.safetensors"
+            else:
+                v_filename = v_name
 
+            # Ensure voices directories exist
+            (CONFIG_DIR / "voices").mkdir(parents=True, exist_ok=True)
+
+            prof_config = CONFIG_DIR / v_filename
+            prof_models = MODELS_DIR / v_filename
             pocket_tts.export_model_state(model_state, str(prof_config))
             shutil.copy2(prof_config, prof_models)
+
+            # Also if saving as a custom profile, place a copy in CONFIG/stage_3_voice/voices/
+            if v_filename != "my_pocket_voice.safetensors":
+                shutil.copy2(prof_config, CONFIG_DIR / "voices" / v_filename)
 
             # Generate sample phrase for headphone verification
             test_phrase = "Enemy spotted on B site! Fall back and hold the angles, I am covering you."

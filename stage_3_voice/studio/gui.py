@@ -12,6 +12,8 @@ from typing import Dict, Optional
 from PySide6.QtCore import Qt, QTimer, QEvent, QRectF, QThread, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QLinearGradient
 from PySide6.QtWidgets import (
+    QDialog,
+    QInputDialog,
     QApplication,
     QCheckBox,
     QComboBox,
@@ -203,19 +205,181 @@ class ModelLoaderWorker(QThread):
         self.sig_finished.emit(ok_stt and ok_mt and ok_tts)
 
 
+class KeyCaptureDialog(QDialog):
+    """Modal dialog to capture any keyboard key, mouse button, or combination."""
+
+    sig_captured = Signal(str)
+    sig_preview = Signal(str)
+
+    def __init__(self, parent=None, hotkeys=None, is_zh: bool = False):
+        super().__init__(parent)
+        self.hotkeys = hotkeys
+        self.is_zh = is_zh
+        self.setWindowTitle("设置对讲按键 PTT" if is_zh else "Назначение кнопки или комбинации PTT")
+        self.setFixedSize(450, 240)
+        self.setModal(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0f172a;
+                border: 2px solid #3b82f6;
+                border-radius: 8px;
+            }
+        """)
+
+        v = QVBoxLayout(self)
+        v.setContentsMargins(20, 20, 20, 20)
+        v.setSpacing(12)
+
+        title_text = "<b>请按下任意按键或组合快捷键</b>" if is_zh else "<b>Нажмите клавишу или комбинацию клавиш</b>"
+        self.lbl_title = QLabel(title_text)
+        self.lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_title.setStyleSheet("color: #f8fafc; font-size: 14px;")
+        v.addWidget(self.lbl_title)
+
+        if is_zh:
+            desc_text = (
+                "• <b>单键:</b> V, CapsLock, Space, Mouse4, Mouse5, 滚轮中键 (MMB)...\n"
+                "• <b>组合键:</b> 按住 Shift, Ctrl 或 Alt 并按下第二个按键\n"
+                "  <i>(例如: Shift + 滚轮中键, Ctrl + V, Alt + Mouse4)</i>\n"
+                "• <b>控制器:</b> 手柄 / VR / 踏板按键 (LB, RB, LT, RT...)\n\n"
+                "(按 Esc 键取消)"
+            )
+        else:
+            desc_text = (
+                "• <b>Одиночная кнопка:</b> V, CapsLock, Space, Mouse4, Mouse5, Колесико...\n"
+                "• <b>Комбинация:</b> Зажмите Shift, Ctrl или Alt и нажмите вторую кнопку\n"
+                "  <i>(например: Shift + Колесико, Ctrl + V, Alt + Mouse4)</i>\n"
+                "• <b>Контроллеры:</b> Кнопки геймпада / VR / педалей (LB, RB, LT, RT...)\n\n"
+                "(Нажмите Esc для отмены)"
+            )
+        lbl_desc = QLabel(desc_text)
+        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        v.addWidget(lbl_desc)
+
+        init_status = "等待输入按键..." if is_zh else "ОЖИДАНИЕ НАЖАТИЯ..."
+        self.lbl_status = QLabel(init_status)
+        self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_status.setStyleSheet("""
+            QLabel {
+                color: #38bdf8;
+                font-weight: bold;
+                font-size: 15px;
+                padding: 8px;
+                background-color: #1e293b;
+                border: 1px dashed #38bdf8;
+                border-radius: 6px;
+            }
+        """)
+        v.addWidget(self.lbl_status)
+
+        self.captured_key: Optional[str] = None
+        self.sig_captured.connect(self._finish)
+        self.sig_preview.connect(self._on_preview_modifier)
+
+        # Hook low-level global OS listener for instant detection anywhere on PC
+        if self.hotkeys:
+            self.hotkeys.start_capture(
+                callback=lambda k: self.sig_captured.emit(k),
+                preview_callback=lambda p: self.sig_preview.emit(p),
+            )
+
+    def _on_preview_modifier(self, mods: str):
+        if self.captured_key is not None:
+            return
+        if mods:
+            txt = f"已按下: {mods.upper()} + [请按第二个键]..." if getattr(self, "is_zh", False) else f"Зажато: {mods.upper()} + [нажмите кнопку]..."
+            self.lbl_status.setText(txt)
+            self.lbl_status.setStyleSheet("""
+                QLabel {
+                    color: #fbbf24;
+                    font-weight: bold;
+                    font-size: 15px;
+                    padding: 8px;
+                    background-color: #451a03;
+                    border: 1px dashed #fbbf24;
+                    border-radius: 6px;
+                }
+            """)
+        else:
+            txt = "等待输入按键..." if getattr(self, "is_zh", False) else "ОЖИДАНИЕ НАЖАТИЯ..."
+            self.lbl_status.setText(txt)
+            self.lbl_status.setStyleSheet("""
+                QLabel {
+                    color: #38bdf8;
+                    font-weight: bold;
+                    font-size: 15px;
+                    padding: 8px;
+                    background-color: #1e293b;
+                    border: 1px dashed #38bdf8;
+                    border-radius: 6px;
+                }
+            """)
+
+    def reject(self):
+        if self.hotkeys:
+            self.hotkeys.stop_capture()
+        super().reject()
+
+    def closeEvent(self, event):
+        if self.hotkeys:
+            self.hotkeys.stop_capture()
+        super().closeEvent(event)
+
+    def _finish(self, key_name: str):
+        if not key_name:
+            self.reject()
+            return
+        if self.captured_key is None:
+            self.captured_key = key_name
+            if self.hotkeys:
+                self.hotkeys.stop_capture()
+            txt = f"✓ 已设定: {key_name.upper()}" if getattr(self, "is_zh", False) else f"✓ НАЗНАЧЕНО: {key_name.upper()}"
+            self.lbl_status.setText(txt)
+            self.lbl_status.setStyleSheet("""
+                QLabel {
+                    color: #10b981;
+                    font-weight: bold;
+                    font-size: 15px;
+                    padding: 8px;
+                    background-color: #064e3b;
+                    border: 1px solid #10b981;
+                    border-radius: 6px;
+                }
+            """)
+            QTimer.singleShot(350, self.accept)
+
+    def keyPressEvent(self, event):
+        k = event.key()
+        from PySide6.QtCore import Qt as QTK
+        if k == QTK.Key_Escape:
+            self.reject()
+            return
+        # If hotkeys listener is inactive for any reason, fallback to Qt events
+        if not self.hotkeys:
+            txt = event.text()
+            if txt and txt.isprintable() and len(txt) == 1:
+                self._finish(txt.lower())
+
+    def mousePressEvent(self, event):
+        pass
+
+
 class StudioWindow(QMainWindow):
     """Main Control Panel Window."""
 
-    def __init__(self, engine: AudioEngine, model_mgr: ModelManager):
+    def __init__(self, engine: AudioEngine, model_mgr: ModelManager, hotkeys=None):
         super().__init__()
         self.engine = engine
         self.mm = model_mgr
+        self.hotkeys = hotkeys
         self.cfg = engine.config
 
         self.setWindowTitle("Stage 3: Voice Translation Studio (S2ST) — CS2 & Discord")
-        self.resize(self.cfg.get("ui", {}).get("window_width", 880),
-                    self.cfg.get("ui", {}).get("window_height", 640))
-        self.setMinimumSize(820, 560)
+        self.resize(self.cfg.get("ui", {}).get("window_width", 920),
+                    max(self.cfg.get("ui", {}).get("window_height", 820), 800))
+        self.setMinimumSize(860, 680)
 
         self.tray_icon: Optional[QSystemTrayIcon] = None
         self._tray_hint_shown = False
@@ -409,14 +573,21 @@ class StudioWindow(QMainWindow):
         root_layout.addWidget(self._create_signal_chain_monitor())
 
         # 3. Functional Tabs (Topping Routing / Models & RAM / Live Transcript)
-        tabs = QTabWidget()
-        tabs.addTab(self._create_routing_tab(), "🎛 Настройка звука и устройств")
-        tabs.addTab(self._create_models_tab(), "🧠 Модели и Управление памятью")
-        tabs.addTab(self._create_transcript_tab(), "📜 Живой журнал перевода")
-        root_layout.addWidget(tabs, stretch=1)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._create_routing_tab(), "🎛 Настройка звука и устройств")
+        self.tabs.addTab(self._create_models_tab(), "🧠 Модели и Управление памятью")
+        self.tabs.addTab(self._create_transcript_tab(), "📜 Живой журнал перевода")
+        root_layout.addWidget(self.tabs, stretch=1)
+
+        # Wire China Mirror environment synchronization
+        if hasattr(self, "chk_china_mirror"):
+            self.chk_china_mirror.toggled.connect(self._on_china_mirror_toggled)
+            if self.chk_china_mirror.isChecked():
+                os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
         # Synchronize UI with active pipeline (RU vs ZH) and audit disk models at boot
         self._update_pipeline_ui()
+        self._populate_voice_combos()
 
     def _create_header(self) -> QHBoxLayout:
         h = QHBoxLayout()
@@ -497,18 +668,18 @@ class StudioWindow(QMainWindow):
         return h
 
     def _create_signal_chain_monitor(self) -> QGroupBox:
-        grp = QGroupBox("Интерактивная цепочка звука (Audio Signal Chain & Real-Time Monitors)")
-        grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
-        main_v = QVBoxLayout(grp)
+        self.grp_chain = QGroupBox("Интерактивная цепочка звука (Audio Signal Chain & Real-Time Monitors)")
+        self.grp_chain.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; }")
+        main_v = QVBoxLayout(self.grp_chain)
         main_v.setContentsMargins(8, 6, 8, 6)
         main_v.setSpacing(6)
 
         # Pipeline selector bar
         h_pipe = QHBoxLayout()
         h_pipe.setContentsMargins(0, 0, 0, 4)
-        lbl_pipe = QLabel("Языковой конвейер (Language Pipeline):")
-        lbl_pipe.setStyleSheet("color: #94a3b8; font-weight: bold; font-size: 11px;")
-        h_pipe.addWidget(lbl_pipe)
+        self.lbl_pipe = QLabel("Языковой конвейер (Language Pipeline):")
+        self.lbl_pipe.setStyleSheet("color: #94a3b8; font-weight: bold; font-size: 11px;")
+        h_pipe.addWidget(self.lbl_pipe)
 
         self.btn_pipe_ru = QPushButton("🇷🇺 Русский профиль (RU➔EN: GigaAM + Opus-MT)")
         self.btn_pipe_ru.setFixedHeight(26)
@@ -579,7 +750,7 @@ class StudioWindow(QMainWindow):
 
         main_v.addLayout(layout)
         self._update_pipeline_buttons_style()
-        return grp
+        return self.grp_chain
 
     # =========================================================================
     # Tab 1: Routing & Topping E2x2
@@ -591,9 +762,9 @@ class StudioWindow(QMainWindow):
         layout.setSpacing(8)
 
         # 1-Click Hardware Profiles Selector Banner
-        grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик")
-        grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        h_prof = QHBoxLayout(grp_profiles)
+        self.grp_profiles = QGroupBox("Быстрый выбор режима звука в 1 клик")
+        self.grp_profiles.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_prof = QHBoxLayout(self.grp_profiles)
         h_prof.setContentsMargins(8, 4, 8, 6)
         h_prof.setSpacing(10)
 
@@ -609,12 +780,12 @@ class StudioWindow(QMainWindow):
         self.btn_prof_cable.clicked.connect(lambda: self._on_switch_profile("cable"))
         h_prof.addWidget(self.btn_prof_cable, stretch=1)
 
-        layout.addWidget(grp_profiles)
+        layout.addWidget(self.grp_profiles)
 
         # Device Selection Grid (Ultra-compact)
-        grp_devs = QGroupBox("Аудиоустройства")
-        grp_devs.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 8px; }")
-        grid = QGridLayout(grp_devs)
+        self.grp_devs = QGroupBox("Аудиоустройства")
+        self.grp_devs.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 8px; }")
+        grid = QGridLayout(self.grp_devs)
         grid.setContentsMargins(6, 4, 6, 6)
         grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(4)
@@ -622,9 +793,9 @@ class StudioWindow(QMainWindow):
         inputs, outputs = AudioEngine.get_devices()
 
         # 1. Mic
-        lbl_in = QLabel("1. Микрофон:")
-        lbl_in.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
-        grid.addWidget(lbl_in, 0, 0)
+        self.lbl_in = QLabel("1. Микрофон:")
+        self.lbl_in.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
+        grid.addWidget(self.lbl_in, 0, 0)
         self.combo_in = NoWheelComboBox()
         self.combo_in.setFixedHeight(26)
         for idx, name in inputs:
@@ -641,9 +812,9 @@ class StudioWindow(QMainWindow):
         grid.addWidget(self.combo_in, 0, 1)
 
         # 2. Out
-        lbl_out = QLabel("2. Канал перевода:")
-        lbl_out.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
-        grid.addWidget(lbl_out, 1, 0)
+        self.lbl_out = QLabel("2. Канал перевода:")
+        self.lbl_out.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
+        grid.addWidget(self.lbl_out, 1, 0)
         self.combo_out = NoWheelComboBox()
         self.combo_out.setFixedHeight(26)
         for idx, name in outputs:
@@ -662,9 +833,9 @@ class StudioWindow(QMainWindow):
         grid.addWidget(self.combo_out, 1, 1)
 
         # 3. Sidetone
-        lbl_side = QLabel("3. Наушники:")
-        lbl_side.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
-        grid.addWidget(lbl_side, 2, 0)
+        self.lbl_side = QLabel("3. Наушники:")
+        self.lbl_side.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
+        grid.addWidget(self.lbl_side, 2, 0)
         self.combo_side = NoWheelComboBox()
         self.combo_side.setFixedHeight(26)
         for idx, name in outputs:
@@ -682,12 +853,12 @@ class StudioWindow(QMainWindow):
         self.combo_side.currentIndexChanged.connect(self._on_device_changed)
         grid.addWidget(self.combo_side, 2, 1)
 
-        layout.addWidget(grp_devs)
+        layout.addWidget(self.grp_devs)
 
         # Compact Controls Panel: Options & Volume in ONE horizontal row
-        grp_opts = QGroupBox("Режимы микрофона и самопрослушивание")
-        grp_opts.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        h_opts = QHBoxLayout(grp_opts)
+        self.grp_opts = QGroupBox("Режимы микрофона и самопрослушивание")
+        self.grp_opts.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_opts = QHBoxLayout(self.grp_opts)
         h_opts.setContentsMargins(8, 6, 8, 6)
         h_opts.setSpacing(14)
 
@@ -702,9 +873,9 @@ class StudioWindow(QMainWindow):
         h_opts.addWidget(self.chk_sidetone)
 
         h_opts.addSpacing(10)
-        lbl_v = QLabel("Громкость:")
-        lbl_v.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        h_opts.addWidget(lbl_v)
+        self.lbl_sidetone_title = QLabel("Громкость:")
+        self.lbl_sidetone_title.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_opts.addWidget(self.lbl_sidetone_title)
         self.slider_sidetone = QSlider(Qt.Orientation.Horizontal)
         self.slider_sidetone.setRange(0, 100)
         cur_vol = int(self.cfg.get("audio", {}).get("sidetone_volume", 0.70) * 100)
@@ -715,7 +886,96 @@ class StudioWindow(QMainWindow):
         h_opts.addWidget(self.slider_sidetone)
         h_opts.addWidget(self.lbl_sidetone_val)
 
-        layout.addWidget(grp_opts)
+        layout.addWidget(self.grp_opts)
+
+        # 1. AI Voice Selection Block on Tab 1
+        self.grp_voice = QGroupBox("🎙 Выбор тембра голоса ИИ")
+        self.grp_voice.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_voice = QHBoxLayout(self.grp_voice)
+        h_voice.setContentsMargins(8, 6, 8, 6)
+        h_voice.setSpacing(10)
+
+        self.lbl_voice_main = QLabel("Голос перевода:")
+        self.lbl_voice_main.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
+        h_voice.addWidget(self.lbl_voice_main)
+
+        self.combo_voices_main = NoWheelComboBox()
+        self.combo_voices_main.setFixedHeight(28)
+        self.combo_voices_main.currentIndexChanged.connect(self._on_voice_changed)
+        h_voice.addWidget(self.combo_voices_main, stretch=1)
+
+        self.btn_add_voice_main = QPushButton("🎙 Добавить свой голос (7 сек)")
+        self.btn_add_voice_main.setFixedHeight(28)
+        self.btn_add_voice_main.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_add_voice_main.setStyleSheet("""
+            QPushButton {
+                background-color: #6366f1;
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 2px 14px;
+            }
+            QPushButton:hover { background-color: #4f46e5; }
+        """)
+        self.btn_add_voice_main.clicked.connect(self._on_open_voice_studio_wizard)
+        h_voice.addWidget(self.btn_add_voice_main)
+
+        layout.addWidget(self.grp_voice)
+
+        # 2. Clean PTT Control Row
+        self.grp_ptt = QGroupBox("🎮 Активация микрофона (Push-to-Talk)")
+        self.grp_ptt.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_ptt = QHBoxLayout(self.grp_ptt)
+        h_ptt.setContentsMargins(8, 6, 8, 6)
+        h_ptt.setSpacing(10)
+
+        self.lbl_ptt_prompt = QLabel("Кнопка PTT:")
+        self.lbl_ptt_prompt.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
+        h_ptt.addWidget(self.lbl_ptt_prompt)
+
+        self.btn_bind_ptt = QPushButton()
+        self.btn_bind_ptt.setFixedHeight(28)
+        self.btn_bind_ptt.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._update_ptt_button_text()
+        self.btn_bind_ptt.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #38bdf8;
+                font-weight: bold;
+                font-size: 11px;
+                border: 1px solid #38bdf8;
+                border-radius: 4px;
+                padding: 2px 16px;
+            }
+            QPushButton:hover { background-color: #0f172a; }
+        """)
+        self.btn_bind_ptt.clicked.connect(self._on_click_bind_ptt)
+        h_ptt.addWidget(self.btn_bind_ptt)
+
+        self.btn_reset_ptt = QPushButton("↺ Shift + MMB")
+        self.btn_reset_ptt.setFixedHeight(28)
+        self.btn_reset_ptt.setToolTip("Сбросить кнопку на стандартную (Shift + Колесико мыши)")
+        self.btn_reset_ptt.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_reset_ptt.setStyleSheet("""
+            QPushButton {
+                background-color: #334155;
+                color: #94a3b8;
+                font-size: 11px;
+                border: 1px solid #475569;
+                border-radius: 4px;
+                padding: 2px 10px;
+            }
+            QPushButton:hover { background-color: #1e293b; color: #f1f5f9; }
+        """)
+        self.btn_reset_ptt.clicked.connect(self._on_reset_ptt)
+        h_ptt.addWidget(self.btn_reset_ptt)
+
+        h_ptt.addStretch()
+        self.lbl_master_pause = QLabel("Мастер-пауза: <b>F8</b>")
+        self.lbl_master_pause.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_ptt.addWidget(self.lbl_master_pause)
+
+        layout.addWidget(self.grp_ptt)
 
         # Universal Educational Routing Banner (Compact 1-line format)
         self.info_frame = QFrame()
@@ -735,7 +995,15 @@ class StudioWindow(QMainWindow):
         layout.addWidget(self.info_frame)
 
         self._update_profile_buttons_style()
-        return w
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
+        scroll.setWidget(w)
+        return scroll
 
     # =========================================================================
     # Tab 2: Models & RAM Management
@@ -747,16 +1015,16 @@ class StudioWindow(QMainWindow):
         layout.setSpacing(8)
 
         # Telemetry Summary Bar
-        ram_grp = QGroupBox("📊 Инвентарь нейросетей и потребление памяти")
-        ram_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        h_ram = QHBoxLayout(ram_grp)
+        self.ram_grp = QGroupBox("📊 Инвентарь нейросетей и потребление памяти")
+        self.ram_grp.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        h_ram = QHBoxLayout(self.ram_grp)
         h_ram.setContentsMargins(8, 6, 8, 6)
 
         self.lbl_ram_telemetry = QLabel("ОЗУ всех моделей: ~535 MB | Видеопамять (VRAM): 0 MB (Strict CPU) | Пул инференса: 4T (Zen 4)")
         self.lbl_ram_telemetry.setStyleSheet("font-family: Consolas, monospace; font-weight: bold; color: #38bdf8; font-size: 12px;")
         h_ram.addWidget(self.lbl_ram_telemetry)
         h_ram.addStretch()
-        layout.addWidget(ram_grp)
+        layout.addWidget(self.ram_grp)
 
         # Informational Dynamic Cards
         models_grid = QGridLayout()
@@ -800,9 +1068,9 @@ class StudioWindow(QMainWindow):
         models_grid.addWidget(self.mt_box, 0, 1)
 
         # Card 3: TTS & Voice Selector
-        tts_box = QGroupBox("🗣 3. Синтез и клонирование голоса (TTS)")
-        tts_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        v_tts = QVBoxLayout(tts_box)
+        self.tts_box = QGroupBox("🗣 3. Синтез и клонирование голоса (TTS)")
+        self.tts_box.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        v_tts = QVBoxLayout(self.tts_box)
         v_tts.setContentsMargins(8, 6, 8, 8)
         v_tts.setSpacing(4)
 
@@ -818,25 +1086,39 @@ class StudioWindow(QMainWindow):
         v_tts.addLayout(h_tts_top)
 
         h_voice = QHBoxLayout()
-        lbl_v_sel = QLabel("Выбор тембра голоса:")
-        lbl_v_sel.setStyleSheet("color: #cbd5e1; font-weight: bold;")
-        h_voice.addWidget(lbl_v_sel)
+        self.lbl_voice_models = QLabel("Выбор тембра голоса:")
+        self.lbl_voice_models.setStyleSheet("color: #cbd5e1; font-weight: bold;")
+        h_voice.addWidget(self.lbl_voice_models)
         self.combo_voices = NoWheelComboBox()
         self.combo_voices.setFixedHeight(28)
-        self.combo_voices.addItem("⭐ Мой клонированный голос (my_pocket_voice)", "my_pocket_voice")
-        self.combo_voices.addItem("Juergen (Мужской, уверенный)", "juergen")
-        self.combo_voices.addItem("Marius (Мужской, спокойный)", "marius")
-        self.combo_voices.addItem("Alba (Женский)", "alba")
-        self.combo_voices.addItem("Fantine (Женский)", "fantine")
+        self._populate_voice_combos()
         self.combo_voices.currentIndexChanged.connect(self._on_voice_changed)
         h_voice.addWidget(self.combo_voices, stretch=1)
+
+        # Direct in-studio Voice Training & Cloning Studio Button
+        self.btn_clone_in_studio = QPushButton("🎙 Обучить / Записать новый голос (7 сек)")
+        self.btn_clone_in_studio.setFixedHeight(28)
+        self.btn_clone_in_studio.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_clone_in_studio.setStyleSheet("""
+            QPushButton {
+                background-color: #6366f1;
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 2px 10px;
+            }
+            QPushButton:hover { background-color: #4f46e5; }
+        """)
+        self.btn_clone_in_studio.clicked.connect(self._on_open_voice_studio_wizard)
+        h_voice.addWidget(self.btn_clone_in_studio)
+
         v_tts.addLayout(h_voice)
 
         # Speed / Natural Pacing Slider
         h_speed = QHBoxLayout()
-        lbl_speed = QLabel("Скорость речи (SOLA):")
-        lbl_speed.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
-        h_speed.addWidget(lbl_speed)
+        self.lbl_speed_title = QLabel("Скорость речи (SOLA):")
+        self.lbl_speed_title.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
+        h_speed.addWidget(self.lbl_speed_title)
 
         self.slider_speed = QSlider(Qt.Orientation.Horizontal)
         self.slider_speed.setRange(80, 120)
@@ -849,13 +1131,13 @@ class StudioWindow(QMainWindow):
         h_speed.addWidget(self.lbl_speed_val)
         v_tts.addLayout(h_speed)
 
-        models_grid.addWidget(tts_box, 1, 0, 1, 2)
+        models_grid.addWidget(self.tts_box, 1, 0, 1, 2)
         layout.addLayout(models_grid)
 
         # Dedicated Honest Downloader Card (Zero Fake UI)
-        grp_dl = QGroupBox("📥 Менеджер загрузки моделей / 模型下载器 (Zero-Fake Downloader)")
-        grp_dl.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        v_dl = QVBoxLayout(grp_dl)
+        self.grp_dl = QGroupBox("📥 Менеджер загрузки моделей / 模型下载器 (Zero-Fake Downloader)")
+        self.grp_dl.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
+        v_dl = QVBoxLayout(self.grp_dl)
         v_dl.setContentsMargins(10, 8, 10, 10)
         v_dl.setSpacing(8)
 
@@ -929,9 +1211,17 @@ class StudioWindow(QMainWindow):
         self.lbl_download_status.setStyleSheet("color: #94a3b8; font-size: 11px; font-family: Consolas, monospace;")
         v_dl.addWidget(self.lbl_download_status)
 
-        layout.addWidget(grp_dl)
+        layout.addWidget(self.grp_dl)
         self._refresh_models_tab()
-        return w
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
+        scroll.setWidget(w)
+        return scroll
 
     # =========================================================================
     # Tab 3: Live Transcript
@@ -975,24 +1265,30 @@ class StudioWindow(QMainWindow):
         # 2. PTT Banner State (Guarded to prevent Qt CSS re-parsing 30 times/sec)
         state = self.engine.engine_state
         master_enabled = self.engine._master_enabled
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
         if state != self._last_rendered_state or master_enabled != self._last_rendered_master:
             self._last_rendered_state = state
             self._last_rendered_master = master_enabled
 
             if not master_enabled:
-                self.ptt_banner.setText("⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F8 для включения)")
+                txt = "⏸ 系统已暂停 (按 F8 键激活)" if is_zh else "⏸ СИСТЕМА НА ПАУЗЕ (Нажмите F8 для включения)"
+                self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #374151; color: #9ca3af; font-weight: bold; border-radius: 6px;")
             elif state == "RECORDING":
-                self.ptt_banner.setText("🔴 ИДЕТ ЗАПИСЬ РЕЧИ (Shift + MMB нажат)...")
+                txt = "🔴 正在录音对讲 (按住讲话中)..." if is_zh else "🔴 ИДЕТ ЗАПИСЬ РЕЧИ (Shift + MMB нажат)..."
+                self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #991b1b; color: #ffffff; font-weight: bold; border-radius: 6px;")
             elif state == "PROCESSING":
-                self.ptt_banner.setText("⚡ ПЕРЕВОД И ГЕНЕРАЦИЯ ГОЛОСА...")
+                txt = "⚡ 正在翻译与神经合成语音..." if is_zh else "⚡ ПЕРЕВОД И ГЕНЕРАЦИЯ ГОЛОСА..."
+                self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #854d0e; color: #fef08a; font-weight: bold; border-radius: 6px;")
             elif state == "SPEAKING":
-                self.ptt_banner.setText("🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 1+2)")
+                txt = "🔊 正在播放翻译语音到游戏 (Playback 3/4)..." if is_zh else "🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 1+2)"
+                self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #065f46; color: #a7f3d0; font-weight: bold; border-radius: 6px;")
             else:
-                self.ptt_banner.setText("🎙 Нажмите Shift + Колесико мыши (MMB) для записи речи")
+                txt = "🎙 请按住快捷键开始讲话 (Push-to-Talk)" if is_zh else "🎙 Нажмите Shift + Колесико мыши (MMB) для записи речи"
+                self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #1f2937; color: #9ca3af; font-weight: bold; border: 1px solid #374151; border-radius: 6px;")
 
         # 3. Chain Nodes Status & Latency Badges
@@ -1000,18 +1296,19 @@ class StudioWindow(QMainWindow):
         mt_status = self.mm._mt_status
         tts_status = self.mm._tts_status
 
+        badge_ready = "已加载" if is_zh else "В ОЗУ"
         self.node_stt.set_telemetry(
-            "В ОЗУ" if stt_status == "ready" else stt_status.upper(),
+            badge_ready if stt_status == "ready" else stt_status.upper(),
             self.engine.last_stt_ms,
             is_active=(state == "PROCESSING")
         )
         self.node_mt.set_telemetry(
-            "В ОЗУ" if mt_status == "ready" else mt_status.upper(),
+            badge_ready if mt_status == "ready" else mt_status.upper(),
             self.engine.last_mt_ms,
             is_active=(state == "PROCESSING")
         )
         self.node_tts.set_telemetry(
-            "В ОЗУ" if tts_status == "ready" else tts_status.upper(),
+            badge_ready if tts_status == "ready" else tts_status.upper(),
             self.engine.last_tts_ms,
             is_active=(state == "SPEAKING")
         )
@@ -1058,6 +1355,13 @@ class StudioWindow(QMainWindow):
     def _on_passthrough_toggle(self, checked: bool):
         self.cfg["audio"]["passthrough_enabled"] = checked
         save_settings(self.cfg)
+        if not checked:
+            # Instantly drain any remaining mic chunks from output queue
+            try:
+                while not self.engine._out_queue.empty():
+                    self.engine._out_queue.get_nowait()
+            except Exception:
+                pass
 
     def _on_sidetone_toggle(self, checked: bool):
         self.cfg["audio"]["sidetone_enabled"] = checked
@@ -1066,6 +1370,7 @@ class StudioWindow(QMainWindow):
     def _on_sidetone_slider(self, val: int):
         self.lbl_sidetone_val.setText(f"{val}%")
         self.cfg["audio"]["sidetone_volume"] = val / 100.0
+        save_settings(self.cfg)
 
     def _update_profile_buttons_style(self):
         mode = self.cfg.get("audio", {}).get("routing_mode", "topping")
@@ -1155,11 +1460,156 @@ class StudioWindow(QMainWindow):
         self.node_out.sub_lbl.setText(f"{cur_out} ➔ Игра")
         self.engine.restart_streams()
 
-    def _on_voice_changed(self, idx: int):
-        voice_key = self.combo_voices.currentData()
-        self.cfg["models"]["tts_voice"] = voice_key
-        self.mm.set_voice(voice_key)
+    def _format_key_display(self, raw_key: str) -> str:
+        """Format any combination or single key into clean, human-friendly Russian label."""
+        parts = [p.strip().lower() for p in raw_key.split("+") if p.strip()]
+        if not parts:
+            return "⌨ SHIFT + КОЛЕСИКО (MMB)"
+
+        labels = []
+        is_mouse = False
+        is_gamepad = False
+
+        for p in parts:
+            if p == "shift":
+                labels.append("SHIFT")
+            elif p in ("ctrl", "control"):
+                labels.append("CTRL")
+            elif p == "alt":
+                labels.append("ALT")
+            elif p in ("middle", "mmb"):
+                labels.append("КОЛЕСИКО (MMB)")
+                is_mouse = True
+            elif p in ("mouse4", "xbutton1"):
+                labels.append("MOUSE 4")
+                is_mouse = True
+            elif p in ("mouse5", "xbutton2"):
+                labels.append("MOUSE 5")
+                is_mouse = True
+            elif p == "left":
+                labels.append("LMB")
+                is_mouse = True
+            elif p == "right":
+                labels.append("RMB")
+                is_mouse = True
+            elif p.startswith("gamepad"):
+                labels.append(p.replace("gamepad_", "").upper())
+                is_gamepad = True
+            elif p == "caps_lock":
+                labels.append("CAPSLOCK")
+            elif p == "space":
+                labels.append("SPACE")
+            else:
+                labels.append(p.upper())
+
+        combo_str = " + ".join(labels)
+        icon = "🎮 " if is_gamepad else ("🖱 " if is_mouse else "⌨ ")
+        return f"{icon}{combo_str}"
+
+    def _update_ptt_button_text(self):
+        """Update PTT button text with clear human-readable name."""
+        cur_key = self.cfg.get("ptt", {}).get("key", "shift+middle")
+        display = self._format_key_display(cur_key)
+        if hasattr(self, "btn_bind_ptt"):
+            self.btn_bind_ptt.setText(display)
+
+    def _on_reset_ptt(self):
+        """Reset PTT keybinding to standard Shift + MMB."""
+        self.cfg.setdefault("ptt", {})["key"] = "shift+middle"
         save_settings(self.cfg)
+        self._update_ptt_button_text()
+        if self.hotkeys:
+            self.hotkeys.set_binding("shift+middle")
+
+    def _populate_voice_combos(self):
+        """Scan all user cloned, custom, and stock voices and populate combo boxes."""
+        combos = []
+        if hasattr(self, "combo_voices_main"):
+            combos.append(self.combo_voices_main)
+        if hasattr(self, "combo_voices"):
+            combos.append(self.combo_voices)
+
+        if not combos:
+            return
+
+        available = self.mm.get_available_voices()
+        cur_v = self.cfg.get("models", {}).get("tts_voice", "my_pocket_voice")
+        sel_idx = 0
+
+        for cb in combos:
+            cb.blockSignals(True)
+            cb.clear()
+            for i, (v_id, v_label) in enumerate(available):
+                cb.addItem(v_label, v_id)
+                if v_id == cur_v:
+                    sel_idx = i
+            cb.setCurrentIndex(sel_idx)
+            cb.blockSignals(False)
+
+    def _on_voice_changed(self, idx: int):
+        """Synchronize voice selection across all tabs."""
+        sender = self.sender()
+        if not sender:
+            return
+        voice_key = sender.currentData()
+        if not voice_key:
+            return
+
+        self.cfg.setdefault("models", {})["tts_voice"] = voice_key
+        save_settings(self.cfg)
+        self.mm.set_voice(voice_key)
+
+        # Sync other combo box
+        for cb in (getattr(self, "combo_voices_main", None), getattr(self, "combo_voices", None)):
+            if cb and cb is not sender:
+                cb.blockSignals(True)
+                for i in range(cb.count()):
+                    if cb.itemData(i) == voice_key:
+                        cb.setCurrentIndex(i)
+                        break
+                cb.blockSignals(False)
+
+    def _on_open_voice_studio_wizard(self):
+        """Launch integrated Voice Cloning Studio with custom name support."""
+        name, ok = QInputDialog.getText(
+            self,
+            "Имя профиля голоса",
+            "Введите название нового голоса (например: Мой голос 2):",
+            text="Мой голос"
+        )
+        if not ok or not name.strip():
+            return
+
+        safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in name.strip().lower())
+        if not safe_name:
+            safe_name = "my_custom_voice"
+
+        try:
+            from launcher.voice_wizard import VoiceCloningWizard
+        except ImportError:
+            from voice_wizard import VoiceCloningWizard
+
+        wiz = VoiceCloningWizard(self, target_voice_name=safe_name)
+        if wiz.exec():
+            # Refresh voice lists on all tabs and select newly trained voice
+            custom_id = f"custom:{safe_name}.safetensors"
+            self.cfg.setdefault("models", {})["tts_voice"] = custom_id
+            save_settings(self.cfg)
+            self.mm.set_voice(custom_id)
+            self._populate_voice_combos()
+            self._refresh_models_tab()
+
+    def _on_click_bind_ptt(self):
+        """Open clean key capture dialog to bind any keyboard, mouse, or gamepad button."""
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        dialog = KeyCaptureDialog(self, hotkeys=self.hotkeys, is_zh=is_zh)
+        if dialog.exec() and dialog.captured_key:
+            new_bind = dialog.captured_key
+            self.cfg.setdefault("ptt", {})["key"] = new_bind
+            save_settings(self.cfg)
+            self._update_ptt_button_text()
+            if self.hotkeys:
+                self.hotkeys.set_binding(new_bind)
 
     def _on_speed_slider(self, val: int):
         speed_float = val / 100.0
@@ -1327,22 +1777,196 @@ class StudioWindow(QMainWindow):
         save_settings(self.cfg)
         self._update_pipeline_ui()
 
+    def _on_china_mirror_toggled(self, checked: bool):
+        """Ensure HF_ENDPOINT is globally updated for all python huggingface calls."""
+        if checked:
+            os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+            log.info("China Mirror activated: set HF_ENDPOINT='https://hf-mirror.com'")
+        else:
+            os.environ.pop("HF_ENDPOINT", None)
+            log.info("China Mirror deactivated: restored upstream HuggingFace endpoint")
+
     def _update_pipeline_ui(self):
-        """Update chain node titles and subtitles based on active pipeline."""
+        """Update chain nodes and entire studio UI localization based on active pipeline."""
         pipe = getattr(self.mm, "pipeline", "ru_en")
+        is_zh = (pipe == "zh_en")
         self._update_pipeline_buttons_style()
-        if pipe == "zh_en":
+
+        if is_zh:
+            self.setWindowTitle("Stage 3: 实时语音翻译控制台 (S2ST) — CS2 & Discord")
+            if hasattr(self, "btn_master"):
+                self.btn_master.setText("🟢 系统已激活 (F8)" if self.engine._master_enabled else "⏸ 系统已暂停 (F8)")
+            if hasattr(self, "btn_tray"):
+                self.btn_tray.setText("📥 最小化到托盘")
+            if hasattr(self, "grp_chain"):
+                self.grp_chain.setTitle("交互式音频信号链路与实时监测 (Audio Signal Chain & Real-Time Monitors)")
+            if hasattr(self, "lbl_pipe"):
+                self.lbl_pipe.setText("语言流水线 (Language Pipeline):")
+            if hasattr(self, "node_mic"):
+                self.node_mic.update_info("1 输入", self.node_mic.sub_lbl.text())
+            if hasattr(self, "node_stt"):
+                self.node_stt.update_info("2 STT (语音识别)", "SenseVoice Chinese (INT8)")
+            if hasattr(self, "node_mt"):
+                self.node_mt.update_info("3 MT (机器翻译)", "Opus-MT ZH➔EN (INT8)")
+            if hasattr(self, "node_tts"):
+                self.node_tts.update_info("4 TTS (语音合成)", "Pocket-TTS 声音克隆")
+            if hasattr(self, "node_out"):
+                self.node_out.update_info("5 输出", "Playback 3/4 ➔ 游戏麦克风")
+            if hasattr(self, "tabs"):
+                self.tabs.setTabText(0, "🎛 音频与设备设置")
+                self.tabs.setTabText(1, "🧠 模型与内存管理")
+                self.tabs.setTabText(2, "📜 实时翻译日志")
+            # Routing Tab (Tab 1)
+            if hasattr(self, "grp_profiles"):
+                self.grp_profiles.setTitle("一键音频模式选择")
+            if hasattr(self, "btn_prof_topping"):
+                self.btn_prof_topping.setText("🎛 模式: Topping声卡硬件回环 (0 ms)")
+                self.btn_prof_topping.setToolTip("通过 Topping E2x2 OTG 硬件监听实现零延迟回环 (0 ms latency)")
+            if hasattr(self, "btn_prof_cable"):
+                self.btn_prof_cable.setText("🔌 模式: VB-Cable虚拟音频线 (普通电脑)")
+                self.btn_prof_cable.setToolTip("通过 VB-Audio Virtual Cable 虚拟音频线传输至各类游戏和通话软件")
+            if hasattr(self, "grp_devs"):
+                self.grp_devs.setTitle("音频设备选择")
+            if hasattr(self, "lbl_in"):
+                self.lbl_in.setText("1. 麦克风输入:")
+            if hasattr(self, "lbl_out"):
+                self.lbl_out.setText("2. 翻译输出通道:")
+            if hasattr(self, "lbl_side"):
+                self.lbl_side.setText("3. 耳机监听:")
+            if hasattr(self, "grp_opts"):
+                self.grp_opts.setTitle("麦克风模式与监听")
+            if hasattr(self, "chk_passthrough"):
+                self.chk_passthrough.setText("原声直通游戏 (Passthrough)")
+            if hasattr(self, "chk_sidetone"):
+                self.chk_sidetone.setText("耳机监听AI翻译 (Sidetone)")
+            if hasattr(self, "lbl_sidetone_title"):
+                self.lbl_sidetone_title.setText("监听音量:")
+            if hasattr(self, "grp_voice"):
+                self.grp_voice.setTitle("🎙 AI 声音与音色选择")
+            if hasattr(self, "lbl_voice_main"):
+                self.lbl_voice_main.setText("翻译音色:")
+            if hasattr(self, "btn_add_voice_main"):
+                self.btn_add_voice_main.setText("🎙 录制专属声音 (7秒)")
+            if hasattr(self, "grp_ptt"):
+                self.grp_ptt.setTitle("🎮 按键对讲设置 (Push-to-Talk: 键盘、鼠标、VR/手柄)")
+            if hasattr(self, "lbl_ptt_prompt"):
+                self.lbl_ptt_prompt.setText("对讲按键 (PTT):")
+            if hasattr(self, "btn_reset_ptt"):
+                self.btn_reset_ptt.setToolTip("重置为默认按键 (Shift + 滚轮中键)")
+            if hasattr(self, "lbl_master_pause"):
+                self.lbl_master_pause.setText("总开关暂停: <b>F8</b>")
+            if hasattr(self, "info_title"):
+                self.info_title.setText("💡 <b>说明:</b> AI翻译语音输出至 Playback 3/4 ➔ 路由到 Loopback 1+2 (游戏麦克风). 耳机监听: Playback 1/2 (0 ms).")
+            # Models Tab (Tab 2)
+            if hasattr(self, "ram_grp"):
+                self.ram_grp.setTitle("📊 模型清单与内存占用")
+            if hasattr(self, "lbl_ram_telemetry"):
+                self.lbl_ram_telemetry.setText("模型内存占用: ~535 MB | 显存 (VRAM): 0 MB (严格CPU) | 推理线程池: 4T (Zen 4)")
+            if hasattr(self, "stt_box"):
+                self.stt_box.setTitle("🎙 1. 语音识别 (STT / ASR)")
+            if hasattr(self, "mt_box"):
+                self.mt_box.setTitle("🌐 2. 机器翻译 (MT)")
+            if hasattr(self, "tts_box"):
+                self.tts_box.setTitle("🗣 3. 语音合成与声音克隆 (TTS)")
+            if hasattr(self, "lbl_voice_models"):
+                self.lbl_voice_models.setText("选择发音人音色:")
+            if hasattr(self, "btn_clone_in_studio"):
+                self.btn_clone_in_studio.setText("🎙 训练/录制新声音 (7秒)")
+            if hasattr(self, "lbl_speed_title"):
+                self.lbl_speed_title.setText("语速调整 (SOLA):")
+            if hasattr(self, "grp_dl"):
+                self.grp_dl.setTitle("📥 模型下载与国内镜像加速 (Zero-Fake Downloader)")
+            if hasattr(self, "btn_download_models"):
+                self.btn_download_models.setText("📥 一键下载所需模型")
             if hasattr(self, "chk_china_mirror"):
                 self.chk_china_mirror.setChecked(True)
-            if hasattr(self, "node_stt"):
-                self.node_stt.update_info("STT (ASR / 识别)", "SenseVoice Chinese (INT8)")
-            if hasattr(self, "node_mt"):
-                self.node_mt.update_info("MT (翻译 / ZH➔EN)", "Opus-MT ZH➔EN (INT8)")
         else:
+            self.setWindowTitle("Stage 3: Voice Translation Studio (S2ST) — CS2 & Discord")
+            if hasattr(self, "btn_master"):
+                self.btn_master.setText("🟢 СИСТЕМА АКТИВНА (F8)" if self.engine._master_enabled else "⏸ СИСТЕМА НА ПАУЗЕ (F8)")
+            if hasattr(self, "btn_tray"):
+                self.btn_tray.setText("📥 В трей")
+            if hasattr(self, "grp_chain"):
+                self.grp_chain.setTitle("Интерактивная цепочка звука (Audio Signal Chain & Real-Time Monitors)")
+            if hasattr(self, "lbl_pipe"):
+                self.lbl_pipe.setText("Языковой конвейер (Language Pipeline):")
+            if hasattr(self, "node_mic"):
+                self.node_mic.update_info("1 ВХОД", self.node_mic.sub_lbl.text())
             if hasattr(self, "node_stt"):
                 self.node_stt.update_info("STT (ASR)", "Sber GigaAM v3 CTC")
             if hasattr(self, "node_mt"):
                 self.node_mt.update_info("MT (ПЕРЕВОД)", "Opus-MT RU➔EN")
+            if hasattr(self, "node_tts"):
+                self.node_tts.update_info("4 TTS (ГОЛОС)", "Pocket-TTS Клон")
+            if hasattr(self, "node_out"):
+                self.node_out.update_info("5 ВЫХОД", "Playback 3/4 ➔ Игра")
+            if hasattr(self, "tabs"):
+                self.tabs.setTabText(0, "🎛 Настройка звука и устройств")
+                self.tabs.setTabText(1, "🧠 Модели и Управление памятью")
+                self.tabs.setTabText(2, "📜 Живой журнал перевода")
+            # Routing Tab (Tab 1)
+            if hasattr(self, "grp_profiles"):
+                self.grp_profiles.setTitle("Быстрый выбор режима звука в 1 клик")
+            if hasattr(self, "btn_prof_topping"):
+                self.btn_prof_topping.setText("🎛 Режим: Звуковая карта Topping (0 ms)")
+                self.btn_prof_topping.setToolTip("Аппаратный нулевой мониторинг через карту Topping E2x2 OTG (0 ms latency)")
+            if hasattr(self, "btn_prof_cable"):
+                self.btn_prof_cable.setText("🔌 Режим: Виртуальный Кабель (Для ПК без Topping)")
+                self.btn_prof_cable.setToolTip("Универсальная передача аудио через драйвер VB-Audio Virtual Cable для любых ПК")
+            if hasattr(self, "grp_devs"):
+                self.grp_devs.setTitle("Аудиоустройства")
+            if hasattr(self, "lbl_in"):
+                self.lbl_in.setText("1. Микрофон:")
+            if hasattr(self, "lbl_out"):
+                self.lbl_out.setText("2. Канал перевода:")
+            if hasattr(self, "lbl_side"):
+                self.lbl_side.setText("3. Наушники:")
+            if hasattr(self, "grp_opts"):
+                self.grp_opts.setTitle("Режимы микрофона и самопрослушивание")
+            if hasattr(self, "chk_passthrough"):
+                self.chk_passthrough.setText("Пропускать голос (Passthrough)")
+            if hasattr(self, "chk_sidetone"):
+                self.chk_sidetone.setText("Слышать перевод (Sidetone)")
+            if hasattr(self, "lbl_sidetone_title"):
+                self.lbl_sidetone_title.setText("Громкость:")
+            if hasattr(self, "grp_voice"):
+                self.grp_voice.setTitle("🎙 Выбор тембра голоса ИИ")
+            if hasattr(self, "lbl_voice_main"):
+                self.lbl_voice_main.setText("Голос перевода:")
+            if hasattr(self, "btn_add_voice_main"):
+                self.btn_add_voice_main.setText("🎙 Добавить свой голос (7 сек)")
+            if hasattr(self, "grp_ptt"):
+                self.grp_ptt.setTitle("🎮 Управление Push-to-Talk (Клавиатура, Мышь, VR / Геймпад)")
+            if hasattr(self, "lbl_ptt_prompt"):
+                self.lbl_ptt_prompt.setText("Кнопка активации микрофона (PTT):")
+            if hasattr(self, "btn_reset_ptt"):
+                self.btn_reset_ptt.setToolTip("Сбросить кнопку на стандартную (Shift + Колесико мыши)")
+            if hasattr(self, "lbl_master_pause"):
+                self.lbl_master_pause.setText("Мастер-пауза: <b>F8</b>")
+            if hasattr(self, "info_title"):
+                self.info_title.setText("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ направлен в Loopback 1+2 (микрофон игры). Наушники: Playback 1/2 (0 ms).")
+            # Models Tab (Tab 2)
+            if hasattr(self, "ram_grp"):
+                self.ram_grp.setTitle("📊 Инвентарь нейросетей и потребление памяти")
+            if hasattr(self, "lbl_ram_telemetry"):
+                self.lbl_ram_telemetry.setText("ОЗУ всех моделей: ~535 MB | Видеопамять (VRAM): 0 MB (Strict CPU) | Пул инференса: 4T (Zen 4)")
+            if hasattr(self, "stt_box"):
+                self.stt_box.setTitle("🎙 1. Распознавание речи (STT / ASR)")
+            if hasattr(self, "mt_box"):
+                self.mt_box.setTitle("🌐 2. Нейроперевод (MT)")
+            if hasattr(self, "tts_box"):
+                self.tts_box.setTitle("🗣 3. Синтез и клонирование голоса (TTS)")
+            if hasattr(self, "lbl_voice_models"):
+                self.lbl_voice_models.setText("Выбор тембра голоса:")
+            if hasattr(self, "btn_clone_in_studio"):
+                self.btn_clone_in_studio.setText("🎙 Обучить / Записать новый голос (7 сек)")
+            if hasattr(self, "lbl_speed_title"):
+                self.lbl_speed_title.setText("Скорость речи (SOLA):")
+            if hasattr(self, "grp_dl"):
+                self.grp_dl.setTitle("📥 Менеджер загрузки моделей / 模型下载器 (Zero-Fake Downloader)")
+            if hasattr(self, "btn_download_models"):
+                self.btn_download_models.setText("📥 一键下载所需模型 / Скачать недостающие модели")
+
         self._refresh_models_tab()
 
     def _refresh_models_tab(self):
@@ -1350,13 +1974,14 @@ class StudioWindow(QMainWindow):
         if not hasattr(self, "lbl_stt_title"):
             return
         pipe = getattr(self.mm, "pipeline", "ru_en")
-        if pipe == "zh_en":
+        is_zh = (pipe == "zh_en")
+        if is_zh:
             stt_key = "sensevoice_zh"
             mt_key = "opus_mt_zh_en"
             self.lbl_stt_title.setText("<b>SenseVoiceSmall Chinese ASR (INT8)</b>")
-            self.lbl_stt_engine.setText("Движок: Sherpa-ONNX INT8 | 2T (Zen 4)")
+            self.lbl_stt_engine.setText("推理引擎: Sherpa-ONNX INT8 | 2T (Zen 4)")
             self.lbl_mt_title.setText("<b>Helsinki Opus-MT ZH ➔ EN (INT8)</b>")
-            self.lbl_mt_engine.setText("Движок: CTranslate2 INT8 | 2T (Zen 4)")
+            self.lbl_mt_engine.setText("推理引擎: CTranslate2 INT8 | 2T (Zen 4)")
         else:
             stt_key = "giga_am_ru"
             mt_key = "opus_mt_ru_en"
@@ -1367,46 +1992,49 @@ class StudioWindow(QMainWindow):
 
         # Audit STT
         stt_stat = check_spec_status(stt_key)
-        self.lbl_stt_disk.setText(f"Размер на диске: <b>{stt_stat['size_mb']} МБ</b>")
+        prefix_disk = "磁盘占用" if is_zh else "Размер на диске"
+        self.lbl_stt_disk.setText(f"{prefix_disk}: <b>{stt_stat['size_mb']} МБ</b>")
         if self.mm._stt_status == "ready":
-            self.lbl_stt_state.setText("🟢 Активна в ОЗУ (Готова к работе)")
+            self.lbl_stt_state.setText("🟢 内存已就绪 (可直接使用)" if is_zh else "🟢 Активна в ОЗУ (Готова к работе)")
             self.lbl_stt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
         elif stt_stat["is_ready"]:
-            self.lbl_stt_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_stt_state.setText("💾 磁盘就绪 (未加载到内存)" if is_zh else "💾 На диске (ОК, не в ОЗУ)")
             self.lbl_stt_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
         else:
-            self.lbl_stt_state.setText("❌ Не скачано (Файлы отсутствуют)")
+            self.lbl_stt_state.setText("❌ 未下载 (缺少模型文件)" if is_zh else "❌ Не скачано (Файлы отсутствуют)")
             self.lbl_stt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
 
         # Audit MT
         mt_stat = check_spec_status(mt_key)
-        self.lbl_mt_disk.setText(f"Размер на диске: <b>{mt_stat['size_mb']} МБ</b>")
+        self.lbl_mt_disk.setText(f"{prefix_disk}: <b>{mt_stat['size_mb']} МБ</b>")
         if self.mm._mt_status == "ready":
-            self.lbl_mt_state.setText("🟢 Активна в ОЗУ (Готова к работе)")
+            self.lbl_mt_state.setText("🟢 内存已就绪 (可直接使用)" if is_zh else "🟢 Активна в ОЗУ (Готова к работе)")
             self.lbl_mt_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
         elif getattr(self.mm, "_mt_status", "") == "error":
-            err = getattr(self.mm, "_mt_error", "") or "Ошибка загрузки"
-            self.lbl_mt_state.setText(f"❌ Ошибка ОЗУ: {err[:35]}...")
+            err = getattr(self.mm, "_mt_error", "") or ("加载失败" if is_zh else "Ошибка загрузки")
+            prefix_err = "❌ 内存错误" if is_zh else "❌ Ошибка ОЗУ"
+            self.lbl_mt_state.setText(f"{prefix_err}: {err[:35]}...")
             self.lbl_mt_state.setToolTip(err)
             self.lbl_mt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
         elif mt_stat["is_ready"]:
-            self.lbl_mt_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_mt_state.setText("💾 磁盘就绪 (未加载到内存)" if is_zh else "💾 На диске (ОК, не в ОЗУ)")
             self.lbl_mt_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
         else:
-            self.lbl_mt_state.setText("❌ Не скачано (Файлы отсутствуют)")
+            self.lbl_mt_state.setText("❌ 未下载 (缺少模型文件)" if is_zh else "❌ Не скачано (Файлы отсутствуют)")
             self.lbl_mt_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
 
         # Audit TTS
         tts_stat = check_spec_status("pocket_tts_en")
-        self.lbl_tts_disk.setText(f"Диск: <b>{tts_stat['size_mb']} МБ</b>")
+        prefix_tts_disk = "磁盘" if is_zh else "Диск"
+        self.lbl_tts_disk.setText(f"{prefix_tts_disk}: <b>{tts_stat['size_mb']} МБ</b>")
         if self.mm._tts_status == "ready":
-            self.lbl_tts_state.setText("🟢 Активна в ОЗУ (~320 МБ)")
+            self.lbl_tts_state.setText("🟢 内存已就绪 (~320 МБ)" if is_zh else "🟢 Активна в ОЗУ (~320 МБ)")
             self.lbl_tts_state.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px;")
         elif tts_stat["is_ready"]:
-            self.lbl_tts_state.setText("💾 На диске (ОК, не в ОЗУ)")
+            self.lbl_tts_state.setText("💾 磁盘就绪 (未加载到内存)" if is_zh else "💾 На диске (ОК, не в ОЗУ)")
             self.lbl_tts_state.setStyleSheet("color: #38bdf8; font-weight: bold; font-size: 11px;")
         else:
-            self.lbl_tts_state.setText("❌ Не скачано")
+            self.lbl_tts_state.setText("❌ 未下载" if is_zh else "❌ Не скачано")
             self.lbl_tts_state.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px;")
 
     def _on_start_download_models(self):

@@ -1578,8 +1578,8 @@ class EcosystemHub(QMainWindow):
         layout.setSpacing(16)
 
         # 0. Master Architecture Overview Banner (Whole System at a Glance)
-        box_overview = QGroupBox("🗺 Общая архитектура экосистемы (3 направления перевода)")
-        box_overview.setStyleSheet("""
+        self.box_overview = QGroupBox("🗺 Общая архитектура экосистемы (3 направления перевода)")
+        self.box_overview.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #2e3440;
@@ -1592,59 +1592,15 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_over = QVBoxLayout(box_overview)
-        lbl_over = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<table border="0" cellpadding="10" style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
-<tr style="background-color: #1e293b; border-radius: 6px;">
-    <td style="width: 28%; font-weight: bold; color: #38bdf8; font-size: 12px;">
-        🔊 1. Входящий звук ПК<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Видео, Discord, Звонки)</span>
-    </td>
-    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">WASAPI Loopback</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">SenseVoice INT8</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Hunyuan MT</span>
-    </td>
-    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
-        📺 Субтитры поверх экрана<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~250 мс, 100% офлайн)</span>
-    </td>
-</tr>
-<tr style="background-color: #1e293b; border-radius: 6px;">
-    <td style="width: 28%; font-weight: bold; color: #fbbf24; font-size: 12px;">
-        🖼 2. Экранный текст<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Интерфейсы, Документы, Графика)</span>
-    </td>
-    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Рамка Ctrl+Alt+A</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">RapidOcr ONNX</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Microsoft MT</span>
-    </td>
-    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
-        📝 Замена прямо на экране<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~180 мс, In-Place)</span>
-    </td>
-</tr>
-<tr style="background-color: #1e293b; border-radius: 6px;">
-    <td style="width: 28%; font-weight: bold; color: #a78bfa; font-size: 12px;">
-        🎙 3. Исходящий голос<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Вы говорите по-русски)</span>
-    </td>
-    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">GigaAM CTC</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Opus-MT</span> ➔
-        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Pocket-TTS Клон</span>
-    </td>
-    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
-        🔊 Ваш голос по-английски<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(В Discord / Topping петлю)</span>
-    </td>
-</tr>
-</table>
-</div>
-        """)
-        lbl_over.setWordWrap(True)
-        v_over.addWidget(lbl_over)
-        layout.addWidget(box_overview)
+        v_over = QVBoxLayout(self.box_overview)
+        self.lbl_over = QLabel()
+        self.lbl_over.setWordWrap(True)
+        v_over.addWidget(self.lbl_over)
+        layout.addWidget(self.box_overview)
 
         # Card 1: Module 1 Guide
-        box_m1 = QGroupBox("📦 1. Синхронные субтитры (LiveTranslate) — Аудио ➔ Субтитры")
-        box_m1.setStyleSheet("""
+        self.box_m1 = QGroupBox("📦 1. Синхронные субтитры (LiveTranslate) — Аудио ➔ Субтитры")
+        self.box_m1.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #0284c7;
@@ -1657,34 +1613,15 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_m1 = QVBoxLayout(box_m1)
-        lbl_m1 = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Перехват иностранной речи из аудиопотока и вывод субтитров поверх любых окон (видео, лекции, конференции, звонки).<br><br>
-
-<b style="color: #38bdf8;">Архитектурные доработки под капотом (Почему работает быстро и без зависаний):</b>
-<ul style="margin: 6px 0 10px 18px; padding: 0;">
-    <li><b>Sherpa-ONNX SenseVoice INT8:</b> Заменили медленный Python Whisper на аппаратный C++ рантайм ONNX. Распознает речь за <b>~170 мс</b> прямо на 2 ядрах процессора без нагрузки на видеокарту.</li>
-    <li><b>Локальная модель Tencent Hunyuan MT 1.8B:</b> Вшита напрямую в память процесса через <code>llama-cpp-python</code>. <b>Никаких внешних веб-серверов</b> (Ollama, Docker, port 8080) — чистый офлайн перевод за <b>~80 мс</b>.</li>
-    <li><b>Аппаратный Silero VAD:</b> Автоматически делит речь на фразы по паузам дыхания, не обрезая окончания слов.</li>
-    <li><b>Сенсорная подложка Alpha 1/255:</b> Невидимый сенсорный слой DWM позволяет мыши захватывать колесико даже при прозрачности фона 0%.</li>
-</ul>
-
-<b style="color: #facc15;">Горячие клавиши управления:</b><br>
-<div style="margin-top: 6px;">
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">F9</kbd> — <b>Единый рубильник:</b> мгновенно скрывает субтитры и ставит транскрипцию на паузу (нулевая нагрузка на CPU в тишине).<br>
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">2x Колесико мыши</kbd> — <b>Клик сквозь окно:</b> субтитры перестают реагировать на курсор мыши и не блокируют элементы управления окон под ними.<br>
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">Зажать колесико мыши</kbd> — Свободное перемещение субтитров по экрану без риска случайно кликнуть ЛКМ.
-</div>
-</div>
-        """)
-        lbl_m1.setWordWrap(True)
-        v_m1.addWidget(lbl_m1)
-        layout.addWidget(box_m1)
+        v_m1 = QVBoxLayout(self.box_m1)
+        self.lbl_m1 = QLabel()
+        self.lbl_m1.setWordWrap(True)
+        v_m1.addWidget(self.lbl_m1)
+        layout.addWidget(self.box_m1)
 
         # Card 2: Module 2 Guide
-        box_m2 = QGroupBox("📦 2. Экранный переводчик (OverTranslate) — Рамка ➔ Перевод прямо на экране")
-        box_m2.setStyleSheet("""
+        self.box_m2 = QGroupBox("📦 2. Экранный переводчик (OverTranslate) — Рамка ➔ Перевод прямо на экране")
+        self.box_m2.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #d97706;
@@ -1697,32 +1634,15 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_m2 = QVBoxLayout(box_m2)
-        lbl_m2 = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Мгновенный перевод невыделяемого текста с изображений, документации, диалоговых окон и интерфейсов сторонних программ с заменой текста на картинке (In-Place эффект).<br><br>
-
-<b style="color: #fbbf24;">Архитектура и устраненный баг:</b>
-<ul style="margin: 6px 0 10px 18px; padding: 0;">
-    <li><b>Оптическое распознавание (RapidOcrNet ONNX):</b> Легковесная нейросеть PP-OCRv6 считывает текст с пикселей за <b>~30 мс</b>.</li>
-    <li><b>Двуязычный взаимный перевод:</b> Настроен в <code>appsettings.json</code> (выделил русский — перевел на английский, выделил английский — перевел на русский).</li>
-    <li><b>Фикс бага буфера обмена Windows 11:</b> В оригинале метод <code>Clipboard.SetText</code> вызывал краш Win32 API <code>0x800401D0</code> («Буфер обмена недоступен»). Мы заменили вызов на неблокирующий <code>SetDataObject(copy: false)</code> в <code>OverTranslate.dll</code> — быстрый перевод по выделению теперь работает стабильно везде.</li>
-</ul>
-
-<b style="color: #facc15;">Горячие клавиши управления:</b><br>
-<div style="margin-top: 6px;">
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Alt</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">A</kbd> — <b>Выделить рамкой:</b> обведите нужную область на экране, перевод отобразится прямо поверх слов.<br>
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> — <b>Быстрый перевод из буфера:</b> мгновенный перевод выделенного фрагмента текста в окне.
-</div>
-</div>
-        """)
-        lbl_m2.setWordWrap(True)
-        v_m2.addWidget(lbl_m2)
-        layout.addWidget(box_m2)
+        v_m2 = QVBoxLayout(self.box_m2)
+        self.lbl_m2 = QLabel()
+        self.lbl_m2.setWordWrap(True)
+        v_m2.addWidget(self.lbl_m2)
+        layout.addWidget(self.box_m2)
 
         # Card 3: Module 3 Guide
-        box_m3 = QGroupBox("📦 3. Голосовой переводчик (Voice Studio) — Микрофон (RU) ➔ Голос ИИ (EN)")
-        box_m3.setStyleSheet("""
+        self.box_m3 = QGroupBox("📦 3. Голосовой переводчик (Voice Studio) — Микрофон (RU) ➔ Голос ИИ (EN)")
+        self.box_m3.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #7c3aed;
@@ -1735,32 +1655,15 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_m3 = QVBoxLayout(box_m3)
-        lbl_m3 = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>Назначение:</b> Вы говорите в микрофон по-русски — собеседники в Discord, Zoom, Telegram и веб-конференциях слышат плавную английскую речь вашим клонированным голосом.<br><br>
-
-<b style="color: #a78bfa;">Конвейер синтеза речи (100% собственный автономный код):</b>
-<ol style="margin: 6px 0 10px 18px; padding: 0;">
-    <li><b>Русский слух (Sber GigaAM v3 CTC INT8):</b> Расшифровывает русскую речь за <b>~170 мс</b> без авторегрессионного ожидания.</li>
-    <li><b>Умная пунктуация:</b> Алгоритм расставляет точки, вопросы и паузы в потоке слов для естественной интонации.</li>
-    <li><b>Быстрый перевод (Helsinki Opus-MT INT8):</b> Переводит фразу на английский язык всего за <b>~15 мс</b>.</li>
-    <li><b>Клонирование тембра (Kyutai Pocket-TTS 24kHz):</b> Синтезирует английскую речь за <b>~750 мс</b> по вашему 7-секундному образцу <code>my_pocket_voice.safetensors</code>.</li>
-</ol>
-
-<b style="color: #facc15;">Горячая клавиша:</b><br>
-<div style="margin-top: 6px;">
-• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">Shift</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">Колесико мыши</kbd> — <b>Режим рации (PTT):</b> зажмите, скажите фразу по-русски и отпустите. Перевод сразу пойдет в микрофон собеседникам.
-</div>
-</div>
-        """)
-        lbl_m3.setWordWrap(True)
-        v_m3.addWidget(lbl_m3)
-        layout.addWidget(box_m3)
+        v_m3 = QVBoxLayout(self.box_m3)
+        self.lbl_m3 = QLabel()
+        self.lbl_m3.setWordWrap(True)
+        v_m3.addWidget(self.lbl_m3)
+        layout.addWidget(self.box_m3)
 
         # Card 4: Audio Routing Guide (Topping vs Cable)
-        box_audio = QGroupBox("🎛 4. Звуковая карта Topping E2x2: Шпаргалка настройки на века")
-        box_audio.setStyleSheet("""
+        self.box_audio = QGroupBox("🎛 4. Звуковая карта Topping E2x2: Шпаргалка настройки на века")
+        self.box_audio.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #059669;
@@ -1773,42 +1676,15 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_audio = QVBoxLayout(box_audio)
-        lbl_audio = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b style="color: #34d399;">Правило 3 каналов (Как звук попадает собеседникам с задержкой 0 мс):</b><br><br>
-<table border="0" cellpadding="8" style="background-color: #111827; border-radius: 6px; width: 100%; border: 1px solid #1f2937;">
-<tr style="background-color: #1e293b; color: #ffffff;">
-    <th align="left" style="width: 25%;">Где настраивать</th>
-    <th align="left" style="width: 30%;">Что выбрать</th>
-    <th align="left" style="width: 45%;">Физический смысл</th>
-</tr>
-<tr>
-    <td><b>1. Windows звук</b></td>
-    <td><code style="color: #38bdf8; font-weight: bold;">Playback 1/2</code></td>
-    <td>Ваши обычные наушники (системный звук, медиа, речь собеседников).</td>
-</tr>
-<tr style="background-color: #161e2e;">
-    <td><b>2. Наш Лаунчер</b></td>
-    <td><code style="color: #a78bfa; font-weight: bold;">Playback 3/4</code></td>
-    <td>Канал синтеза: голос ИИ бесшумно направляется в звуковую карту.</td>
-</tr>
-<tr>
-    <td><b>3. Discord / Звонки</b></td>
-    <td><b style="color: #34d399;">Loopback 1/2</b></td>
-    <td><b>Микрофон:</b> звуковая карта Topping аппаратно смешивает ваш перевод и отдает в сеть за 0 мс!</td>
-</tr>
-</table><br>
-<span style="color: #94a3b8;">* Если карта Topping отключена — выберите профиль <b>«Виртуальный кабель»</b>, и звук пойдет через драйвер VB-Audio Cable.</span>
-</div>
-        """)
-        lbl_audio.setWordWrap(True)
-        v_audio.addWidget(lbl_audio)
-        layout.addWidget(box_audio)
+        v_audio = QVBoxLayout(self.box_audio)
+        self.lbl_audio = QLabel()
+        self.lbl_audio.setWordWrap(True)
+        v_audio.addWidget(self.lbl_audio)
+        layout.addWidget(self.box_audio)
 
         # Card 5: Upstream Update Safety
-        box_safe = QGroupBox("🔒 5. Почему обновления авторов репозиториев никогда не сломают систему")
-        box_safe.setStyleSheet("""
+        self.box_safe = QGroupBox("🔒 5. Почему обновления авторов репозиториев никогда не сломают систему")
+        self.box_safe.setStyleSheet("""
             QGroupBox {
                 background-color: #16181d;
                 border: 1px solid #2e3440;
@@ -1821,17 +1697,13 @@ class EcosystemHub(QMainWindow):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         """)
-        v_safe = QVBoxLayout(box_safe)
-        lbl_safe = QLabel("""
-<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
-<b>1. Автономный офлайн-принцип:</b> Наша система на 100% автономна. Лаунчер никогда не делает автоматических скрытых обновлений чужого кода из интернета. То, что настроено и отлажено, продолжит стабильно работать годами.<br><br>
-<b>2. Защищенное хранилище CONFIG/:</b> Все ваши файлы настроек, слепок голоса и эталонные копии всех инженерных патчей изолированы в защищенной директории <code>CONFIG/</code>.<br><br>
-<b>3. Если вы сами обновите чужой репозиторий:</b> Лаунчер проверит чек-суммы и код, подсветит красный статус <code>СЛЕТЕЛ</code>. Одно нажатие на кнопку <b>«🛠 Восстановить все патчи (1 клик)»</b> моментально вернет вшитые модули ускорения и патчи на место.
-</div>
-        """)
-        lbl_safe.setWordWrap(True)
-        v_safe.addWidget(lbl_safe)
-        layout.addWidget(box_safe)
+        v_safe = QVBoxLayout(self.box_safe)
+        self.lbl_safe = QLabel()
+        self.lbl_safe.setWordWrap(True)
+        v_safe.addWidget(self.lbl_safe)
+        layout.addWidget(self.box_safe)
+
+        self._retranslate_guide_tab()
 
         layout.addStretch()
         scroll.setWidget(w)
@@ -1879,10 +1751,313 @@ class EcosystemHub(QMainWindow):
         self.btn_restore_patches.setText(I18n.t("btn_restore_patches"))
         self.btn_vault_folder.setText(I18n.t("btn_open_folder"))
 
+        self._retranslate_guide_tab()
+
         if not is_initial:
             self._populate_patches_view()
             self._refresh_all_latencies()
             self._poll_process_status()
+
+    def _retranslate_guide_tab(self):
+        """Update guide tab content dynamically on language switch."""
+        if not hasattr(self, "box_overview") or not self.box_overview:
+            return
+        lang = getattr(I18n, "current_lang", "ru")
+
+        if lang == "zh":
+            self.box_overview.setTitle("🗺 全局架构总览 (3大独立翻译模块)")
+            self.lbl_over.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<table border="0" cellpadding="10" style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #38bdf8; font-size: 12px;">
+        🔊 1. 系统音频字幕<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(视频、会议、Discord通话)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">WASAPI Loopback</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">SenseVoice INT8</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Hunyuan MT</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        📺 屏幕顶层透明字幕<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~250 ms, 100% 离线)</span>
+    </td>
+</tr>
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #fbbf24; font-size: 12px;">
+        🖼 2. 屏幕划词翻译<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(界面、文档、游戏画面)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">选区框选 Ctrl+Alt+A</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">RapidOcr ONNX</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Microsoft MT</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        📝 原地文字替换覆盖<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~180 ms, In-Place)</span>
+    </td>
+</tr>
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #a78bfa; font-size: 12px;">
+        🎙 3. 实时语音翻译<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(您说俄语/中文 ➔ 英文)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">SenseVoice / GigaAM</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Opus-MT</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Pocket-TTS 声音克隆</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        🔊 专属克隆声音输出<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(输出至游戏麦克风通道)</span>
+    </td>
+</tr>
+</table>
+</div>
+            """)
+
+            self.box_m1.setTitle("📦 1. 实时音频字幕 (LiveTranslate) — 系统音频 ➔ 屏幕字幕")
+            self.lbl_m1.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>核心功能:</b> 实时捕获来自任何程序的外语声音（视频、网课、会议、语音通话），并在屏幕顶层显示优雅透明的双语字幕.<br><br>
+
+<b style="color: #38bdf8;">底层架构优化 (极速运行，彻底杜绝掉帧与卡顿):</b>
+<ul style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>Sherpa-ONNX SenseVoice INT8:</b> 采用现代 C++ ONNX 运行时，在 2 个 CPU 核心上仅需 <b>~170 ms</b> 即可完成识别，0 显存占用.</li>
+    <li><b>Tencent Hunyuan MT 1.8B 本地模型:</b> 深度嵌入内存，免除外部 Web 服务 (Ollama/Docker) 开销，纯离线极速翻译仅需 <b>~80 ms</b>.</li>
+    <li><b>硬件级 Silero VAD:</b> 依据自然呼吸停顿精准断句，不吞字、不截断词尾.</li>
+    <li><b>Alpha 1/255 隐形交互层:</b> Windows DWM 底层即使在透明度为 0% 时依然能精准响应鼠标操作.</li>
+</ul>
+
+<b style="color: #facc15;">快捷控制键:</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">F9</kbd> — <b>总控开关:</b> 一键隐藏字幕并暂停音频转录 (静默时零 CPU 开销).<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">双击滚轮中键 (2x MMB)</kbd> — <b>鼠标穿透:</b> 开启后鼠标可点击穿透字幕区域，不阻挡游戏与程序按键.<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">按住中键拖动</kbd> — 随心调整字幕在屏幕上的停靠位置，避免遮挡重要画面.
+</div>
+</div>
+            """)
+
+            self.box_m2.setTitle("📦 2. 屏幕划词翻译 (OverTranslate) — 框选与剪贴板 ➔ 原地翻译")
+            self.lbl_m2.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>核心功能:</b> 框选屏幕上任何不可复制的文字（图片、扫描件、游戏弹窗、软件界面），原地覆盖替换翻译 (In-Place 效果).<br><br>
+
+<b style="color: #fbbf24;">底层架构与稳定性修复:</b>
+<ul style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>PP-OCRv6 极速光学扫描:</b> 轻量级 ONNX 神经网络，仅需 <b>~30 ms</b> 即可完成像素级文字识别.</li>
+    <li><b>Windows 11 剪贴板安全补丁:</b> 针对原版 <code>0x800401D0</code> 剪贴板死锁崩溃，深度移植非阻塞对象传递，彻底根除崩溃现象.</li>
+</ul>
+
+<b style="color: #facc15;">快捷控制键:</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Alt</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">A</kbd> — <b>矩形截屏框选:</b> 拖拽选框，译文直接覆盖在原文字上方.<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> — <b>快速查词:</b> 划词选中后快速按两次复制键，原地弹出释义.
+</div>
+</div>
+            """)
+
+            self.box_m3.setTitle("📦 3. 语音合成翻译 (Voice Studio) — 麦克风 ➔ 专属AI克隆声音")
+            self.lbl_m3.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>核心功能:</b> 您对着麦克风说话，Discord、CS2、Zoom 会议中的队友将实时听到您专属克隆音色的英语语音.<br><br>
+
+<b style="color: #a78bfa;">端到端语音转语音流水线 (100% 本地自主推理):</b>
+<ol style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>语音识别 (SenseVoice INT8 / GigaAM CTC):</b> 极速转录输入语音，仅需 <b>~170 ms</b>.</li>
+    <li><b>快速机器翻译 (Opus-MT INT8):</b> 神经网络结构将语句翻译为英语，仅需 <b>~15 ms</b>.</li>
+    <li><b>音色克隆合成 (Pocket-TTS 24kHz):</b> 依据您录制的 7 秒声音样本，在 <b>~750 ms</b> 内合成逼真英语发音.</li>
+</ol>
+
+<b style="color: #facc15;">对讲按键 (PTT):</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">Shift</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">滚轮中键 (MMB)</kbd> — <b>对讲通话:</b> 按住说话，松开后翻译语音将自动注入游戏麦克风通道. 支持自定义改键 (键盘、鼠标侧键、手柄LB/RB、VR控制器、脚踏板).
+</div>
+</div>
+            """)
+
+            self.box_audio.setTitle("🎛 4. 声卡与音频通道配置指南 (0延迟硬件回环)")
+            self.lbl_audio.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b style="color: #34d399;">3通道黄金路由法则 (如何实现与队友 0 延迟沟通):</b><br><br>
+<table border="0" cellpadding="8" style="background-color: #111827; border-radius: 6px; width: 100%; border: 1px solid #1f2937;">
+<tr style="background-color: #1e293b; color: #ffffff;">
+    <th align="left" style="width: 25%;">设置位置</th>
+    <th align="left" style="width: 30%;">选择设备</th>
+    <th align="left" style="width: 45%;">音频流向说明</th>
+</tr>
+<tr>
+    <td><b>1. Windows 默认输出</b></td>
+    <td><code style="color: #38bdf8; font-weight: bold;">Playback 1/2</code></td>
+    <td>您的耳机听筒 (系统声音、游戏音效、队友语音).</td>
+</tr>
+<tr style="background-color: #161e2e;">
+    <td><b>2. 本程序翻译输出</b></td>
+    <td><code style="color: #a78bfa; font-weight: bold;">Playback 3/4</code></td>
+    <td>AI克隆声音通道: 独立传输，不污染耳机中的游戏音效.</td>
+</tr>
+<tr>
+    <td><b>3. Discord / 游戏麦克风</b></td>
+    <td><b style="color: #34d399;">Loopback 1/2</b></td>
+    <td><b>游戏麦克风:</b> Topping声卡硬件混音，0延迟回环至网络!</td>
+</tr>
+</table><br>
+<span style="color: #94a3b8;">* 若未使用 Topping 声卡，可选用 <b>«VB-Cable 虚拟音频线»</b> 模式，兼容任何普通电脑.</span>
+</div>
+            """)
+
+            self.box_safe.setTitle("🔒 5. 原厂版本更新隔离与补丁防护")
+            self.lbl_safe.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>1. 100% 离线自主运行:</b> 程序永不会在后台自动联网更新第三方依赖代码，您配置好的所有加速补丁将永久稳定工作.<br><br>
+<b>2. CONFIG/ 安全备份库:</b> 您的个人声音样本、硬件配置及所有工程补丁副本均妥善备份于 <code>CONFIG/</code> 目录.<br><br>
+<b>3. 一键校验与修复:</b> 控制台内置补丁完整性扫描，一旦检测到异常，点击 <b>«🛠 一键修复全部补丁»</b> 即可瞬间恢复原厂加速优化.
+</div>
+            """)
+        else:
+            self.box_overview.setTitle("🗺 Общая архитектура экосистемы (3 направления перевода)")
+            self.lbl_over.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<table border="0" cellpadding="10" style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #38bdf8; font-size: 12px;">
+        🔊 1. Входящий звук ПК<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Видео, Discord, Звонки)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">WASAPI Loopback</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">SenseVoice INT8</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Hunyuan MT</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        📺 Субтитры поверх экрана<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~250 мс, 100% офлайн)</span>
+    </td>
+</tr>
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #fbbf24; font-size: 12px;">
+        🖼 2. Экранный текст<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Интерфейсы, Документы, Графика)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Рамка Ctrl+Alt+A</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">RapidOcr ONNX</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Microsoft MT</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        📝 Замена прямо на экране<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(~180 мс, In-Place)</span>
+    </td>
+</tr>
+<tr style="background-color: #1e293b; border-radius: 6px;">
+    <td style="width: 28%; font-weight: bold; color: #a78bfa; font-size: 12px;">
+        🎙 3. Исходящий голос<br><span style="font-size: 10px; color: #94a3b8; font-weight: normal;">(Вы говорите по-русски)</span>
+    </td>
+    <td style="width: 44%; color: #e2e8f0; font-size: 11px;">
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">GigaAM CTC</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Opus-MT</span> ➔
+        <span style="background-color: #0f172a; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155;">Pocket-TTS Клон</span>
+    </td>
+    <td style="width: 28%; text-align: right; font-weight: bold; color: #34d399; font-size: 11px;">
+        🔊 Ваш голос по-английски<br><span style="color: #64748b; font-size: 10px; font-weight: normal;">(В Discord / Topping петлю)</span>
+    </td>
+</tr>
+</table>
+</div>
+            """)
+
+            self.box_m1.setTitle("📦 1. Синхронные субтитры (LiveTranslate) — Аудио ➔ Субтитры")
+            self.lbl_m1.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>Назначение:</b> Перехват иностранной речи из аудиопотока и вывод субтитров поверх любых окон (видео, лекции, конференции, звонки).<br><br>
+
+<b style="color: #38bdf8;">Архитектурные доработки под капотом (Почему работает быстро и без зависаний):</b>
+<ul style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>Sherpa-ONNX SenseVoice INT8:</b> Заменили медленный Python Whisper на аппаратный C++ рантайм ONNX. Распознает речь за <b>~170 мс</b> прямо на 2 ядрах процессора без нагрузки на видеокарту.</li>
+    <li><b>Локальная модель Tencent Hunyuan MT 1.8B:</b> Вшита напрямую в память процесса через <code>llama-cpp-python</code>. <b>Никаких внешних веб-серверов</b> (Ollama, Docker, port 8080) — чистый офлайн перевод за <b>~80 мс</b>.</li>
+    <li><b>Аппаратный Silero VAD:</b> Автоматически делит речь на фразы по паузам дыхания, не обрезая окончания слов.</li>
+    <li><b>Сенсорная подложка Alpha 1/255:</b> Невидимый сенсорный слой DWM позволяет мыши захватывать колесико даже при прозрачности фона 0%.</li>
+</ul>
+
+<b style="color: #facc15;">Горячие клавиши управления:</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">F9</kbd> — <b>Единый рубильник:</b> мгновенно скрывает субтитры и ставит транскрипцию на паузу (нулевая нагрузка на CPU в тишине).<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">2x Колесико мыши</kbd> — <b>Клик сквозь окно:</b> субтитры перестают реагировать на курсор мыши и не блокируют элементы управления окон под ними.<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#38bdf8;">Зажать колесико мыши</kbd> — Свободное перемещение субтитров по экрану без риска случайно кликнуть ЛКМ.
+</div>
+</div>
+            """)
+
+            self.box_m2.setTitle("📦 2. Экранный переводчик (OverTranslate) — Рамка ➔ Перевод прямо на экране")
+            self.lbl_m2.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>Назначение:</b> Мгновенный перевод невыделяемого текста с изображений, документации, диалоговых окон и интерфейсов сторонних программ с заменой текста на картинке (In-Place эффект).<br><br>
+
+<b style="color: #fbbf24;">Архитектура и устраненный баг:</b>
+<ul style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>Оптическое распознавание (RapidOcrNet ONNX):</b> Легковесная нейросеть PP-OCRv6 считывает текст с пикселей за <b>~30 мс</b>.</li>
+    <li><b>Двуязычный взаимный перевод:</b> Настроен в <code>appsettings.json</code> (выделил русский — перевел на английский, выделил английский — перевел на русский).</li>
+    <li><b>Фикс бага буфера обмена Windows 11:</b> В оригинале метод <code>Clipboard.SetText</code> вызывал краш Win32 API <code>0x800401D0</code> («Буфер обмена недоступен»). Мы заменили вызов на неблокирующий <code>SetDataObject(copy: false)</code> в <code>OverTranslate.dll</code> — быстрый перевод по выделению теперь работает стабильно везде.</li>
+</ul>
+
+<b style="color: #facc15;">Горячие клавиши управления:</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Alt</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">A</kbd> — <b>Выделить рамкой:</b> обведите нужную область на экране, перевод отобразится прямо поверх слов.<br>
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">Ctrl</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#fbbf24;">C</kbd> — <b>Быстрый перевод из буфера:</b> мгновенный перевод выделенного фрагмента текста в окне.
+</div>
+</div>
+            """)
+
+            self.box_m3.setTitle("📦 3. Голосовой переводчик (Voice Studio) — Микрофон (RU) ➔ Голос ИИ (EN)")
+            self.lbl_m3.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>Назначение:</b> Вы говорите в микрофон по-русски — собеседники в Discord, Zoom, Telegram и веб-конференциях слышат плавную английскую речь вашим клонированным голосом.<br><br>
+
+<b style="color: #a78bfa;">Конвейер синтеза речи (100% собственный автономный код):</b>
+<ol style="margin: 6px 0 10px 18px; padding: 0;">
+    <li><b>Русский слух (Sber GigaAM v3 CTC INT8):</b> Расшифровывает русскую речь за <b>~170 мс</b> без авторегрессионного ожидания.</li>
+    <li><b>Умная пунктуация:</b> Алгоритм расставляет точки, вопросы и паузы в потоке слов для естественной интонации.</li>
+    <li><b>Быстрый перевод (Helsinki Opus-MT INT8):</b> Переводит фразу на английский язык всего за <b>~15 мс</b>.</li>
+    <li><b>Клонирование тембра (Kyutai Pocket-TTS 24kHz):</b> Синтезирует английскую речь за <b>~750 мс</b> по вашему 7-секундному образцу <code>my_pocket_voice.safetensors</code>.</li>
+</ol>
+
+<b style="color: #facc15;">Горячая клавиша:</b><br>
+<div style="margin-top: 6px;">
+• <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">Shift</kbd> + <kbd style="background:#1e293b; border:1px solid #475569; padding:2px 7px; border-radius:4px; font-weight:bold; color:#a78bfa;">Колесико мыши</kbd> — <b>Режим рации (PTT):</b> зажмите, скажите фразу по-русски и отпустите. Перевод сразу пойдет в микрофон собеседникам.
+</div>
+</div>
+            """)
+
+            self.box_audio.setTitle("🎛 4. Звуковая карта Topping E2x2: Шпаргалка настройки на века")
+            self.lbl_audio.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b style="color: #34d399;">Правило 3 каналов (Как звук попадает собеседникам с задержкой 0 мс):</b><br><br>
+<table border="0" cellpadding="8" style="background-color: #111827; border-radius: 6px; width: 100%; border: 1px solid #1f2937;">
+<tr style="background-color: #1e293b; color: #ffffff;">
+    <th align="left" style="width: 25%;">Где настраивать</th>
+    <th align="left" style="width: 30%;">Что выбрать</th>
+    <th align="left" style="width: 45%;">Физический смысл</th>
+</tr>
+<tr>
+    <td><b>1. Windows звук</b></td>
+    <td><code style="color: #38bdf8; font-weight: bold;">Playback 1/2</code></td>
+    <td>Ваши обычные наушники (системный звук, медиа, речь собеседников).</td>
+</tr>
+<tr style="background-color: #161e2e;">
+    <td><b>2. Наш Лаунчер</b></td>
+    <td><code style="color: #a78bfa; font-weight: bold;">Playback 3/4</code></td>
+    <td>Канал синтеза: голос ИИ бесшумно направляется в звуковую карту.</td>
+</tr>
+<tr>
+    <td><b>3. Discord / Звонки</b></td>
+    <td><b style="color: #34d399;">Loopback 1/2</b></td>
+    <td><b>Микрофон:</b> звуковая карта Topping аппаратно смешивает ваш перевод и отдает в сеть за 0 мс!</td>
+</tr>
+</table><br>
+<span style="color: #94a3b8;">* Если карта Topping отключена — выберите профиль <b>«Виртуальный кабель»</b>, и звук пойдет через драйвер VB-Audio Cable.</span>
+</div>
+            """)
+
+            self.box_safe.setTitle("🔒 5. Почему обновления авторов репозиториев никогда не сломают систему")
+            self.lbl_safe.setText("""
+<div style="font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+<b>1. Автономный офлайн-принцип:</b> Наша система на 100% автономна. Лаунчер никогда не делает автоматических скрытых обновлений чужого кода из интернета. То, что настроено и отлажено, продолжит стабильно работать годами.<br><br>
+<b>2. Защищенное хранилище CONFIG/:</b> Все ваши файлы настроек, слепок голоса и эталонные копии всех инженерных патчей изолированы в защищенной директории <code>CONFIG/</code>.<br><br>
+<b>3. Если вы сами обновите чужой репозиторий:</b> Лаунчер проверит чек-суммы и код, подсветит красный статус <code>СЛЕТЕЛ</code>. Одно нажатие на кнопку <b>«🛠 Восстановить все патчи (1 клик)»</b> моментально вернет вшитые модули ускорения и патчи на место.
+</div>
+            """)
 
     def _poll_process_status(self):
         # 1. Hot-reload pipeline latency chips if user altered models or settings in any program

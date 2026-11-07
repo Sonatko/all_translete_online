@@ -157,6 +157,7 @@ class AudioEngine:
                 channels=1,
                 samplerate=DEFAULT_SR,
                 blocksize=BLOCK_SIZE,
+                latency="low",
                 dtype="float32",
                 callback=self._in_callback,
             )
@@ -169,6 +170,7 @@ class AudioEngine:
                 channels=1,
                 samplerate=DEFAULT_SR,
                 blocksize=BLOCK_SIZE,
+                latency="low",
                 dtype="float32",
                 callback=self._out_callback,
             )
@@ -182,6 +184,7 @@ class AudioEngine:
                     channels=1,
                     samplerate=DEFAULT_SR,
                     blocksize=BLOCK_SIZE,
+                    latency="low",
                     dtype="float32",
                     callback=self._sidetone_callback,
                 )
@@ -336,10 +339,16 @@ class AudioEngine:
                 if self._tail_frames_left <= 0:
                     self._dispatch_ptt_utterance()
             else:
-                # 2. PTT UP: Optional passthrough of natural mic to game loopback
-                if self.config.get("audio", {}).get("passthrough_enabled", True):
+                # 2. PTT UP: Clean low-latency passthrough of natural mic to game loopback
+                if self.engine_state != "SPEAKING" and self.config.get("audio", {}).get("passthrough_enabled", True):
                     gain = float(self.config.get("audio", {}).get("passthrough_volume", 1.0))
                     passthrough_chunk = mono * gain
+                    # Keep queue shallow (<= 2 blocks = ~20ms) to prevent latency buildup across soundcards
+                    while self._out_queue.qsize() > 2:
+                        try:
+                            self._out_queue.get_nowait()
+                        except queue.Empty:
+                            break
                     if not self._out_queue.full():
                         self._out_queue.put_nowait(passthrough_chunk)
 
@@ -481,6 +490,12 @@ class AudioEngine:
 
                 # Step 3: TTS Synthesis (Pocket-TTS Cloned Voice)
                 self.engine_state = "SPEAKING"
+                # Drain any remaining passthrough chunks before outputting translated voice
+                while not self._out_queue.empty():
+                    try:
+                        self._out_queue.get_nowait()
+                    except queue.Empty:
+                        break
                 tts_audio_24k, tts_sr, tts_ms = self.mm.synthesize(en_text)
                 self.last_tts_ms = round(tts_ms, 1)
                 self.last_total_ms = round(stt_ms + mt_ms + tts_ms, 1)

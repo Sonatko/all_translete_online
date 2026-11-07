@@ -416,6 +416,38 @@ mimi:
             log.error("Failed to load Pocket-TTS: %s", e)
             return False
 
+    def get_available_voices(self) -> List[Tuple[str, str]]:
+        """Scan CONFIG, custom voices directory, and stock voices."""
+        voices = []
+        voices_dir = CONFIG_DIR / "voices"
+        voices_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Author's Pre-trained Voice
+        clone_default = CONFIG_DIR / "my_pocket_voice.safetensors"
+        if not clone_default.is_file():
+            clone_default = MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"
+        if clone_default.is_file():
+            voices.append(("my_pocket_voice", "⭐ Голос автора (my_pocket_voice)"))
+
+        # 2. Standard Built-in Voices
+        stock = [
+            ("juergen", "Стандартный: Juergen (Мужской, уверенный)"),
+            ("marius", "Стандартный: Marius (Мужской, спокойный)"),
+            ("paul", "Стандартный: Paul (Мужской, баритон)"),
+            ("charles", "Стандартный: Charles (Мужской, глубокий)"),
+            ("alba", "Стандартный: Alba (Женский, выразительный)"),
+            ("fantine", "Стандартный: Fantine (Женский, мягкий)"),
+        ]
+        voices.extend(stock)
+
+        # 3. User Trained Voices in CONFIG/stage_3_voice/voices/
+        for p in sorted(voices_dir.glob("*.safetensors")):
+            v_id = f"custom:{p.name}"
+            v_title = p.stem.replace("_", " ").title()
+            voices.append((v_id, f"👤 Мой голос: {v_title}"))
+
+        return voices
+
     def set_voice(self, voice_name: str) -> bool:
         """Switch active voice profile without reloading the neural backbone."""
         if self._tts_model is None:
@@ -425,6 +457,18 @@ mimi:
             import pocket_tts
 
             self._tts_current_voice = voice_name
+            if voice_name.startswith("custom:"):
+                fname = voice_name.split(":", 1)[1]
+                custom_path = CONFIG_DIR / "voices" / fname
+                if custom_path.is_file():
+                    self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
+                        str(custom_path), self._tts_model.device
+                    )
+                    log.info("Voice state loaded from custom profile: %s", custom_path)
+                    return True
+                else:
+                    log.warning("Custom voice not found at %s", custom_path)
+
             if voice_name == "my_pocket_voice":
                 clone_path = CONFIG_DIR / "my_pocket_voice.safetensors"
                 if not clone_path.is_file():
@@ -436,8 +480,8 @@ mimi:
                     log.info("Voice state loaded from user clone: %s", clone_path)
                     return True
                 else:
-                    log.warning("Voice clone file not found at %s, falling back to stock voice 'alba'", clone_path)
-                    voice_name = "alba"
+                    log.warning("Voice clone file not found at %s, falling back to stock voice 'juergen'", clone_path)
+                    voice_name = "juergen"
 
             if voice_name in ("alba", "marius", "juergen", "fantine", "paul", "charles", "george", "michael"):
                 try:

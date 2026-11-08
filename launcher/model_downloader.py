@@ -126,6 +126,12 @@ def download_single_file(
     speed telemetry, automatic retry on network drops, and atomic destination swap.
     Retains partial .part downloads so subsequent retries resume rather than restart.
     """
+    if dest_path.is_file() and (expected_size <= 0 or dest_path.stat().st_size >= max(50, int(expected_size * 0.95))):
+        log.info("File %s already exists on disk (%d bytes). Skipping download.", dest_path.name, dest_path.stat().st_size)
+        if progress_cb:
+            progress_cb(dest_path.stat().st_size, dest_path.stat().st_size, 0.0)
+        return True
+
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     part_path = dest_path.with_suffix(dest_path.suffix + ".part")
 

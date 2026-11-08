@@ -21,7 +21,7 @@
     "mt_provider": "opus_mt",
     "mt_threads": 2,
     "tts_provider": "pocket_tts",
-    "tts_voice": "juergen",
+    "tts_voice": "my_pocket_voice",
     "tts_temperature": 0.3,
     "tts_speed": 1.15,
     "auto_load_on_startup": true,

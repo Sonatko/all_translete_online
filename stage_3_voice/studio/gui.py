@@ -216,7 +216,7 @@ class KeyCaptureDialog(QDialog):
         self.hotkeys = hotkeys
         self.is_zh = is_zh
         self.setWindowTitle("设置对讲按键 PTT" if is_zh else "Назначение кнопки или комбинации PTT")
-        self.setFixedSize(450, 240)
+        self.setFixedSize(520, 360)
         self.setModal(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setStyleSheet("""
@@ -228,30 +228,26 @@ class KeyCaptureDialog(QDialog):
         """)
 
         v = QVBoxLayout(self)
-        v.setContentsMargins(20, 20, 20, 20)
-        v.setSpacing(12)
+        v.setContentsMargins(18, 16, 18, 16)
+        v.setSpacing(10)
 
         title_text = "<b>请按下任意按键或组合快捷键</b>" if is_zh else "<b>Нажмите клавишу или комбинацию клавиш</b>"
         self.lbl_title = QLabel(title_text)
         self.lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_title.setStyleSheet("color: #f8fafc; font-size: 14px;")
+        self.lbl_title.setStyleSheet("color: #f8fafc; font-size: 14px; font-weight: bold;")
         v.addWidget(self.lbl_title)
 
         if is_zh:
             desc_text = (
-                "• <b>单键:</b> V, CapsLock, Space, Mouse4, Mouse5, 滚轮中键 (MMB)...\n"
-                "• <b>组合键:</b> 按住 Shift, Ctrl 或 Alt 并按下第二个按键\n"
-                "  <i>(例如: Shift + 滚轮中键, Ctrl + V, Alt + Mouse4)</i>\n"
-                "• <b>控制器:</b> 手柄 / VR / 踏板按键 (LB, RB, LT, RT...)\n\n"
-                "(按 Esc 键取消)"
+                "• <b>单键:</b> 直接按下目标键 (例如: V, CapsLock, Space, 侧键 Mouse4/5, 滚轮中键)\n"
+                "• <b>组合键:</b> 先按住 Shift, Ctrl 或 Alt，再按下第二个按键 (例如: Shift + 滚轮中键)\n"
+                "• <b>手柄/VR:</b> 手柄肩键或扳机 (LB, RB, LT, RT)"
             )
         else:
             desc_text = (
-                "• <b>Одиночная кнопка:</b> V, CapsLock, Space, Mouse4, Mouse5, Колесико...\n"
-                "• <b>Комбинация:</b> Зажмите Shift, Ctrl или Alt и нажмите вторую кнопку\n"
-                "  <i>(например: Shift + Колесико, Ctrl + V, Alt + Mouse4)</i>\n"
-                "• <b>Контроллеры:</b> Кнопки геймпада / VR / педалей (LB, RB, LT, RT...)\n\n"
-                "(Нажмите Esc для отмены)"
+                "• <b>Одиночная кнопка:</b> Нажмите любую клавишу (V, CapsLock, Пробел, Mouse4/5, Колесико)\n"
+                "• <b>Комбинация:</b> Зажмите Shift, Ctrl или Alt и нажмите вторую кнопку (например: Shift + Колесико)\n"
+                "• <b>Геймпад / VR:</b> Кнопки геймпада (LB, RB, LT, RT)"
             )
         lbl_desc = QLabel(desc_text)
         lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -266,13 +262,75 @@ class KeyCaptureDialog(QDialog):
                 color: #38bdf8;
                 font-weight: bold;
                 font-size: 15px;
-                padding: 8px;
+                padding: 10px;
                 background-color: #1e293b;
                 border: 1px dashed #38bdf8;
                 border-radius: 6px;
             }
         """)
         v.addWidget(self.lbl_status)
+
+        # Quick 1-Click Popular Preset Buttons
+        lbl_quick_hint = QLabel("或者直接点击下方常用预设 (1键设置):" if is_zh else "Или кликните мышью по готовой кнопке (в 1 клик):")
+        lbl_quick_hint.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold;")
+        v.addWidget(lbl_quick_hint)
+
+        grid_presets = QGridLayout()
+        grid_presets.setSpacing(6)
+
+        presets = [
+            ("🖱 Shift + 滚轮 (MMB)" if is_zh else "🖱 Shift + Колесико (MMB)", "shift+middle"),
+            ("🖱 鼠标侧键 4" if is_zh else "🖱 Боковая Mouse 4", "mouse4"),
+            ("🖱 鼠标侧键 5" if is_zh else "🖱 Боковая Mouse 5", "mouse5"),
+            ("⌨ 按键 V" if is_zh else "⌨ Клавиша V", "v"),
+            ("⌨ CapsLock" if is_zh else "⌨ CapsLock", "caps_lock"),
+            ("⌨ 空格 (Space)" if is_zh else "⌨ Пробел (Space)", "space"),
+        ]
+
+        for i, (label, keycode) in enumerate(presets):
+            btn = QPushButton(label)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #1e293b;
+                    color: #cbd5e1;
+                    font-size: 11px;
+                    border: 1px solid #334155;
+                    border-radius: 4px;
+                    padding: 5px 8px;
+                }
+                QPushButton:hover {
+                    background-color: #2563eb;
+                    color: #ffffff;
+                    border-color: #60a5fa;
+                }
+            """)
+            btn.clicked.connect(lambda checked=False, kc=keycode: self._finish(kc))
+            row = i // 3
+            col = i % 3
+            grid_presets.addWidget(btn, row, col)
+
+        v.addLayout(grid_presets)
+
+        # Bottom Cancel Button
+        h_bottom = QHBoxLayout()
+        h_bottom.addStretch()
+        self.btn_cancel = QPushButton("❌ 取消 (Esc)" if is_zh else "❌ Отмена (Esc)")
+        self.btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #334155;
+                color: #e2e8f0;
+                font-size: 11px;
+                border: 1px solid #475569;
+                border-radius: 4px;
+                padding: 5px 16px;
+            }
+            QPushButton:hover { background-color: #475569; }
+        """)
+        self.btn_cancel.clicked.connect(self.reject)
+        h_bottom.addWidget(self.btn_cancel)
+        v.addLayout(h_bottom)
 
         self.captured_key: Optional[str] = None
         self.sig_captured.connect(self._finish)
@@ -363,7 +421,14 @@ class KeyCaptureDialog(QDialog):
                 self._finish(txt.lower())
 
     def mousePressEvent(self, event):
-        pass
+        btn = event.button()
+        if btn == Qt.MouseButton.MiddleButton:
+            self._finish("middle")
+        elif btn == Qt.MouseButton.XButton1:
+            self._finish("mouse4")
+        elif btn == Qt.MouseButton.XButton2:
+            self._finish("mouse5")
+        super().mousePressEvent(event)
 
 
 class StudioWindow(QMainWindow):
@@ -377,9 +442,9 @@ class StudioWindow(QMainWindow):
         self.cfg = engine.config
 
         self.setWindowTitle("Stage 3: Voice Translation Studio (S2ST) — CS2 & Discord")
-        self.resize(self.cfg.get("ui", {}).get("window_width", 920),
-                    max(self.cfg.get("ui", {}).get("window_height", 820), 800))
-        self.setMinimumSize(860, 680)
+        self.resize(max(self.cfg.get("ui", {}).get("window_width", 980), 960),
+                    max(self.cfg.get("ui", {}).get("window_height", 860), 840))
+        self.setMinimumSize(900, 720)
 
         self.tray_icon: Optional[QSystemTrayIcon] = None
         self._tray_hint_shown = False
@@ -681,14 +746,16 @@ class StudioWindow(QMainWindow):
         self.lbl_pipe.setStyleSheet("color: #94a3b8; font-weight: bold; font-size: 11px;")
         h_pipe.addWidget(self.lbl_pipe)
 
-        self.btn_pipe_ru = QPushButton("🇷🇺 Русский профиль (RU➔EN: GigaAM + Opus-MT)")
-        self.btn_pipe_ru.setFixedHeight(26)
+        self.btn_pipe_ru = QPushButton("🇷🇺 RU➔EN (GigaAM + Opus-MT)")
+        self.btn_pipe_ru.setToolTip("Русский профиль: Sber GigaAM v3 CTC + Opus-MT RU➔EN + Pocket-TTS")
+        self.btn_pipe_ru.setMinimumHeight(28)
         self.btn_pipe_ru.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_pipe_ru.clicked.connect(lambda: self._on_switch_pipeline("ru_en"))
         h_pipe.addWidget(self.btn_pipe_ru)
 
-        self.btn_pipe_zh = QPushButton("🇨🇳 中文配置 / Китайский (ZH➔EN: SenseVoice + Opus-MT)")
-        self.btn_pipe_zh.setFixedHeight(26)
+        self.btn_pipe_zh = QPushButton("🇨🇳 ZH➔EN (SenseVoice + Opus-MT)")
+        self.btn_pipe_zh.setToolTip("中文配置: SenseVoice Chinese INT8 + Opus-MT ZH➔EN + Pocket-TTS")
+        self.btn_pipe_zh.setMinimumHeight(28)
         self.btn_pipe_zh.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_pipe_zh.clicked.connect(lambda: self._on_switch_pipeline("zh_en"))
         h_pipe.addWidget(self.btn_pipe_zh)
@@ -770,13 +837,13 @@ class StudioWindow(QMainWindow):
 
         self.btn_prof_topping = QPushButton("🎛 Режим: Звуковая карта Topping (0 ms)")
         self.btn_prof_topping.setToolTip("Аппаратный нулевой мониторинг через карту Topping E2x2 OTG (0 ms latency)")
-        self.btn_prof_topping.setFixedHeight(34)
+        self.btn_prof_topping.setMinimumHeight(32)
         self.btn_prof_topping.clicked.connect(lambda: self._on_switch_profile("topping"))
         h_prof.addWidget(self.btn_prof_topping, stretch=1)
 
         self.btn_prof_cable = QPushButton("🔌 Режим: Виртуальный Кабель (Для ПК без Topping)")
         self.btn_prof_cable.setToolTip("Универсальная передача аудио через драйвер VB-Audio Virtual Cable для любых ПК")
-        self.btn_prof_cable.setFixedHeight(34)
+        self.btn_prof_cable.setMinimumHeight(32)
         self.btn_prof_cable.clicked.connect(lambda: self._on_switch_profile("cable"))
         h_prof.addWidget(self.btn_prof_cable, stretch=1)
 
@@ -786,9 +853,9 @@ class StudioWindow(QMainWindow):
         self.grp_devs = QGroupBox("Аудиоустройства")
         self.grp_devs.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 8px; }")
         grid = QGridLayout(self.grp_devs)
-        grid.setContentsMargins(6, 4, 6, 6)
+        grid.setContentsMargins(8, 6, 8, 8)
         grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(4)
+        grid.setVerticalSpacing(6)
 
         inputs, outputs = AudioEngine.get_devices()
 
@@ -797,7 +864,7 @@ class StudioWindow(QMainWindow):
         self.lbl_in.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(self.lbl_in, 0, 0)
         self.combo_in = NoWheelComboBox()
-        self.combo_in.setFixedHeight(26)
+        self.combo_in.setMinimumHeight(28)
         for idx, name in inputs:
             label = f"[{idx}] {name}"
             if "analog 1/2" in name.lower() or "broadcast" in name.lower():
@@ -816,7 +883,7 @@ class StudioWindow(QMainWindow):
         self.lbl_out.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(self.lbl_out, 1, 0)
         self.combo_out = NoWheelComboBox()
-        self.combo_out.setFixedHeight(26)
+        self.combo_out.setMinimumHeight(28)
         for idx, name in outputs:
             label = f"[{idx}] {name}"
             if "3/4" in name.lower():
@@ -837,7 +904,7 @@ class StudioWindow(QMainWindow):
         self.lbl_side.setStyleSheet("font-weight: bold; color: #cbd5e1; font-size: 11px;")
         grid.addWidget(self.lbl_side, 2, 0)
         self.combo_side = NoWheelComboBox()
-        self.combo_side.setFixedHeight(26)
+        self.combo_side.setMinimumHeight(28)
         for idx, name in outputs:
             label = f"[{idx}] {name}"
             if "1/2" in name.lower():
@@ -888,53 +955,80 @@ class StudioWindow(QMainWindow):
 
         layout.addWidget(self.grp_opts)
 
-        # 1. AI Voice Selection Block on Tab 1
+        # 1. AI Voice Selection Block on Tab 1 (Clear 1-Click Buttons + Full List)
         self.grp_voice = QGroupBox("🎙 Выбор тембра голоса ИИ")
         self.grp_voice.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        h_voice = QHBoxLayout(self.grp_voice)
-        h_voice.setContentsMargins(8, 6, 8, 6)
-        h_voice.setSpacing(10)
+        v_voice = QVBoxLayout(self.grp_voice)
+        v_voice.setContentsMargins(8, 6, 8, 8)
+        v_voice.setSpacing(8)
 
-        self.lbl_voice_main = QLabel("Голос перевода:")
-        self.lbl_voice_main.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
-        h_voice.addWidget(self.lbl_voice_main)
+        # Direct 1-Click Buttons
+        h_voice_btns = QHBoxLayout()
+        h_voice_btns.setSpacing(8)
 
-        self.combo_voices_main = NoWheelComboBox()
-        self.combo_voices_main.setFixedHeight(28)
-        self.combo_voices_main.currentIndexChanged.connect(self._on_voice_changed)
-        h_voice.addWidget(self.combo_voices_main, stretch=1)
+        self.btn_voice_author = QPushButton("⭐ Голос автора")
+        self.btn_voice_author.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_voice_author.setMinimumHeight(28)
+        self.btn_voice_author.clicked.connect(lambda: self._on_quick_voice_clicked("author"))
+        h_voice_btns.addWidget(self.btn_voice_author)
 
-        self.btn_add_voice_main = QPushButton("🎙 Добавить свой голос (7 сек)")
-        self.btn_add_voice_main.setFixedHeight(28)
+        self.btn_voice_stock = QPushButton("🎭 Стандартный голос")
+        self.btn_voice_stock.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_voice_stock.setMinimumHeight(28)
+        self.btn_voice_stock.clicked.connect(lambda: self._on_quick_voice_clicked("stock"))
+        h_voice_btns.addWidget(self.btn_voice_stock)
+
+        self.btn_voice_custom = QPushButton("👤 Свой клон")
+        self.btn_voice_custom.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_voice_custom.setMinimumHeight(28)
+        self.btn_voice_custom.clicked.connect(lambda: self._on_quick_voice_clicked("custom"))
+        h_voice_btns.addWidget(self.btn_voice_custom)
+
+        self.btn_add_voice_main = QPushButton("🎤 Записать свой голос (7 сек)")
         self.btn_add_voice_main.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_add_voice_main.setMinimumHeight(28)
         self.btn_add_voice_main.setStyleSheet("""
             QPushButton {
                 background-color: #6366f1;
                 color: #ffffff;
                 font-weight: bold;
                 border-radius: 4px;
-                padding: 2px 14px;
+                padding: 4px 14px;
             }
             QPushButton:hover { background-color: #4f46e5; }
         """)
         self.btn_add_voice_main.clicked.connect(self._on_open_voice_studio_wizard)
-        h_voice.addWidget(self.btn_add_voice_main)
+        h_voice_btns.addWidget(self.btn_add_voice_main)
+        v_voice.addLayout(h_voice_btns)
+
+        # Full Dropdown Selector
+        h_voice_combo = QHBoxLayout()
+        self.lbl_voice_main = QLabel("Активный тембр:")
+        self.lbl_voice_main.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
+        h_voice_combo.addWidget(self.lbl_voice_main)
+
+        self.combo_voices_main = NoWheelComboBox()
+        self.combo_voices_main.setMinimumHeight(28)
+        self.combo_voices_main.currentIndexChanged.connect(self._on_voice_changed)
+        h_voice_combo.addWidget(self.combo_voices_main, stretch=1)
+        v_voice.addLayout(h_voice_combo)
 
         layout.addWidget(self.grp_voice)
 
-        # 2. Clean PTT Control Row
+        # 2. PTT Control Block with 1-Click Presets
         self.grp_ptt = QGroupBox("🎮 Активация микрофона (Push-to-Talk)")
         self.grp_ptt.setStyleSheet("QGroupBox { font-weight: bold; color: #e5e7eb; padding-top: 10px; }")
-        h_ptt = QHBoxLayout(self.grp_ptt)
-        h_ptt.setContentsMargins(8, 6, 8, 6)
-        h_ptt.setSpacing(10)
+        v_ptt = QVBoxLayout(self.grp_ptt)
+        v_ptt.setContentsMargins(8, 6, 8, 8)
+        v_ptt.setSpacing(6)
 
+        h_ptt = QHBoxLayout()
         self.lbl_ptt_prompt = QLabel("Кнопка PTT:")
         self.lbl_ptt_prompt.setStyleSheet("color: #cbd5e1; font-weight: bold; font-size: 11px;")
         h_ptt.addWidget(self.lbl_ptt_prompt)
 
         self.btn_bind_ptt = QPushButton()
-        self.btn_bind_ptt.setFixedHeight(28)
+        self.btn_bind_ptt.setMinimumHeight(28)
         self.btn_bind_ptt.setCursor(Qt.CursorShape.PointingHandCursor)
         self._update_ptt_button_text()
         self.btn_bind_ptt.setStyleSheet("""
@@ -945,32 +1039,55 @@ class StudioWindow(QMainWindow):
                 font-size: 11px;
                 border: 1px solid #38bdf8;
                 border-radius: 4px;
-                padding: 2px 16px;
+                padding: 4px 14px;
             }
-            QPushButton:hover { background-color: #0f172a; }
+            QPushButton:hover { background-color: #0f172a; border-color: #60a5fa; }
         """)
         self.btn_bind_ptt.clicked.connect(self._on_click_bind_ptt)
         h_ptt.addWidget(self.btn_bind_ptt)
 
-        self.btn_reset_ptt = QPushButton("↺ Shift + MMB")
-        self.btn_reset_ptt.setFixedHeight(28)
-        self.btn_reset_ptt.setToolTip("Сбросить кнопку на стандартную (Shift + Колесико мыши)")
-        self.btn_reset_ptt.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_reset_ptt.setStyleSheet("""
-            QPushButton {
-                background-color: #334155;
-                color: #94a3b8;
-                font-size: 11px;
-                border: 1px solid #475569;
-                border-radius: 4px;
-                padding: 2px 10px;
-            }
-            QPushButton:hover { background-color: #1e293b; color: #f1f5f9; }
-        """)
-        self.btn_reset_ptt.clicked.connect(self._on_reset_ptt)
-        h_ptt.addWidget(self.btn_reset_ptt)
+        h_ptt.addSpacing(8)
+        self.lbl_quick_ptt = QLabel("Быстрый выбор:")
+        self.lbl_quick_ptt.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_ptt.addWidget(self.lbl_quick_ptt)
+
+        self.btn_ptt_shift_mmb = QPushButton("Shift + MMB")
+        self.btn_ptt_shift_mmb.setToolTip("Shift + Колесико мыши (По умолчанию для CS2 и Discord)")
+        self.btn_ptt_shift_mmb.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ptt_shift_mmb.clicked.connect(lambda: self._apply_quick_ptt("shift+middle"))
+        h_ptt.addWidget(self.btn_ptt_shift_mmb)
+
+        self.btn_ptt_m4 = QPushButton("Mouse 4")
+        self.btn_ptt_m4.setToolTip("Боковая кнопка мыши 4")
+        self.btn_ptt_m4.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ptt_m4.clicked.connect(lambda: self._apply_quick_ptt("mouse4"))
+        h_ptt.addWidget(self.btn_ptt_m4)
+
+        self.btn_ptt_m5 = QPushButton("Mouse 5")
+        self.btn_ptt_m5.setToolTip("Боковая кнопка мыши 5")
+        self.btn_ptt_m5.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ptt_m5.clicked.connect(lambda: self._apply_quick_ptt("mouse5"))
+        h_ptt.addWidget(self.btn_ptt_m5)
+
+        self.btn_ptt_v = QPushButton("V")
+        self.btn_ptt_v.setToolTip("Клавиша V (Стандарт голосового чата)")
+        self.btn_ptt_v.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ptt_v.clicked.connect(lambda: self._apply_quick_ptt("v"))
+        h_ptt.addWidget(self.btn_ptt_v)
+
+        self.btn_ptt_caps = QPushButton("CapsLock")
+        self.btn_ptt_caps.setToolTip("Клавиша CapsLock")
+        self.btn_ptt_caps.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ptt_caps.clicked.connect(lambda: self._apply_quick_ptt("caps_lock"))
+        h_ptt.addWidget(self.btn_ptt_caps)
 
         h_ptt.addStretch()
+        self.lbl_master_pause = QLabel("Мастер-пауза: <b>F8</b>")
+        self.lbl_master_pause.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        h_ptt.addWidget(self.lbl_master_pause)
+
+        v_ptt.addLayout(h_ptt)
+        layout.addWidget(self.grp_ptt)
         self.lbl_master_pause = QLabel("Мастер-пауза: <b>F8</b>")
         self.lbl_master_pause.setStyleSheet("color: #94a3b8; font-size: 11px;")
         h_ptt.addWidget(self.lbl_master_pause)
@@ -993,8 +1110,11 @@ class StudioWindow(QMainWindow):
         self.info_title.setStyleSheet("color: #93c5fd; font-size: 11px;")
         v_info.addWidget(self.info_title)
         layout.addWidget(self.info_frame)
+        layout.addStretch(1)
 
         self._update_profile_buttons_style()
+        self._update_voice_buttons_style()
+        self._update_ptt_presets_style()
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -1212,6 +1332,7 @@ class StudioWindow(QMainWindow):
         v_dl.addWidget(self.lbl_download_status)
 
         layout.addWidget(self.grp_dl)
+        self._update_ptt_button_text()
         self._refresh_models_tab()
 
         scroll = QScrollArea()
@@ -1460,11 +1581,11 @@ class StudioWindow(QMainWindow):
         self.node_out.sub_lbl.setText(f"{cur_out} ➔ Игра")
         self.engine.restart_streams()
 
-    def _format_key_display(self, raw_key: str) -> str:
-        """Format any combination or single key into clean, human-friendly Russian label."""
+    def _format_key_display(self, raw_key: str, is_zh: bool = False) -> str:
+        """Format any combination or single key into clean, human-friendly Russian or Chinese label."""
         parts = [p.strip().lower() for p in raw_key.split("+") if p.strip()]
         if not parts:
-            return "⌨ SHIFT + КОЛЕСИКО (MMB)"
+            return "⌨ Shift + 滚轮中键" if is_zh else "⌨ SHIFT + КОЛЕСИКО (MMB)"
 
         labels = []
         is_mouse = False
@@ -1478,13 +1599,13 @@ class StudioWindow(QMainWindow):
             elif p == "alt":
                 labels.append("ALT")
             elif p in ("middle", "mmb"):
-                labels.append("КОЛЕСИКО (MMB)")
+                labels.append("滚轮中键 (MMB)" if is_zh else "КОЛЕСИКО (MMB)")
                 is_mouse = True
             elif p in ("mouse4", "xbutton1"):
-                labels.append("MOUSE 4")
+                labels.append("侧键 Mouse 4" if is_zh else "MOUSE 4")
                 is_mouse = True
             elif p in ("mouse5", "xbutton2"):
-                labels.append("MOUSE 5")
+                labels.append("侧键 Mouse 5" if is_zh else "MOUSE 5")
                 is_mouse = True
             elif p == "left":
                 labels.append("LMB")
@@ -1498,7 +1619,7 @@ class StudioWindow(QMainWindow):
             elif p == "caps_lock":
                 labels.append("CAPSLOCK")
             elif p == "space":
-                labels.append("SPACE")
+                labels.append("空格 (SPACE)" if is_zh else "SPACE")
             else:
                 labels.append(p.upper())
 
@@ -1509,17 +1630,82 @@ class StudioWindow(QMainWindow):
     def _update_ptt_button_text(self):
         """Update PTT button text with clear human-readable name."""
         cur_key = self.cfg.get("ptt", {}).get("key", "shift+middle")
-        display = self._format_key_display(cur_key)
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        display = self._format_key_display(cur_key, is_zh=is_zh)
         if hasattr(self, "btn_bind_ptt"):
             self.btn_bind_ptt.setText(display)
+        self._update_ptt_presets_style()
 
-    def _on_reset_ptt(self):
-        """Reset PTT keybinding to standard Shift + MMB."""
-        self.cfg.setdefault("ptt", {})["key"] = "shift+middle"
+    def _apply_quick_ptt(self, key_code: str):
+        """1-click PTT assignment from main panel."""
+        self.cfg.setdefault("ptt", {})["key"] = key_code
         save_settings(self.cfg)
         self._update_ptt_button_text()
         if self.hotkeys:
-            self.hotkeys.set_binding("shift+middle")
+            self.hotkeys.set_binding(key_code)
+        self._update_ptt_presets_style()
+
+    def _update_ptt_presets_style(self):
+        """Highlight active PTT preset button."""
+        cur_key = self.cfg.get("ptt", {}).get("key", "shift+middle").lower()
+        active_style = "background-color: #059669; color: #ffffff; font-weight: bold; border: 1px solid #34d399; border-radius: 4px; padding: 3px 8px; font-size: 11px;"
+        inactive_style = "background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 3px 8px; font-size: 11px;"
+
+        mapping = [
+            ("btn_ptt_shift_mmb", "shift+middle"),
+            ("btn_ptt_m4", "mouse4"),
+            ("btn_ptt_m5", "mouse5"),
+            ("btn_ptt_v", "v"),
+            ("btn_ptt_caps", "caps_lock"),
+        ]
+        for attr, target in mapping:
+            btn = getattr(self, attr, None)
+            if btn:
+                btn.setStyleSheet(active_style if cur_key == target else inactive_style)
+
+    def _on_reset_ptt(self):
+        """Reset PTT keybinding to standard Shift + MMB."""
+        self._apply_quick_ptt("shift+middle")
+
+    def _on_quick_voice_clicked(self, category: str):
+        """1-click direct voice switch between Author, Stock, and Custom clone."""
+        if category == "author":
+            target = "my_pocket_voice"
+        elif category == "stock":
+            target = "juergen"
+        elif category == "custom":
+            voices = self.mm.get_available_voices()
+            custom_voices = [v_id for v_id, _ in voices if v_id.startswith("custom:")]
+            if custom_voices:
+                target = custom_voices[0]
+            else:
+                self._on_open_voice_studio_wizard()
+                return
+        else:
+            target = "my_pocket_voice"
+
+        self.cfg.setdefault("models", {})["tts_voice"] = target
+        save_settings(self.cfg)
+        self.mm.set_voice(target)
+        self._populate_voice_combos()
+        self._update_voice_buttons_style()
+
+    def _update_voice_buttons_style(self):
+        """Highlight active voice category button."""
+        cur_v = self.cfg.get("models", {}).get("tts_voice", "my_pocket_voice")
+        is_author = (cur_v == "my_pocket_voice")
+        is_custom = str(cur_v).startswith("custom:")
+        is_stock = not is_author and not is_custom
+
+        active_style = "background-color: #2563eb; color: #ffffff; font-weight: bold; border: 1px solid #60a5fa; border-radius: 4px; padding: 4px 10px;"
+        inactive_style = "background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px 10px;"
+
+        if hasattr(self, "btn_voice_author"):
+            self.btn_voice_author.setStyleSheet(active_style if is_author else inactive_style)
+        if hasattr(self, "btn_voice_stock"):
+            self.btn_voice_stock.setStyleSheet(active_style if is_stock else inactive_style)
+        if hasattr(self, "btn_voice_custom"):
+            self.btn_voice_custom.setStyleSheet(active_style if is_custom else inactive_style)
 
     def _populate_voice_combos(self):
         """Scan all user cloned, custom, and stock voices and populate combo boxes."""
@@ -1546,6 +1732,8 @@ class StudioWindow(QMainWindow):
             cb.setCurrentIndex(sel_idx)
             cb.blockSignals(False)
 
+        self._update_voice_buttons_style()
+
     def _on_voice_changed(self, idx: int):
         """Synchronize voice selection across all tabs."""
         sender = self.sender()
@@ -1569,13 +1757,19 @@ class StudioWindow(QMainWindow):
                         break
                 cb.blockSignals(False)
 
+        self._update_voice_buttons_style()
+
     def _on_open_voice_studio_wizard(self):
         """Launch integrated Voice Cloning Studio with custom name support."""
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        title = "新建声音档案" if is_zh else "Имя профиля голоса"
+        prompt = "请输入新声音名称 (例如: 我的声音 2):" if is_zh else "Введите название нового голоса (например: Мой голос 2):"
+        default_txt = "我的声音" if is_zh else "Мой голос"
         name, ok = QInputDialog.getText(
             self,
-            "Имя профиля голоса",
-            "Введите название нового голоса (например: Мой голос 2):",
-            text="Мой голос"
+            title,
+            prompt,
+            text=default_txt
         )
         if not ok or not name.strip():
             return
@@ -1589,7 +1783,7 @@ class StudioWindow(QMainWindow):
         except ImportError:
             from voice_wizard import VoiceCloningWizard
 
-        wiz = VoiceCloningWizard(self, target_voice_name=safe_name)
+        wiz = VoiceCloningWizard(self, target_voice_name=safe_name, is_zh=is_zh)
         if wiz.exec():
             # Refresh voice lists on all tabs and select newly trained voice
             custom_id = f"custom:{safe_name}.safetensors"
@@ -1597,7 +1791,8 @@ class StudioWindow(QMainWindow):
             save_settings(self.cfg)
             self.mm.set_voice(custom_id)
             self._populate_voice_combos()
-            self._refresh_models_tab()
+            self._update_ptt_button_text()
+        self._refresh_models_tab()
 
     def _on_click_bind_ptt(self):
         """Open clean key capture dialog to bind any keyboard, mouse, or gamepad button."""
@@ -1617,25 +1812,26 @@ class StudioWindow(QMainWindow):
         if "models" not in self.cfg:
             self.cfg["models"] = {}
         self.cfg["models"]["tts_speed"] = speed_float
-        if val < 95:
-            hint = "Спокойная речь"
-        elif val > 105:
-            hint = "Быстрая речь"
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        if is_zh:
+            hint = "沉稳语速" if val < 95 else ("较快语速" if val > 105 else "标准语速")
         else:
-            hint = "Стандартная речь"
+            hint = "Спокойная речь" if val < 95 else ("Быстрая речь" if val > 105 else "Стандартная речь")
         self.lbl_speed_val.setText(f"{val}% ({hint})")
         save_settings(self.cfg)
 
     def _on_load_all_models(self):
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
         self.btn_load_all.setEnabled(False)
-        self.btn_load_all.setText("Загрузка...")
+        self.btn_load_all.setText("正在载入..." if is_zh else "Загрузка...")
         QTimer.singleShot(50, self._do_load_all)
 
     def _do_load_all(self):
         voice = self.combo_voices.currentData()
         self.mm.load_all(voice=voice)
         self.btn_load_all.setEnabled(True)
-        self.btn_load_all.setText("📥 Загрузить ВСЕ модели в ОЗУ")
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        self.btn_load_all.setText("📥 一键载入全部模型到内存" if is_zh else "📥 Загрузить ВСЕ модели в ОЗУ")
 
     def _on_unload_all_models(self):
         self.mm.unload_all()
@@ -1702,12 +1898,37 @@ class StudioWindow(QMainWindow):
                 background-color: #212328;
                 border: 1px solid #374151;
                 border-radius: 4px;
-                padding: 5px 10px;
+                padding: 4px 28px 4px 10px;
                 min-height: 28px;
                 color: #ffffff;
+                font-size: 12px;
+            }
+            QComboBox:hover {
+                border-color: #60a5fa;
             }
             QComboBox::drop-down {
-                border: none;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 24px;
+                border-left: 1px solid #374151;
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+                background-color: #1a1b1e;
+            }
+            QComboBox::down-arrow {
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #94a3b8;
+                width: 0;
+                height: 0;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #1e293b;
+                color: #f1f5f9;
+                border: 1px solid #475569;
+                selection-background-color: #2563eb;
+                selection-color: #ffffff;
+                padding: 4px;
             }
             QPushButton {
                 background-color: #374151;
@@ -1843,20 +2064,28 @@ class StudioWindow(QMainWindow):
                 self.lbl_sidetone_title.setText("监听音量:")
             if hasattr(self, "grp_voice"):
                 self.grp_voice.setTitle("🎙 AI 声音与音色选择")
+            if hasattr(self, "btn_voice_author"):
+                self.btn_voice_author.setText("⭐ 作者原声")
+            if hasattr(self, "btn_voice_stock"):
+                self.btn_voice_stock.setText("🎭 标准音色")
+            if hasattr(self, "btn_voice_custom"):
+                self.btn_voice_custom.setText("👤 我的克隆")
             if hasattr(self, "lbl_voice_main"):
-                self.lbl_voice_main.setText("翻译音色:")
+                self.lbl_voice_main.setText("当前音色:")
             if hasattr(self, "btn_add_voice_main"):
                 self.btn_add_voice_main.setText("🎙 录制专属声音 (7秒)")
             if hasattr(self, "grp_ptt"):
                 self.grp_ptt.setTitle("🎮 按键对讲设置 (Push-to-Talk: 键盘、鼠标、VR/手柄)")
             if hasattr(self, "lbl_ptt_prompt"):
                 self.lbl_ptt_prompt.setText("对讲按键 (PTT):")
-            if hasattr(self, "btn_reset_ptt"):
-                self.btn_reset_ptt.setToolTip("重置为默认按键 (Shift + 滚轮中键)")
+            if hasattr(self, "lbl_quick_ptt"):
+                self.lbl_quick_ptt.setText("快速选择:")
             if hasattr(self, "lbl_master_pause"):
                 self.lbl_master_pause.setText("总开关暂停: <b>F8</b>")
             if hasattr(self, "info_title"):
                 self.info_title.setText("💡 <b>说明:</b> AI翻译语音输出至 Playback 3/4 ➔ 路由到 Loopback 1+2 (游戏麦克风). 耳机监听: Playback 1/2 (0 ms).")
+            if hasattr(self, "tbl_transcript"):
+                self.tbl_transcript.setHorizontalHeaderLabels(["时间", "原文", "英语翻译", "延迟明细"])
             # Models Tab (Tab 2)
             if hasattr(self, "ram_grp"):
                 self.ram_grp.setTitle("📊 模型清单与内存占用")
@@ -1931,20 +2160,28 @@ class StudioWindow(QMainWindow):
                 self.lbl_sidetone_title.setText("Громкость:")
             if hasattr(self, "grp_voice"):
                 self.grp_voice.setTitle("🎙 Выбор тембра голоса ИИ")
+            if hasattr(self, "btn_voice_author"):
+                self.btn_voice_author.setText("⭐ Голос автора")
+            if hasattr(self, "btn_voice_stock"):
+                self.btn_voice_stock.setText("🎭 Стандартный голос")
+            if hasattr(self, "btn_voice_custom"):
+                self.btn_voice_custom.setText("👤 Свой клон")
             if hasattr(self, "lbl_voice_main"):
-                self.lbl_voice_main.setText("Голос перевода:")
+                self.lbl_voice_main.setText("Активный тембр:")
             if hasattr(self, "btn_add_voice_main"):
-                self.btn_add_voice_main.setText("🎙 Добавить свой голос (7 сек)")
+                self.btn_add_voice_main.setText("🎙 Записать свой голос (7 сек)")
             if hasattr(self, "grp_ptt"):
                 self.grp_ptt.setTitle("🎮 Управление Push-to-Talk (Клавиатура, Мышь, VR / Геймпад)")
             if hasattr(self, "lbl_ptt_prompt"):
-                self.lbl_ptt_prompt.setText("Кнопка активации микрофона (PTT):")
-            if hasattr(self, "btn_reset_ptt"):
-                self.btn_reset_ptt.setToolTip("Сбросить кнопку на стандартную (Shift + Колесико мыши)")
+                self.lbl_ptt_prompt.setText("Кнопка PTT:")
+            if hasattr(self, "lbl_quick_ptt"):
+                self.lbl_quick_ptt.setText("Быстрый выбор:")
             if hasattr(self, "lbl_master_pause"):
                 self.lbl_master_pause.setText("Мастер-пауза: <b>F8</b>")
             if hasattr(self, "info_title"):
                 self.info_title.setText("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ направлен в Loopback 1+2 (микрофон игры). Наушники: Playback 1/2 (0 ms).")
+            if hasattr(self, "tbl_transcript"):
+                self.tbl_transcript.setHorizontalHeaderLabels(["Время", "Оригинал", "Английский перевод", "Задержка (Latency)"])
             # Models Tab (Tab 2)
             if hasattr(self, "ram_grp"):
                 self.ram_grp.setTitle("📊 Инвентарь нейросетей и потребление памяти")
@@ -1967,6 +2204,7 @@ class StudioWindow(QMainWindow):
             if hasattr(self, "btn_download_models"):
                 self.btn_download_models.setText("📥 一键下载所需模型 / Скачать недостающие модели")
 
+        self._update_ptt_button_text()
         self._refresh_models_tab()
 
     def _refresh_models_tab(self):

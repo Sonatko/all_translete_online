@@ -37,6 +37,9 @@ def get_file_hash(path: Path) -> str:
 
 def download_with_fallback(urls: list[str], dest_file: Path) -> bool:
     """Download a file with fallback mirror support."""
+    if dest_file.is_file() and dest_file.stat().st_size > 1024:
+        log.info("File %s already exists on disk (%d bytes). Skipping download.", dest_file.name, dest_file.stat().st_size)
+        return True
     dest_file.parent.mkdir(parents=True, exist_ok=True)
     for url in urls:
         try:

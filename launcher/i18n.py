@@ -84,6 +84,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "m2_group_title": "📦 Модуль 2: Экранный переводчик (OverTranslate) — Готовая программа + фикс буфера Windows 11",
         "m3_group_title": "📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Собственный движок",
         "vault_group_title": "🔒 Хранилище эталонов (CONFIG/) — Защита от обновлений авторов",
+        "patch_quick_ok": "🛡 {active}/{total} Патчей активны (ОК)",
+        "patch_quick_fail": "🔴 Патчи: {active}/{total} (СЛЕТЕЛ)",
+        "patch_restore_success_title": "Успешное восстановление",
+        "patch_restore_success_msg": "Все ключевые инженерные патчи и конфигурации успешно восстановлены из хранилища CONFIG/!\n\nВосстановлено файлов: {count}.",
 
         "hotkeys_label": "Клавиши:",
         "res_metrics": "Память: {ram} МБ | ЦП: {cpu}%",
@@ -167,6 +171,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "m2_group_title": "📦 Module 2: Screen Translator (OverTranslate) — Portable App + Win11 Clipboard Bugfix",
         "m3_group_title": "📦 Module 3: Voice Translator (Voice Studio) — 100% In-Process Engine",
         "vault_group_title": "🔒 Vault Storage (CONFIG/) — Protection against upstream updates",
+        "patch_quick_ok": "🛡 {active}/{total} Patches Active (OK)",
+        "patch_quick_fail": "🔴 Patches: {active}/{total} (FAILED)",
+        "patch_restore_success_title": "Patches Restored Successfully",
+        "patch_restore_success_msg": "All key engineering patches and configurations restored from CONFIG/!\n\nRestored files: {count}.",
 
         "hotkeys_label": "Hotkeys:",
         "res_metrics": "RAM: {ram} MB | CPU: {cpu}%",
@@ -250,6 +258,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "m2_group_title": "📦 模块 2: 屏幕翻译 (OverTranslate) — 便携独立程序 + Win11 剪贴板修复",
         "m3_group_title": "📦 模块 3: 语音翻译 (Voice Studio) — 100% 自研本地引擎",
         "vault_group_title": "🔒 备份金库 (CONFIG/) — 防止作者更新覆盖",
+        "patch_quick_ok": "🛡 {active}/{total} 核心补丁正常 (OK)",
+        "patch_quick_fail": "🔴 补丁状态: {active}/{total} (异常)",
+        "patch_restore_success_title": "恢复成功",
+        "patch_restore_success_msg": "全部核心工程补丁与配置文件已成功从 CONFIG/ 恢复！\n\n已恢复文件数: {count}。",
 
         "hotkeys_label": "快捷键:",
         "res_metrics": "内存: {ram} MB | CPU: {cpu}%",

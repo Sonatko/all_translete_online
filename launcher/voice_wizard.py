@@ -44,10 +44,11 @@ class VoiceCloningWizard(QDialog):
     sig_cloning_finished = Signal(str, float)  # wav_path, latency_s
     sig_error = Signal(str)
 
-    def __init__(self, parent=None, target_voice_name: str = "my_pocket_voice"):
+    def __init__(self, parent=None, target_voice_name: str = "my_pocket_voice", is_zh: bool = False):
         super().__init__(parent)
         self.target_voice_name = target_voice_name
-        self.setWindowTitle("Студия обучения и клонирования голоса — Kyutai Pocket-TTS")
+        self.is_zh = is_zh
+        self.setWindowTitle("声音克隆与训练工作室 — Kyutai Pocket-TTS" if is_zh else "Студия обучения и клонирования голоса — Kyutai Pocket-TTS")
         self.resize(680, 560)
         self.setMinimumSize(640, 520)
 
@@ -114,21 +115,25 @@ class VoiceCloningWizard(QDialog):
         layout.setSpacing(12)
 
         # Header
-        title = QLabel("🎙 <b>Обучение нейро-модели под ваш собственный голос</b>")
+        head_txt = "🎙 <b>训练专属 AI 声音克隆模型 (Mimi + Pocket-TTS)</b>" if self.is_zh else "🎙 <b>Обучение нейро-модели под ваш собственный голос</b>"
+        title = QLabel(head_txt)
         title.setStyleSheet("font-size: 16px; color: #ffffff;")
         layout.addWidget(title)
 
-        subtitle = QLabel(
-            "Для создания цифрового двойника вашего голоса достаточно прочитать короткую 7-секундную фразу. "
-            "Нейросеть Mimi извлечет акустический слепок вашего тембра (Mimi Latents) без нагрузки на видеокарту."
+        sub_txt = (
+            "仅需朗读下方一段 7 秒的简短英文句子，Mimi 神经网络将在 CPU 上瞬间提取您的音色声纹特征，无需独立显卡。"
+            if self.is_zh
+            else "Для создания цифрового двойника вашего голоса достаточно прочитать короткую 7-секундную фразу. "
+                 "Нейросеть Mimi извлечет акустический слепок вашего тембра (Mimi Latents) без нагрузки на видеокарту."
         )
+        subtitle = QLabel(sub_txt)
         subtitle.setWordWrap(True)
-        subtitle.setStyleSheet("color: #9ca3af; font-size: 12px;")
+        subtitle.setStyleSheet("color: #94a3b8; font-size: 12px;")
         layout.addWidget(subtitle)
 
         # Device Selection Bar
         h_dev = QHBoxLayout()
-        h_dev.addWidget(QLabel("Микрофон:"))
+        h_dev.addWidget(QLabel("麦克风输入:" if self.is_zh else "Микрофон:"))
         self.combo_mic = QComboBox()
         try:
             for idx, d in enumerate(sd.query_devices()):
@@ -147,7 +152,7 @@ class VoiceCloningWizard(QDialog):
 
         # Microphone Live Level Bar
         h_vu = QHBoxLayout()
-        h_vu.addWidget(QLabel("Уровень микрофона:"))
+        h_vu.addWidget(QLabel("麦克风电平:" if self.is_zh else "Уровень микрофона:"))
         self.vu_bar = QProgressBar()
         self.vu_bar.setRange(0, 100)
         self.vu_bar.setValue(0)
@@ -180,7 +185,7 @@ class VoiceCloningWizard(QDialog):
         v_card = QVBoxLayout(card)
         v_card.setSpacing(6)
 
-        card_hint = QLabel("<b>Текст для калибровки (читайте спокойно в микрофон при записи):</b>")
+        card_hint = QLabel("<b>校准文本 (录音时请对着麦克风平稳朗读):</b>" if self.is_zh else "<b>Текст для калибровки (читайте спокойно в микрофон при записи):</b>")
         card_hint.setStyleSheet("color: #60a5fa; font-size: 12px;")
         v_card.addWidget(card_hint)
 
@@ -189,13 +194,15 @@ class VoiceCloningWizard(QDialog):
         self.lbl_text_en.setStyleSheet("color: #ffffff; font-size: 15px; font-weight: bold; font-family: Georgia, serif;")
         v_card.addWidget(self.lbl_text_en)
 
-        card_tip = QLabel("<i>Подсказка: держите микрофон на расстоянии 12–15 см под небольшим углом, чтобы избежать задуваний.</i>")
+        tip_txt = "<i>提示: 麦克风距离嘴部约 12–15 厘米，避免喷麦爆音。</i>" if self.is_zh else "<i>Подсказка: держите микрофон на расстоянии 12–15 см под небольшим углом, чтобы избежать задуваний.</i>"
+        card_tip = QLabel(tip_txt)
         card_tip.setStyleSheet("color: #9ca3af; font-size: 11px;")
         v_card.addWidget(card_tip)
         layout.addWidget(card)
 
         # Progress / Status Section
-        self.lbl_status = QLabel("Нажмите кнопку записи, чтобы начать калибровку...")
+        init_stat = "点击下方录音按钮开始录制 7 秒语音..." if self.is_zh else "Нажмите кнопку записи, чтобы начать калибровку..."
+        self.lbl_status = QLabel(init_stat)
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_status.setStyleSheet("color: #d1d5db; font-weight: bold; font-size: 13px;")
         layout.addWidget(self.lbl_status)
@@ -205,7 +212,7 @@ class VoiceCloningWizard(QDialog):
         self.rec_progress.setValue(0)
         self.rec_progress.setFixedHeight(18)
         self.rec_progress.setTextVisible(True)
-        self.rec_progress.setFormat("Готов к записи")
+        self.rec_progress.setFormat("准备录音" if self.is_zh else "Готов к записи")
         self.rec_progress.setStyleSheet("""
             QProgressBar {
                 background-color: #1f2937;
@@ -224,7 +231,8 @@ class VoiceCloningWizard(QDialog):
 
         # Action Buttons
         h_act = QHBoxLayout()
-        self.btn_record = QPushButton("🔴 НАЧАТЬ ЗАПИСЬ (7 СЕКУНД)")
+        btn_rec_txt = "🔴 开始录音 (7 秒)" if self.is_zh else "🔴 НАЧАТЬ ЗАПИСЬ (7 СЕКУНД)"
+        self.btn_record = QPushButton(btn_rec_txt)
         self.btn_record.setFixedHeight(44)
         self.btn_record.setStyleSheet("""
             QPushButton {
@@ -240,7 +248,8 @@ class VoiceCloningWizard(QDialog):
         self.btn_record.clicked.connect(self._on_start_recording)
         h_act.addWidget(self.btn_record, stretch=1)
 
-        self.btn_listen = QPushButton("▶ Прослушать свой клон")
+        btn_lis_txt = "▶ 试听克隆声音" if self.is_zh else "▶ Прослушать свой клон"
+        self.btn_listen = QPushButton(btn_lis_txt)
         self.btn_listen.setFixedHeight(44)
         self.btn_listen.setEnabled(False)
         self.btn_listen.setStyleSheet("""
@@ -262,7 +271,7 @@ class VoiceCloningWizard(QDialog):
         # Footer
         h_foot = QHBoxLayout()
         h_foot.addStretch()
-        self.btn_close = QPushButton("Готово / Закрыть")
+        self.btn_close = QPushButton("完成 / 关闭" if self.is_zh else "Готово / Закрыть")
         self.btn_close.setFixedHeight(34)
         self.btn_close.clicked.connect(self.accept)
         h_foot.addWidget(self.btn_close)
@@ -276,7 +285,8 @@ class VoiceCloningWizard(QDialog):
         self.btn_record.setEnabled(False)
         self.btn_listen.setEnabled(False)
         self.rec_progress.setValue(0)
-        self.lbl_status.setText("🔴 ИДЕТ ЗАПИСЬ... ЧИТАЙТЕ ТЕКСТ В МИКРОФОН!")
+        rec_txt = "🔴 正在录音... 请平稳朗读上方英文文本！" if self.is_zh else "🔴 ИДЕТ ЗАПИСЬ... ЧИТАЙТЕ ТЕКСТ В МИКРОФОН!"
+        self.lbl_status.setText(rec_txt)
         self.lbl_status.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 14px;")
 
         self._stop_mic_monitor()
@@ -386,14 +396,15 @@ class VoiceCloningWizard(QDialog):
 
     def _on_recording_tick(self, sec: int):
         self.rec_progress.setValue(sec)
-        self.rec_progress.setFormat(f"Запись: {sec} / 7 сек")
+        self.rec_progress.setFormat(f"录音中: {sec} / 7 秒" if self.is_zh else f"Запись: {sec} / 7 сек")
 
     def _on_cloning_finished(self, test_wav: str, latency_s: float):
         self.btn_record.setEnabled(True)
         self.btn_listen.setEnabled(True)
-        self.lbl_status.setText(f"✔ Обучение завершено за {latency_s:.2f} сек! Слепок вашего тембра успешно сохранен.")
+        done_txt = f"✔ 声音克隆提取完成 (耗时 {latency_s:.2f} 秒)！声纹档案已成功就绪。" if self.is_zh else f"✔ Обучение завершено за {latency_s:.2f} сек! Слепок вашего тембра успешно сохранен."
+        self.lbl_status.setText(done_txt)
         self.lbl_status.setStyleSheet("color: #10b981; font-weight: bold; font-size: 13px;")
-        self.rec_progress.setFormat("Готово! Профиль сохранен.")
+        self.rec_progress.setFormat("完成！专属音色已就绪" if self.is_zh else "Готово! Профиль сохранен.")
         self._start_mic_monitor()
 
         # Play automatic preview in headphones
@@ -401,7 +412,8 @@ class VoiceCloningWizard(QDialog):
 
     def _on_error(self, err_msg: str):
         self.btn_record.setEnabled(True)
-        self.lbl_status.setText(f"❌ Ошибка калибровки: {err_msg[:60]}")
+        err_txt = f"❌ 声音校准错误: {err_msg[:60]}" if self.is_zh else f"❌ Ошибка калибровки: {err_msg[:60]}"
+        self.lbl_status.setText(err_txt)
         self.lbl_status.setStyleSheet("color: #ef4444; font-weight: bold;")
         self._start_mic_monitor()
 

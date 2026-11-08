@@ -528,8 +528,8 @@ class StageCard(QFrame):
             elif lang == "zh":
                 return [
                     ("1", "麦克风输入", "WASAPI Input", "物理麦克风"),
-                    ("2", "语音识别", "Sber GigaAM CTC", "PyTorch (CPU)"),
-                    ("3", "机器翻译", "Helsinki Opus-MT", "In-Process (CPU)"),
+                    ("2", "语音识别", "SenseVoiceSmall INT8", "Sherpa-ONNX (CPU)"),
+                    ("3", "机器翻译", "Opus-MT ZH➔EN", "In-Process (CPU)"),
                     ("4", "语音合成", "Pocket-TTS 24kHz", "声音克隆"),
                     ("5", "音频输出", "Topping Loopback", "硬件回环 (0 ms)"),
                 ]
@@ -1420,22 +1420,22 @@ class EcosystemHub(QMainWindow):
         layout.addLayout(h_ctrl)
 
         # 3. Modular Cards Container
-        self.box_module1 = QGroupBox("📦 Модуль 1: Синхронные субтитры (LiveTranslate) — 4 патча")
+        self.box_module1 = QGroupBox(I18n.t("m1_group_title"))
         self.v_m1 = QVBoxLayout(self.box_module1)
         self.v_m1.setSpacing(6)
         layout.addWidget(self.box_module1)
 
-        self.box_module2 = QGroupBox("📦 Модуль 2: Экранный переводчик (OverTranslate) — 1 патч")
+        self.box_module2 = QGroupBox(I18n.t("m2_group_title"))
         self.v_m2 = QVBoxLayout(self.box_module2)
         self.v_m2.setSpacing(6)
         layout.addWidget(self.box_module2)
 
-        self.box_module3 = QGroupBox("📦 Модуль 3: Голосовой переводчик (Voice Studio) — 100% Автономный движок")
+        self.box_module3 = QGroupBox(I18n.t("m3_group_title"))
         self.v_m3 = QVBoxLayout(self.box_module3)
         self.v_m3.setSpacing(6)
         layout.addWidget(self.box_module3)
 
-        self.box_vault = QGroupBox("🔒 Защищенное хранилище настроек (CONFIG/)")
+        self.box_vault = QGroupBox(I18n.t("vault_group_title"))
         self.v_vault = QVBoxLayout(self.box_vault)
         self.v_vault.setSpacing(6)
         layout.addWidget(self.box_vault)
@@ -1459,11 +1459,12 @@ class EcosystemHub(QMainWindow):
 
         # Status badge
         badge = QLabel()
+        is_zh = (I18n.get_language() == "zh")
         if item["is_ok"]:
-            badge.setText("✔ АКТИВЕН")
+            badge.setText("✔ 正常" if is_zh else ("✔ ACTIVE" if I18n.get_language() == "en" else "✔ АКТИВЕН"))
             badge.setStyleSheet("color: #10b981; font-weight: bold; font-size: 11px; background-color: #064e3b; padding: 3px 8px; border-radius: 4px; border: 1px solid #059669;")
         else:
-            badge.setText("❌ СЛЕТЕЛ")
+            badge.setText("❌ 异常" if is_zh else ("❌ FAILED" if I18n.get_language() == "en" else "❌ СЛЕТЕЛ"))
             badge.setStyleSheet("color: #ef4444; font-weight: bold; font-size: 11px; background-color: #7f1d1d; padding: 3px 8px; border-radius: 4px; border: 1px solid #dc2626;")
         badge.setFixedWidth(90)
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1540,12 +1541,12 @@ class EcosystemHub(QMainWindow):
             summary_msg = I18n.t("patches_summary_ok", active=active_cnt, total=tot_cnt)
             self.lbl_patches_summary.setText(summary_msg)
             self.lbl_patches_summary.setStyleSheet("background-color: #064e3b; color: #a7f3d0; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #059669;")
-            self.lbl_patch_quick.setText(f"🛡 {active_cnt}/{tot_cnt} Патчей активны (ОК)")
+            self.lbl_patch_quick.setText(I18n.t("patch_quick_ok", active=active_cnt, total=tot_cnt))
             self.lbl_patch_quick.setStyleSheet("background-color: #064e3b; color: #34d399; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #059669;")
         else:
             self.lbl_patches_summary.setText(I18n.t("patches_summary_fail"))
             self.lbl_patches_summary.setStyleSheet("background-color: #7f1d1d; color: #fecaca; padding: 10px 14px; border-radius: 6px; font-weight: bold; border: 1px solid #dc2626;")
-            self.lbl_patch_quick.setText(f"🔴 Патчи: {active_cnt}/{tot_cnt} (СЛЕТЕЛ)")
+            self.lbl_patch_quick.setText(I18n.t("patch_quick_fail", active=active_cnt, total=tot_cnt))
             self.lbl_patch_quick.setStyleSheet("background-color: #7f1d1d; color: #fca5a5; font-family: Consolas, monospace; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 0 12px; border: 1px solid #dc2626;")
 
     def _on_restore_patches_clicked(self):
@@ -1555,14 +1556,14 @@ class EcosystemHub(QMainWindow):
             if res["success"]:
                 QMessageBox.information(
                     self,
-                    "Успешное восстановление",
-                    f"Все ключевые инженерные патчи и конфигурации успешно восстановлены из хранилища CONFIG/!\n\nВосстановлено файлов: {len(res['restored_files'])}.",
+                    I18n.t("patch_restore_success_title"),
+                    I18n.t("patch_restore_success_msg", count=len(res['restored_files'])),
                 )
             else:
                 QMessageBox.critical(
                     self,
-                    "Ошибка восстановления",
-                    f"Не удалось восстановить патчи:\n" + "\n".join(res["errors"]),
+                    "Ошибка восстановления" if I18n.get_language() == "ru" else ("Restore Error" if I18n.get_language() == "en" else "恢复错误"),
+                    f"Не удалось восстановить патчи:\n" + "\n".join(res["errors"]) if I18n.get_language() == "ru" else ("Failed to restore patches:\n" + "\n".join(res["errors"]) if I18n.get_language() == "en" else "恢复补丁失败:\n" + "\n".join(res["errors"])),
                 )
 
     # =========================================================================

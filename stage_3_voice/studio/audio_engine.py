@@ -48,9 +48,9 @@ class AudioEngine:
         self._tail_frames_left = 0
         self._tail_total_frames = int((self.config.get("ptt", {}).get("tail_ms", 200) / 1000.0) * DEFAULT_SR)
 
-        # Queues for asynchronous playback
-        self._out_queue: queue.Queue = queue.Queue(maxsize=100)
-        self._sidetone_queue: queue.Queue = queue.Queue(maxsize=100)
+        # Queues for asynchronous playback (size 2000 holds ~20s of audio without deadlocks)
+        self._out_queue: queue.Queue = queue.Queue(maxsize=2000)
+        self._sidetone_queue: queue.Queue = queue.Queue(maxsize=2000)
         self._out_pending = np.array([], dtype=np.float32)
         self._sidetone_pending = np.array([], dtype=np.float32)
 
@@ -63,6 +63,7 @@ class AudioEngine:
         self.mic_rms_db: float = -60.0
         self.out_peak_db: float = -60.0
         self.engine_state: str = "IDLE"  # IDLE, RECORDING, PROCESSING, SPEAKING
+        self._state_start_time: float = time.time()
         self.last_stt_ms: float = 0.0
         self.last_mt_ms: float = 0.0
         self.last_tts_ms: float = 0.0
@@ -79,12 +80,17 @@ class AudioEngine:
     # =========================================================================
     @staticmethod
     def get_devices() -> Tuple[List[Tuple[int, str]], List[Tuple[int, str]]]:
-        """Query system audio input and output devices."""
+        """Query system audio input and output devices, strictly filtering out buggy WDM-KS devices."""
         inputs = []
         outputs = []
         try:
+            hostapis = sd.query_hostapis()
+            # PortAudio's Windows WDM-KS backend frequently crashes with Error -9999
+            wdm_ks_ids = {i for i, h in enumerate(hostapis) if "wdm-ks" in h.get("name", "").lower() or "kernel" in h.get("name", "").lower()}
             devs = sd.query_devices()
             for idx, d in enumerate(devs):
+                if d.get("hostapi") in wdm_ks_ids:
+                    continue
                 name = d.get("name", f"Device #{idx}")
                 if d.get("max_input_channels", 0) > 0:
                     inputs.append((idx, name))
@@ -95,38 +101,67 @@ class AudioEngine:
         return inputs, outputs
 
     def _resolve_device_id(self, name_hint: str, is_input: bool) -> Optional[int]:
-        """Find best matching device index by substring with smart renaming fallbacks."""
+        """Find best matching device index by substring with smart renaming fallbacks.
+        Strictly excludes buggy Windows WDM-KS devices and prioritizes WASAPI for lowest latency.
+        """
         if not name_hint:
             return None
         hint_lower = name_hint.lower()
         try:
+            hostapis = sd.query_hostapis()
+            wdm_ks_ids = {i for i, h in enumerate(hostapis) if "wdm-ks" in h.get("name", "").lower() or "kernel" in h.get("name", "").lower()}
+            wasapi_ids = {i for i, h in enumerate(hostapis) if "wasapi" in h.get("name", "").lower()}
             devs = sd.query_devices()
-            # 1. Exact or close substring match
-            for idx, d in enumerate(devs):
-                ch = d.get("max_input_channels" if is_input else "max_output_channels", 0)
-                if ch > 0 and hint_lower in d.get("name", "").lower():
-                    return idx
 
-            # 2. Smart fallback if user renamed devices in Windows
+            candidates = []
+            for idx, d in enumerate(devs):
+                if d.get("hostapi") in wdm_ks_ids:
+                    continue
+                ch = d.get("max_input_channels" if is_input else "max_output_channels", 0)
+                if ch > 0:
+                    candidates.append((idx, d))
+
+            # 1. Exact or substring match in candidates
+            matching = []
+            for idx, d in candidates:
+                d_name = d.get("name", "").lower()
+                if hint_lower in d_name:
+                    score = 10 if d.get("hostapi") in wasapi_ids else 5
+                    matching.append((score, idx))
+
+            if matching:
+                matching.sort(key=lambda x: x[0], reverse=True)
+                return matching[0][1]
+
+            # 2. Smart fallback if user renamed devices or used generic name
+            fallback_matches = []
             if not is_input:
-                if "3/4" in hint_lower or "озвучк" in hint_lower or "loopback" in hint_lower:
-                    for idx, d in enumerate(devs):
+                if "3/4" in hint_lower or "озвучк" in hint_lower or "loopback" in hint_lower or "voice" in hint_lower:
+                    for idx, d in candidates:
                         name = d.get("name", "").lower()
-                        if d.get("max_output_channels", 0) > 0 and ("3/4" in name or "озвучк" in name):
-                            return idx
-                elif "1/2" in hint_lower or "наушник" in hint_lower:
-                    for idx, d in enumerate(devs):
+                        if "3/4" in name or "озвучк" in name:
+                            score = 10 if d.get("hostapi") in wasapi_ids else 5
+                            fallback_matches.append((score, idx))
+                elif "1/2" in hint_lower or "наушник" in hint_lower or "headphone" in hint_lower or "sidetone" in hint_lower:
+                    for idx, d in candidates:
                         name = d.get("name", "").lower()
-                        if d.get("max_output_channels", 0) > 0 and ("1/2" in name or "наушник" in name):
-                            return idx
+                        if "1/2" in name or "наушник" in name or "динамик" in name or "speaker" in name:
+                            score = 10 if d.get("hostapi") in wasapi_ids else 5
+                            fallback_matches.append((score, idx))
             else:
-                if "broadcast" in hint_lower or "микрофон" in hint_lower or "вход" in hint_lower:
-                    for idx, d in enumerate(devs):
+                if "broadcast" in hint_lower or "микрофон" in hint_lower or "вход" in hint_lower or "mic" in hint_lower:
+                    for idx, d in candidates:
                         name = d.get("name", "").lower()
-                        if d.get("max_input_channels", 0) > 0 and ("broadcast" in name or "микрофон" in name or "analog" in name):
-                            return idx
-        except Exception:
-            pass
+                        if "broadcast" in name or "микрофон" in name or "analog" in name:
+                            score = 10 if d.get("hostapi") in wasapi_ids else 5
+                            fallback_matches.append((score, idx))
+
+            if fallback_matches:
+                fallback_matches.sort(key=lambda x: x[0], reverse=True)
+                return fallback_matches[0][1]
+
+        except Exception as e:
+            log.warning("Device resolution error for %s: %s", name_hint, e)
         return None
 
     # =========================================================================
@@ -150,8 +185,8 @@ class AudioEngine:
         out_id = self._resolve_device_id(audio_cfg.get("output_device", "Playback 3/4"), is_input=False)
         side_id = self._resolve_device_id(audio_cfg.get("sidetone_device", "Playback 1/2"), is_input=False)
 
+        # Input Stream
         try:
-            # Input Stream
             self._in_stream = sd.InputStream(
                 device=in_id,
                 channels=1,
@@ -163,8 +198,12 @@ class AudioEngine:
             )
             self._in_stream.start()
             log.info("Input audio stream started on device: %s (id=%s)", audio_cfg.get("input_device"), in_id)
+        except Exception as ie:
+            log.error("Failed to start input audio stream: %s", ie)
+            self._in_stream = None
 
-            # Main Game Output Stream (Playback 3/4 -> Topping Loopback 1+2)
+        # Main Game Output Stream (Playback 3/4 -> Topping Loopback 1+2)
+        try:
             self._out_stream = sd.OutputStream(
                 device=out_id,
                 channels=1,
@@ -176,9 +215,13 @@ class AudioEngine:
             )
             self._out_stream.start()
             log.info("Output stream started on device: %s (id=%s)", audio_cfg.get("output_device"), out_id)
+        except Exception as oe:
+            log.error("Failed to start output audio stream: %s", oe)
+            self._out_stream = None
 
-            # Sidetone Stream (Headphones Playback 1/2)
-            if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
+        # Sidetone Stream (Headphones Playback 1/2) - optional monitoring
+        if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
+            try:
                 self._sidetone_stream = sd.OutputStream(
                     device=side_id,
                     channels=1,
@@ -190,12 +233,13 @@ class AudioEngine:
                 )
                 self._sidetone_stream.start()
                 log.info("Sidetone stream started on headphones: %s (id=%s)", audio_cfg.get("sidetone_device"), side_id)
+            except Exception as se:
+                log.warning("Sidetone stream could not be started: %s (monitoring disabled)", se)
+                self._sidetone_stream = None
+        else:
+            self._sidetone_stream = None
 
-            return True
-        except Exception as e:
-            log.error("Failed to start audio streams: %s", e)
-            self.stop()
-            return False
+        return (self._in_stream is not None and self._out_stream is not None)
 
     def stop(self) -> None:
         """Stop all streams cleanly."""
@@ -275,7 +319,11 @@ class AudioEngine:
                 callback=self._in_callback,
             )
             self._in_stream.start()
+        except Exception as ie:
+            log.error("Failed to restart input audio stream: %s", ie)
+            self._in_stream = None
 
+        try:
             self._out_stream = sd.OutputStream(
                 device=out_id,
                 channels=1,
@@ -285,8 +333,12 @@ class AudioEngine:
                 callback=self._out_callback,
             )
             self._out_stream.start()
+        except Exception as oe:
+            log.error("Failed to restart output audio stream: %s", oe)
+            self._out_stream = None
 
-            if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
+        if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
+            try:
                 self._sidetone_stream = sd.OutputStream(
                     device=side_id,
                     channels=1,
@@ -296,12 +348,29 @@ class AudioEngine:
                     callback=self._sidetone_callback,
                 )
                 self._sidetone_stream.start()
+            except Exception as se:
+                log.warning("Failed to restart sidetone stream (disabled): %s", se)
+                self._sidetone_stream = None
+        else:
+            self._sidetone_stream = None
 
-            log.info("Audio streams restarted successfully with new devices.")
-            return True
-        except Exception as e:
-            log.error("Failed to restart audio streams: %s", e)
-            return False
+        log.info("Audio streams restarted successfully with new devices.")
+        return True
+
+    def check_watchdog(self) -> None:
+        """Periodic safety watchdog. Automatically unfreezes UI if inference stalls or worker terminates."""
+        # 1. Recover frozen processing state (>7s)
+        if self.engine_state in ("PROCESSING", "SPEAKING"):
+            elapsed = time.time() - self._state_start_time
+            if elapsed > 7.0:
+                log.warning("Watchdog: Engine stuck in state '%s' for %.1fs. Forcing IDLE reset.", self.engine_state, elapsed)
+                self.engine_state = "IDLE"
+
+        # 2. Auto-revive worker thread if unexpectedly dead
+        if self._running and (self._worker_thread is None or not self._worker_thread.is_alive()):
+            log.warning("Watchdog: Worker thread died! Auto-reviving S2ST_Worker...")
+            self._worker_thread = threading.Thread(target=self._inference_worker, daemon=True, name="S2ST_Worker")
+            self._worker_thread.start()
 
     # =========================================================================
     # Audio Callbacks
@@ -411,6 +480,7 @@ class AudioEngine:
                 self._ptt_buffer = []
                 self._tail_frames_left = 0
                 self.engine_state = "RECORDING"
+                self._state_start_time = time.time()
                 log.info("PTT Pressed -> Recording speech buffer...")
             elif not pressed and self._is_ptt_pressed:
                 # PTT Released -> start tail countdown
@@ -433,6 +503,7 @@ class AudioEngine:
             return
 
         self.engine_state = "PROCESSING"
+        self._state_start_time = time.time()
         self._work_queue.put(full_audio_48k)
 
     def toggle_master(self) -> bool:
@@ -449,7 +520,7 @@ class AudioEngine:
     # Background S2ST Inference Worker (STT -> MT -> TTS)
     # =========================================================================
     def _inference_worker(self) -> None:
-        """Runs in separate thread: Resample -> GigaAM -> Opus-MT -> Pocket-TTS."""
+        """Runs in separate thread: Polyphase Resample -> GigaAM -> Opus-MT -> Pocket-TTS."""
         log.info("Inference worker started.")
         while self._running:
             try:
@@ -460,9 +531,8 @@ class AudioEngine:
                 continue
 
             try:
-                # 1. Resample from 48000 Hz to 16000 Hz for GigaAM STT
-                num_samples_16k = int(len(audio_48k) * 16000 / DEFAULT_SR)
-                audio_16k = signal.resample(audio_48k, num_samples_16k).astype(np.float32)
+                # 1. Polyphase resample from 48000 Hz to 16000 Hz (48k / 3 = 16k, ~5ms latency, no FFT stalls)
+                audio_16k = signal.resample_poly(audio_48k, 1, 3).astype(np.float32)
 
                 # Step 1: STT Transcription
                 ru_text, stt_ms = self.mm.transcribe(audio_16k)
@@ -476,7 +546,7 @@ class AudioEngine:
 
                 log.info("STT [%.1f ms]: %s", stt_ms, ru_text)
 
-                # Step 2: MT Translation (Russian -> English)
+                # Step 2: MT Translation (Russian -> English or Chinese -> English)
                 en_text, mt_ms = self.mm.translate(ru_text)
                 self.last_mt_ms = round(mt_ms, 1)
                 self.last_en_text = en_text
@@ -490,12 +560,15 @@ class AudioEngine:
 
                 # Step 3: TTS Synthesis (Pocket-TTS Cloned Voice)
                 self.engine_state = "SPEAKING"
+                self._state_start_time = time.time()
+
                 # Drain any remaining passthrough chunks before outputting translated voice
                 while not self._out_queue.empty():
                     try:
                         self._out_queue.get_nowait()
                     except queue.Empty:
                         break
+
                 tts_audio_24k, tts_sr, tts_ms = self.mm.synthesize(en_text)
                 self.last_tts_ms = round(tts_ms, 1)
                 self.last_total_ms = round(stt_ms + mt_ms + tts_ms, 1)
@@ -503,24 +576,29 @@ class AudioEngine:
                 log.info("TTS [%.1f ms]: Synthesized %d samples. Total Latency: %.1f ms",
                          tts_ms, len(tts_audio_24k) if tts_audio_24k is not None else 0, self.last_total_ms)
 
-                # Step 4: Resample synthesized 24kHz audio to 48kHz and enqueue to streams
+                # Step 4: Polyphase resample synthesized 24kHz audio to 48kHz (24k * 2 = 48k, ~1.6ms latency)
                 if tts_audio_24k is not None and len(tts_audio_24k) > 0:
-                    num_samples_48k = int(len(tts_audio_24k) * DEFAULT_SR / tts_sr)
-                    out_48k = signal.resample(tts_audio_24k, num_samples_48k).astype(np.float32)
+                    out_48k = signal.resample_poly(tts_audio_24k, 2, 1).astype(np.float32)
 
-                    # Chunk and dispatch to Playback 3/4 (Game)
+                    # Chunk and dispatch to Playback 3/4 (Game) with timeout protection
                     chunk_size = BLOCK_SIZE
                     for i in range(0, len(out_48k), chunk_size):
                         chunk = out_48k[i:i + chunk_size]
-                        self._out_queue.put(chunk)
+                        try:
+                            self._out_queue.put(chunk, timeout=0.05)
+                        except queue.Full:
+                            break
 
-                    # Dispatch to Sidetone (Headphones Playback 1/2) with monitor volume
-                    if self.config.get("audio", {}).get("sidetone_enabled", True):
+                    # Dispatch to Sidetone (Headphones Playback 1/2) only if sidetone stream is active
+                    if self._sidetone_stream is not None and self.config.get("audio", {}).get("sidetone_enabled", True):
                         sidetone_vol = float(self.config.get("audio", {}).get("sidetone_volume", 0.70))
                         sidetone_chunk_arr = out_48k * sidetone_vol
                         for i in range(0, len(sidetone_chunk_arr), chunk_size):
                             chunk = sidetone_chunk_arr[i:i + chunk_size]
-                            self._sidetone_queue.put(chunk)
+                            try:
+                                self._sidetone_queue.put_nowait(chunk)
+                            except queue.Full:
+                                break
 
                 # Record transcript record
                 record = {

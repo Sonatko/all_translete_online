@@ -48,7 +48,9 @@ class RoutingPresets:
         if "audio" not in cfg:
             cfg["audio"] = {}
 
-        devs = sd.query_devices()
+        hostapis = sd.query_hostapis()
+        wdm_ks_ids = {i for i, h in enumerate(hostapis) if "wdm-ks" in h.get("name", "").lower() or "kernel" in h.get("name", "").lower()}
+        devs = [d for d in sd.query_devices() if d.get("hostapi") not in wdm_ks_ids]
         inputs = [d.get("name", "") for d in devs if d.get("max_input_channels", 0) > 0]
         outputs = [d.get("name", "") for d in devs if d.get("max_output_channels", 0) > 0]
 
@@ -63,7 +65,7 @@ class RoutingPresets:
             # 2. Sidetone: Playback 1/2 (Topping Headphones)
             side_target = "Playback 1/2"
             for o in outputs:
-                if "1/2" in o.lower() or "наушники" in o.lower() or "topping headphones" in o.lower():
+                if "1/2" in o.lower():
                     side_target = o
                     break
 

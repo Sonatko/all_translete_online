@@ -1379,6 +1379,10 @@ class StudioWindow(QMainWindow):
     # =========================================================================
     def _update_telemetry(self):
         """Called at 30 FPS. Reads atomic state from audio engine."""
+        # 0. Safety Watchdog (prevents any permanent pipeline hang/freeze)
+        if hasattr(self.engine, "check_watchdog"):
+            self.engine.check_watchdog()
+
         # 1. VU Meters
         self.meter_mic.setValue(int(self.engine.mic_peak_db))
         self.meter_out.setValue(int(self.engine.out_peak_db))

@@ -26,12 +26,30 @@ from stage_3_voice.studio.gui import StudioWindow
 from stage_3_voice.studio.hotkey_listener import HotkeyListener
 from stage_3_voice.studio.model_manager import ModelManager
 
-# Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] (%(name)s) %(message)s",
-    datefmt="%H:%M:%S",
-)
+# Logging setup with both console and rotating file output
+from logging.handlers import RotatingFileHandler
+
+LOGS_DIR = PROJECT_ROOT / "stage_3_voice" / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+log_file = LOGS_DIR / "studio.log"
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] (%(name)s) %(message)s", datefmt="%H:%M:%S")
+
+# Console handler
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(formatter)
+root_logger.addHandler(ch)
+
+# Rotating file handler (5 MB, 3 backups)
+try:
+    fh = RotatingFileHandler(str(log_file), maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
+    fh.setFormatter(formatter)
+    root_logger.addHandler(fh)
+except Exception:
+    pass
+
 log = logging.getLogger("Studio.Main")
 
 

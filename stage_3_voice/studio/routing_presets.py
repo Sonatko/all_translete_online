@@ -85,7 +85,7 @@ class RoutingPresets:
 
             msg = (
                 "Профиль 'Topping E2x2 (Аппаратный)' активирован!\n"
-                f"• Микрофон в игре (CS2/Discord): 'ИИ Микрофон' (Loopback 1/2)\n"
+                "• Микрофон в игре (VRChat/CS2/Discord): выберите 'Loopback 3/4 (6- E2x2 OTG)'\n"
                 f"• Канал озвучки ИИ: {out_target}\n"
                 f"• Наушники: {side_target}"
             )

@@ -1106,7 +1106,7 @@ class StudioWindow(QMainWindow):
         """)
         v_info = QHBoxLayout(self.info_frame)
         v_info.setContentsMargins(4, 2, 4, 2)
-        self.info_title = QLabel("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ направлен в Loopback 1+2 (микрофон игры). Наушники: Playback 1/2 (0 ms).")
+        self.info_title = QLabel("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ в игре (VRChat / CS2) микрофоном выберите <b>Loopback 3/4</b>. Наушники: Playback 1/2 (0 ms).")
         self.info_title.setStyleSheet("color: #93c5fd; font-size: 11px;")
         v_info.addWidget(self.info_title)
         layout.addWidget(self.info_frame)
@@ -1408,7 +1408,7 @@ class StudioWindow(QMainWindow):
                 self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #854d0e; color: #fef08a; font-weight: bold; border-radius: 6px;")
             elif state == "SPEAKING":
-                txt = "🔊 正在播放翻译语音到游戏 (Playback 3/4)..." if is_zh else "🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 1+2)"
+                txt = "🔊 正在播放翻译语音到游戏 (Playback 3/4)..." if is_zh else "🔊 ОЗВУЧИВАНИЕ В ИГРУ (Playback 3/4 ➔ Loopback 3/4)"
                 self.ptt_banner.setText(txt)
                 self.ptt_banner.setStyleSheet("background-color: #065f46; color: #a7f3d0; font-weight: bold; border-radius: 6px;")
             else:
@@ -2087,7 +2087,7 @@ class StudioWindow(QMainWindow):
             if hasattr(self, "lbl_master_pause"):
                 self.lbl_master_pause.setText("总开关暂停: <b>F8</b>")
             if hasattr(self, "info_title"):
-                self.info_title.setText("💡 <b>说明:</b> AI翻译语音输出至 Playback 3/4 ➔ 路由到 Loopback 1+2 (游戏麦克风). 耳机监听: Playback 1/2 (0 ms).")
+                self.info_title.setText("💡 <b>说明:</b> AI翻译语音输出至 Playback 3/4 ➔ 在游戏中麦克风请选择 <b>Loopback 3/4</b>. 耳机监听: Playback 1/2 (0 ms).")
             if hasattr(self, "tbl_transcript"):
                 self.tbl_transcript.setHorizontalHeaderLabels(["时间", "原文", "英语翻译", "延迟明细"])
             # Models Tab (Tab 2)
@@ -2183,7 +2183,7 @@ class StudioWindow(QMainWindow):
             if hasattr(self, "lbl_master_pause"):
                 self.lbl_master_pause.setText("Мастер-пауза: <b>F8</b>")
             if hasattr(self, "info_title"):
-                self.info_title.setText("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ направлен в Loopback 1+2 (микрофон игры). Наушники: Playback 1/2 (0 ms).")
+                self.info_title.setText("💡 <b>Справка:</b> Голос ИИ идет в Playback 3/4 ➔ в игре (VRChat / CS2) микрофоном выберите <b>Loopback 3/4</b>. Наушники: Playback 1/2 (0 ms).")
             if hasattr(self, "tbl_transcript"):
                 self.tbl_transcript.setHorizontalHeaderLabels(["Время", "Оригинал", "Английский перевод", "Задержка (Latency)"])
             # Models Tab (Tab 2)

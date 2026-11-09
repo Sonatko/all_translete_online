@@ -409,17 +409,13 @@ class AudioEngine:
                     self._dispatch_ptt_utterance()
             else:
                 # 2. PTT UP: Clean low-latency passthrough of natural mic to game loopback
-                if self.engine_state != "SPEAKING" and self.config.get("audio", {}).get("passthrough_enabled", True):
-                    gain = float(self.config.get("audio", {}).get("passthrough_volume", 1.0))
-                    passthrough_chunk = mono * gain
-                    # Keep queue shallow (<= 2 blocks = ~20ms) to prevent latency buildup across soundcards
-                    while self._out_queue.qsize() > 2:
-                        try:
-                            self._out_queue.get_nowait()
-                        except queue.Empty:
-                            break
-                    if not self._out_queue.full():
-                        self._out_queue.put_nowait(passthrough_chunk)
+                # Only pass mic through when AI is NOT speaking and queue has finished playing
+                if self.engine_state not in ("SPEAKING", "PROCESSING") and self._out_queue.empty():
+                    if self.config.get("audio", {}).get("passthrough_enabled", True):
+                        gain = float(self.config.get("audio", {}).get("passthrough_volume", 1.0))
+                        passthrough_chunk = mono * gain
+                        if not self._out_queue.full():
+                            self._out_queue.put_nowait(passthrough_chunk)
 
     def _out_callback(self, outdata, frames, time_info, status):
         """Outgoing playback to Playback 3/4 (Loopback 1+2) with continuous sample FIFO."""
@@ -616,6 +612,14 @@ class AudioEngine:
                         self.on_transcript_callback(record)
                     except Exception:
                         pass
+
+                # Wait for synthesized speech to physically play out to the game sound card before returning to IDLE
+                t_play_start = time.time()
+                while not self._out_queue.empty() and self._running and not self._is_ptt_pressed:
+                    if time.time() - t_play_start > 10.0:
+                        break
+                    time.sleep(0.02)
+                time.sleep(0.05)
 
             except Exception as e:
                 log.error("Error during S2ST pipeline inference: %s", e)

@@ -1743,13 +1743,16 @@ class StudioWindow(QMainWindow):
         sender = self.sender()
         if not sender:
             return
-        voice_key = sender.currentData()
+        voice_key = sender.itemData(idx) if hasattr(sender, "itemData") else None
+        if not voice_key:
+            voice_key = sender.currentData()
         if not voice_key:
             return
 
         self.cfg.setdefault("models", {})["tts_voice"] = voice_key
         save_settings(self.cfg)
-        self.mm.set_voice(voice_key)
+        ok = self.mm.set_voice(voice_key)
+        log.info("Voice changed to '%s' (active: %s)", voice_key, ok)
 
         # Sync other combo box
         for cb in (getattr(self, "combo_voices_main", None), getattr(self, "combo_voices", None)):

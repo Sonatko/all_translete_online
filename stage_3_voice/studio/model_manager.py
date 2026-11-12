@@ -484,6 +484,38 @@ mimi:
                     voice_name = "juergen"
 
             if voice_name in ("alba", "marius", "juergen", "fantine", "paul", "charles", "george", "michael"):
+                # 1. Try local offline embeddings first (instant, 0ms, zero network)
+                local_emb = MODELS_DIR / "pocket_tts" / "embeddings" / f"{voice_name}.safetensors"
+                if not local_emb.is_file():
+                    local_emb = CONFIG_DIR / "embeddings" / f"{voice_name}.safetensors"
+                if local_emb.is_file():
+                    self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
+                        str(local_emb), self._tts_model.device
+                    )
+                    log.info("Voice state loaded locally offline from %s", local_emb)
+                    return True
+
+                # 2. On-demand mirror download for this specific single voice if missing
+                try:
+                    from launcher.model_downloader import download_single_file, build_download_urls
+                    urls = build_download_urls(
+                        "kyutai/pocket-tts-without-voice-cloning",
+                        f"languages/english/embeddings/{voice_name}.safetensors",
+                        china_mirror=True,
+                    )
+                    dest_file = MODELS_DIR / "pocket_tts" / "embeddings" / f"{voice_name}.safetensors"
+                    dest_file.parent.mkdir(parents=True, exist_ok=True)
+                    log.info("Downloading voice '%s' on-demand via mirror...", voice_name)
+                    if download_single_file(urls, dest_file):
+                        self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
+                            str(dest_file), self._tts_model.device
+                        )
+                        log.info("Voice state '%s' downloaded and activated.", voice_name)
+                        return True
+                except Exception as dl_e:
+                    log.warning("On-demand mirror download for voice '%s' failed: %s", voice_name, dl_e)
+
+                # 3. Upstream fallback
                 try:
                     self._tts_voice_state = self._tts_model.get_state_for_audio_prompt(voice_name)
                     log.info("Voice state loaded from stock voice: %s", voice_name)

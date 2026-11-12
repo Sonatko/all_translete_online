@@ -68,6 +68,8 @@ def stop_all_processes():
     current_pid = os.getpid()
     to_kill = []
 
+    project_root_str = str(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))).lower()
+
     for proc in psutil.process_iter(["pid", "name", "cmdline"]):
         try:
             pid = proc.info["pid"]
@@ -76,12 +78,30 @@ def stop_all_processes():
             name = (proc.info["name"] or "").lower()
             cmd = " ".join(proc.info["cmdline"] or []).lower()
 
+            try:
+                proc_cwd = (proc.cwd() or "").lower()
+            except Exception:
+                proc_cwd = ""
+
+            try:
+                proc_exe = (proc.exe() or "").lower()
+            except Exception:
+                proc_exe = ""
+
             is_target = False
             if "overtranslate" in name or ("update.exe" in name and "overtranslate" in cmd):
                 is_target = True
             elif "python" in name or "pythonw" in name:
+                # 1. Matches known target patterns in cmdline
                 if any(p in cmd for p in TARGET_PATTERNS):
                     is_target = True
+                # 2. Working directory or executable is located inside the project repository
+                elif project_root_str and (project_root_str in proc_cwd or project_root_str in cmd or project_root_str in proc_exe):
+                    is_target = True
+                # 3. Direct script names executed inside our stages
+                elif any(script in cmd for script in ("main.py", "hub.py", "audio_capture.py", "record_voice.py")):
+                    if "stage_" in proc_cwd or "launcher" in proc_cwd or "livetranslate" in proc_cwd or "studio" in proc_cwd:
+                        is_target = True
 
             if is_target:
                 to_kill.append((pid, name, proc))

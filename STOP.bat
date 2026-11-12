@@ -9,6 +9,7 @@ echo ======================================================================
 echo.
 
 set "VENV_PY=%~dp0stage_3_voice\.venv\Scripts\python.exe"
+if exist "%~dp0python_embeded\python.exe" set "VENV_PY=%~dp0python_embeded\python.exe"
 
 :: 1. Force kill OverTranslate and its updater window
 taskkill /F /T /IM OverTranslate.exe >nul 2>&1
@@ -28,5 +29,5 @@ echo.
 echo ======================================================================
 echo  [OK] ALL TRANSLATION ECOSYSTEM PROCESSES STOPPED!
 echo ======================================================================
-timeout /t 2 >nul
+ping 127.0.0.1 -n 2 >nul
 exit /b 0

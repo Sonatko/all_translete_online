@@ -207,11 +207,41 @@ class EcosystemProcessManager:
 
     @classmethod
     def start_stage_3(cls) -> bool:
-        """Launch Stage 3 Voice Translation Studio."""
+        """Launch Stage 3 Voice Translation Studio in detached, windowless mode."""
         try:
             app_dir = PROJECT_ROOT / "stage_3_voice" / "studio"
-            py = str(PYTHONW_EXE) if PYTHONW_EXE.is_file() else sys.executable
-            subprocess.Popen([py, "main.py"], cwd=str(app_dir))
+            main_script = app_dir / "main.py"
+            if not main_script.is_file():
+                log.error("Stage 3 main.py not found at %s", main_script)
+                return False
+
+            py = None
+            if PYTHONW_EXE.is_file():
+                py = str(PYTHONW_EXE)
+            else:
+                candidate_pyw = Path(sys.executable).parent / "pythonw.exe"
+                if candidate_pyw.is_file():
+                    py = str(candidate_pyw)
+                else:
+                    py = sys.executable
+
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            env["PYTHONIOENCODING"] = "utf-8"
+            env["TQDM_DISABLE"] = "1"
+
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+
+            subprocess.Popen(
+                [py, str(main_script)],
+                cwd=str(app_dir),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
             return True
         except Exception as e:
             log.error("Failed to start Stage 3: %s", e)
@@ -229,13 +259,20 @@ class EcosystemProcessManager:
                     cmdline = " ".join(p.cmdline() or []).lower()
                     if "hub.py" in cmdline:
                         continue
-                    if "stage_1_audio" in cmdline or "livetranslate" in cmdline:
+                    try:
+                        p_cwd = (p.cwd() or "").lower()
+                    except Exception:
+                        p_cwd = ""
+                    if "stage_1_audio" in cmdline or "livetranslate" in cmdline or "livetranslate" in p_cwd:
                         try:
                             for child in p.children(recursive=True):
                                 child.kill()
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             pass
-                        p.terminate()
+                        try:
+                            p.kill()
+                        except Exception:
+                            p.terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return True
@@ -253,7 +290,7 @@ class EcosystemProcessManager:
 
     @classmethod
     def stop_stage_3(cls) -> bool:
-        """Stop Stage 3 Voice Translation Studio."""
+        """Stop Stage 3 Voice Translation Studio cleanly and completely."""
         current_pid = os.getpid()
         for p in psutil.process_iter(["name"]):
             try:
@@ -263,13 +300,20 @@ class EcosystemProcessManager:
                     cmdline = " ".join(p.cmdline() or []).lower()
                     if "hub.py" in cmdline:
                         continue
-                    if "stage_3_voice" in cmdline or "studio" in cmdline:
+                    try:
+                        p_cwd = (p.cwd() or "").lower()
+                    except Exception:
+                        p_cwd = ""
+                    if "stage_3_voice" in cmdline or "studio" in cmdline or "stage_3_voice" in p_cwd:
                         try:
                             for child in p.children(recursive=True):
                                 child.kill()
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             pass
-                        p.terminate()
+                        try:
+                            p.kill()
+                        except Exception:
+                            p.terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return True

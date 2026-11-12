@@ -1448,6 +1448,20 @@ class StudioWindow(QMainWindow):
         ram_mb = self.mm.get_process_ram_mb()
         self.lbl_ram_telemetry.setText(f"RAM процесса: {ram_mb:.0f} MB | VRAM: 0 MB (Strict CPU)")
 
+        # 5. Background Voice & Settings Disk Synchronization Watchdog (every ~30 frames / 1s)
+        self._sync_tick = getattr(self, "_sync_tick", 0) + 1
+        if self._sync_tick % 30 == 0:
+            try:
+                voices_dir = Path("CONFIG/stage_3_voice/voices")
+                cur_v_mtime = voices_dir.stat().st_mtime if voices_dir.is_dir() else 0
+                if getattr(self, "_last_voices_mtime", None) is None:
+                    self._last_voices_mtime = cur_v_mtime
+                elif cur_v_mtime != self._last_voices_mtime:
+                    self._last_voices_mtime = cur_v_mtime
+                    self._populate_voice_combos()
+            except Exception:
+                pass
+
     # =========================================================================
     # Callbacks & Handlers
     # =========================================================================
@@ -1791,9 +1805,14 @@ class StudioWindow(QMainWindow):
             from voice_wizard import VoiceCloningWizard
 
         wiz = VoiceCloningWizard(self, target_voice_name=safe_name, is_zh=is_zh)
-        if wiz.exec():
+        wiz_ok = wiz.exec()
+
+        # Check if voice profile was successfully generated on disk (whether accepted or closed with X)
+        custom_id = f"custom:{safe_name}.safetensors"
+        c_file = Path("CONFIG/stage_3_voice/voices") / f"{safe_name}.safetensors"
+        m_file = Path("stage_3_voice/models/pocket_tts") / f"{safe_name}.safetensors"
+        if wiz_ok or c_file.is_file() or m_file.is_file() or (wiz.test_audio_path and Path(wiz.test_audio_path).is_file()):
             # Refresh voice lists on all tabs and select newly trained voice
-            custom_id = f"custom:{safe_name}.safetensors"
             self.cfg.setdefault("models", {})["tts_voice"] = custom_id
             save_settings(self.cfg)
             self.mm.set_voice(custom_id)

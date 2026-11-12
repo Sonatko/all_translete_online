@@ -1,13 +1,17 @@
 # Stop all ecosystem processes cleanly
-$targets = @('all_translete_online', 'stage_1_audio', 'stage_2_screen', 'stage_3_voice', 'LiveTranslate', 'OverTranslate', 'hub.py')
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$targets = @('all_translete_online', 'stage_1_audio', 'stage_2_screen', 'stage_3_voice', 'LiveTranslate', 'OverTranslate', 'hub.py', 'audio_capture.py', 'record_voice.py')
 
 Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     $cmd = $_.CommandLine
     $name = $_.Name
-    if ($name -like "*OverTranslate*") { return $true }
+    $exe = $_.ExecutablePath
+    if ($name -like "*OverTranslate*" -or ($name -like "*Update.exe*" -and $cmd -like "*overtranslate*")) { return $true }
     if ($name -match "python|pythonw") {
+        if ($exe -and $exe.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        if ($cmd -and $cmd -like "*$root*") { return $true }
         foreach ($t in $targets) {
-            if ($cmd -like "*$t*") { return $true }
+            if ($cmd -and $cmd -like "*$t*") { return $true }
         }
     }
     return $false
@@ -15,4 +19,5 @@ Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
     Write-Host "Stopping process: $($_.Name) (PID $($_.ProcessId))"
     Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
 }
+
 

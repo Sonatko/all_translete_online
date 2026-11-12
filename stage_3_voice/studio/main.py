@@ -60,12 +60,54 @@ except Exception:
 
 log = logging.getLogger("Studio.Main")
 
+# Single-instance mutex to prevent duplicate audio streams and conflicting hotkeys
+_INSTANCE_MUTEX = None
+
+
+def ensure_single_instance() -> bool:
+    """Ensure only one instance of Stage 3 Studio runs at a time on Windows."""
+    global _INSTANCE_MUTEX
+    if sys.platform != "win32":
+        return True
+    try:
+        import ctypes
+        from ctypes import wintypes
+        kernel32 = ctypes.windll.kernel32
+        user32 = ctypes.windll.user32
+
+        MUTEX_NAME = "Global\\TranslationEcosystem_Stage3_Studio_Mutex"
+        _INSTANCE_MUTEX = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+        ERROR_ALREADY_EXISTS = 183
+        if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+            log.warning("Another instance of Voice Translation Studio is already active. Activating existing window...")
+            def _enum_cb(hwnd, lparam):
+                length = user32.GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buff = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buff, length + 1)
+                    title = buff.value
+                    if "Voice Translation Studio" in title or "Голосовой переводчик" in title or "声音翻译工作室" in title:
+                        user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                        user32.SetForegroundWindow(hwnd)
+                        return False
+                return True
+            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+            user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+            return False
+    except Exception as e:
+        log.warning("Single instance check notice: %s", e)
+    return True
+
 
 def main():
     parser = argparse.ArgumentParser(description="Stage 3 Voice Translation Studio")
     parser.add_argument("--no-autoload", action="store_true", help="Do not load models on startup")
     parser.add_argument("--headless", action="store_true", help="Run without GUI for automated testing")
     args = parser.parse_args()
+
+    if not args.headless and not ensure_single_instance():
+        log.info("Exiting duplicate Stage 3 process cleanly.")
+        return 0
 
     log.info("Starting Stage 3 Voice Translation Studio...")
 

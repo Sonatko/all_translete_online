@@ -148,17 +148,62 @@ class VoiceCloningWizard(QDialog):
         h_dev.addWidget(QLabel("麦克风输入:" if self.is_zh else "Микрофон:"))
         self.combo_mic = QComboBox()
         try:
-            for idx, d in enumerate(sd.query_devices()):
+            # Query configured device from studio_settings.json if present
+            cfg_mic = ""
+            try:
+                from stage_3_voice.studio.config import load_settings
+                cfg_mic = (load_settings().get("audio", {}).get("input_device") or "").lower()
+            except Exception:
+                pass
+
+            devs = sd.query_devices()
+            def_in = -1
+            try:
+                def_in = int(sd.default.device[0])
+            except Exception:
+                pass
+
+            target_idx = -1
+            for idx, d in enumerate(devs):
                 if d.get("max_input_channels", 0) > 0:
                     self.combo_mic.addItem(f"[{idx}] {d['name']}", idx)
-            # Default to NVIDIA Broadcast or Analog 1/2
-            for i in range(self.combo_mic.count()):
-                text = self.combo_mic.itemText(i).lower()
-                if "broadcast" in text or "analog 1/2" in text:
-                    self.combo_mic.setCurrentIndex(i)
-                    break
-        except Exception:
-            pass
+
+            # 1. Match from studio config
+            if cfg_mic:
+                for i in range(self.combo_mic.count()):
+                    if cfg_mic in self.combo_mic.itemText(i).lower():
+                        target_idx = i
+                        break
+
+            # 2. Match NVIDIA Broadcast or Analog 1/2
+            if target_idx < 0:
+                for i in range(self.combo_mic.count()):
+                    text = self.combo_mic.itemText(i).lower()
+                    if "broadcast" in text or "analog 1/2" in text:
+                        target_idx = i
+                        break
+
+            # 3. Match system default recording device (sd.default.device[0])
+            if target_idx < 0 and def_in >= 0:
+                for i in range(self.combo_mic.count()):
+                    if self.combo_mic.itemData(i) == def_in:
+                        target_idx = i
+                        break
+
+            # 4. Match common microphone keywords (excluding stereo mix / mapper)
+            if target_idx < 0:
+                for i in range(self.combo_mic.count()):
+                    text = self.combo_mic.itemText(i).lower()
+                    if ("микрофон" in text or "mic" in text) and "стерео" not in text and "переназначение" not in text:
+                        target_idx = i
+                        break
+
+            if target_idx >= 0:
+                self.combo_mic.setCurrentIndex(target_idx)
+            elif self.combo_mic.count() > 0:
+                self.combo_mic.setCurrentIndex(0)
+        except Exception as dev_err:
+            log.warning("Could not enumerate audio devices: %s", dev_err)
         h_dev.addWidget(self.combo_mic, stretch=1)
         layout.addLayout(h_dev)
 
@@ -388,6 +433,17 @@ class VoiceCloningWizard(QDialog):
             if v_filename != "my_pocket_voice.safetensors":
                 shutil.copy2(prof_config, CONFIG_DIR / "voices" / v_filename)
 
+            # Auto-persist this newly recorded voice into studio_settings.json
+            try:
+                from stage_3_voice.studio.config import load_settings, save_settings
+                cfg = load_settings()
+                custom_id = f"custom:{v_filename}" if v_filename != "my_pocket_voice.safetensors" else "my_pocket_voice"
+                cfg.setdefault("models", {})["tts_voice"] = custom_id
+                save_settings(cfg)
+                log.info("Registered new voice profile '%s' in studio_settings.json", custom_id)
+            except Exception as se:
+                log.warning("Notice on auto-updating studio_settings.json: %s", se)
+
             # Generate sample phrase for headphone verification
             test_phrase = "Enemy spotted on B site! Fall back and hold the angles, I am covering you."
             wav_tensor = m.generate_audio(model_state, test_phrase, copy_state=True)
@@ -437,17 +493,51 @@ class VoiceCloningWizard(QDialog):
         self.lbl_status.setStyleSheet("color: #ef4444; font-weight: bold;")
         self._start_mic_monitor()
 
+    def closeEvent(self, event):
+        """Auto-accept dialog if voice calibration was successfully completed."""
+        if self.test_audio_path is not None:
+            self.accept()
+        super().closeEvent(event)
+
     def _on_play_sample(self):
-        """Play synthesized test phrase into headphones Playback 1/2."""
+        """Play synthesized test phrase into user headphones or default audio output."""
         if self.test_audio_data is None:
             return
         try:
-            # Prefer Playback 1/2
             out_id = None
-            for idx, d in enumerate(sd.query_devices()):
-                if "playback 1/2" in d["name"].lower() and d["max_output_channels"] > 0:
-                    out_id = idx
-                    break
+            # 1. Match from studio config sidetone/output
+            cfg_out = ""
+            try:
+                from stage_3_voice.studio.config import load_settings
+                c = load_settings().get("audio", {})
+                cfg_out = (c.get("sidetone_device") or c.get("output_device") or "").lower()
+            except Exception:
+                pass
+
+            devs = sd.query_devices()
+            if cfg_out:
+                for idx, d in enumerate(devs):
+                    if cfg_out in d["name"].lower() and d["max_output_channels"] > 0:
+                        out_id = idx
+                        break
+
+            # 2. Prefer Playback 1/2 or Headphones
+            if out_id is None:
+                for idx, d in enumerate(devs):
+                    name_l = d["name"].lower()
+                    if ("playback 1/2" in name_l or "headphone" in name_l or "наушник" in name_l) and d["max_output_channels"] > 0:
+                        out_id = idx
+                        break
+
+            # 3. Default output device
+            if out_id is None:
+                try:
+                    def_out = int(sd.default.device[1])
+                    if def_out >= 0:
+                        out_id = def_out
+                except Exception:
+                    pass
+
             sd.play(self.test_audio_data, samplerate=24000, device=out_id)
         except Exception as e:
             log.warning("Preview playback failed: %s", e)

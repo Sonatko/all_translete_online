@@ -53,10 +53,20 @@ cd all_translete_online
 START.bat
 ```
 
-如果需要拉取最新更新：
-```bash
-git pull https://ghproxy.net/https://github.com/Sonatko/all_translete_online.git main
-```
+---
+
+## 🔄 项目更新与自愈修复（Git Pull & Update）
+
+当仓库更新代码或新增依赖时，支持免配置一键平滑升级：
+
+### 方案 A（最推荐）：双击 `UPDATE.bat`
+直接双击根目录下的 **`UPDATE.bat`**：
+1. 自动执行 `git pull` 同步最新代码。
+2. 自动检查 `requirements.txt` 并高速补充缺失依赖（默认直连清华大学源）。
+3. 自动同步 Stage 1 (LiveTranslate) 与 Stage 2 (OverTranslate) 的最新工程补丁与中文本地化设置。
+
+### 方案 B：直接运行 `START.bat`
+即使您仅执行了 `git pull` 而未运行更新脚本，直接双击 **`START.bat`** 也会在 0.3 秒内触发轻量级自愈审计，自动补全最新补丁并同步配置！
 
 ---
 

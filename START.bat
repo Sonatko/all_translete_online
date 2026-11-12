@@ -14,6 +14,10 @@ if not exist "%~dp0stage_1_audio\LiveTranslate\audio_capture.py" goto need_setup
 "%VENV_PY%" -c "import PyQt6, pyaudiowpatch, ctranslate2, sherpa_onnx, pocket_tts" >nul 2>&1
 if errorlevel 1 goto need_setup
 
+:: Fast patch synchronization, locale adaptation and self-healing (~0.3s)
+"%VENV_PY%" "%~dp0scripts\bootstrap_ecosystem.py" --quiet
+if errorlevel 1 goto need_setup
+
 goto launch_hub
 
 :need_setup

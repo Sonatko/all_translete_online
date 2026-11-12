@@ -35,6 +35,43 @@ def get_file_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def get_system_locale() -> str:
+    """Safely obtain system language/locale code across Python 3.10-3.15.
+    Prioritizes native Windows API GetUserDefaultUILanguage for 100% accurate Chinese/Russian detection.
+    """
+    try:
+        import ctypes
+        windll = getattr(ctypes, "windll", None)
+        if windll and hasattr(windll, "kernel32"):
+            lang_id = windll.kernel32.GetUserDefaultUILanguage()
+            # 0x0804 = zh-CN, 0x0404 = zh-TW, 0x0C04 = zh-HK, 0x1404 = zh-MO, 0x1004 = zh-SG
+            if lang_id in (0x0804, 0x0404, 0x0C04, 0x1404, 0x1004):
+                return "zh"
+            if lang_id == 0x0419:
+                return "ru"
+    except Exception:
+        pass
+
+    try:
+        import locale
+        loc = (locale.getlocale()[0] or "").lower()
+        if "zh" in loc or "cn" in loc:
+            return "zh"
+        if "ru" in loc:
+            return "ru"
+    except Exception:
+        pass
+
+    for env_var in ("LANG", "LANGUAGE", "LC_ALL"):
+        val = (os.environ.get(env_var) or "").lower()
+        if "zh" in val or "cn" in val:
+            return "zh"
+        if "ru" in val:
+            return "ru"
+
+    return "en"
+
+
 def download_with_fallback(urls: list[str], dest_file: Path) -> bool:
     """Download a file with fallback mirror support."""
     if dest_file.is_file() and dest_file.stat().st_size > 1024:
@@ -97,13 +134,9 @@ def setup_stage_2_overtranslate() -> bool:
     # 2. Universal Localization & Settings Sync (Auto-adapts to Chinese / Russian / English OS)
     cfg_src = CONFIG_DIR / "stage_2_screen" / "appsettings.json"
     if cfg_src.is_file():
-        import locale
-        try:
-            loc = (locale.getdefaultlocale()[0] or "").lower()
-        except Exception:
-            loc = ""
-        is_chinese = "zh" in loc or "cn" in loc
-        is_russian = "ru" in loc
+        sys_lang = get_system_locale()
+        is_chinese = (sys_lang == "zh")
+        is_russian = (sys_lang == "ru")
 
         try:
             data = json.loads(cfg_src.read_text(encoding="utf-8"))
@@ -208,13 +241,7 @@ def setup_stage_1_livetranslate() -> bool:
     # Synchronize Stage 1 target language to OS locale (Chinese -> zh, Russian -> ru)
     s1_cfg = LIVETRANSLATE_DIR / "user_settings.json"
     if s1_cfg.is_file():
-        import locale
-        try:
-            loc = (locale.getdefaultlocale()[0] or "").lower()
-        except Exception:
-            loc = ""
-        is_cn = "zh" in loc or "cn" in loc
-        tgt_code = "zh" if is_cn else ("ru" if "ru" in loc else "en")
+        tgt_code = get_system_locale()
         try:
             s1_data = json.loads(s1_cfg.read_text(encoding="utf-8"))
             s1_data["target_language"] = tgt_code
@@ -222,7 +249,7 @@ def setup_stage_1_livetranslate() -> bool:
             if len(lines) > 1:
                 lines[1]["lang"] = tgt_code
             s1_cfg.write_text(json.dumps(s1_data, indent=2, ensure_ascii=False), encoding="utf-8")
-            log.info("LiveTranslate target language adapted to '%s' (locale: %s)", tgt_code, loc)
+            log.info("LiveTranslate target language adapted to '%s'", tgt_code)
         except Exception as e:
             log.warning("Could not adapt LiveTranslate user_settings.json: %s", e)
 
@@ -254,18 +281,22 @@ def verify_integrity() -> bool:
 
 
 def main():
-    log.info("============================================================")
-    log.info("  UNIVERSAL ECOSYSTEM BOOTSTRAPPER & PATCH INJECTOR")
-    log.info("============================================================")
+    if "--quiet" in sys.argv or "-q" in sys.argv:
+        logging.getLogger().setLevel(logging.WARNING)
+    else:
+        log.info("============================================================")
+        log.info("  UNIVERSAL ECOSYSTEM BOOTSTRAPPER & PATCH INJECTOR")
+        log.info("============================================================")
 
     ok_s2 = setup_stage_2_overtranslate()
     ok_s1 = setup_stage_1_livetranslate()
     ok_audit = verify_integrity()
 
     if ok_s1 and ok_s2 and ok_audit:
-        log.info("============================================================")
-        log.info("  [SUCCESS] ALL STAGES DEPLOYED AND PATCHED SUCCESSFULLY!")
-        log.info("============================================================")
+        if "--quiet" not in sys.argv and "-q" not in sys.argv:
+            log.info("============================================================")
+            log.info("  [SUCCESS] ALL STAGES DEPLOYED AND PATCHED SUCCESSFULLY!")
+            log.info("============================================================")
         sys.exit(0)
     else:
         log.error("Bootstrap finished with warnings.")

@@ -46,4 +46,10 @@ all_translete_online_release.zip
 !CONFIG/
 !CONFIG/**
 
+# Exclude bytecode caches even inside tracked CONFIG
+CONFIG/**/__pycache__/
+CONFIG/**/*.py[cod]
+**/__pycache__/
+*.py[cod]
+
 .idea/

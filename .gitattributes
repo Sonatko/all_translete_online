@@ -1,0 +1,28 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Windows batch and powershell scripts MUST use CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Python, JSON, Markdown, configs
+*.py text diff=python
+*.json text
+*.md text
+*.txt text
+*.yaml text
+*.yml text
+
+# Binary files - never normalize or touch line endings
+*.dll binary
+*.exe binary
+*.zip binary
+*.tar.gz binary
+*.safetensors binary
+*.onnx binary
+*.bin binary
+*.pt binary
+*.pth binary
+*.pyc binary
+

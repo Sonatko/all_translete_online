@@ -20,7 +20,14 @@ if %errorlevel% equ 0 (
 )
 
 if not defined SYS_PY (
-    echo [*] Python not found in PATH.
+    if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "SYS_PY=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    if exist "%ProgramFiles%\Python312\python.exe" set "SYS_PY=%ProgramFiles%\Python312\python.exe"
+    if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set "SYS_PY=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    if exist "%ProgramFiles%\Python311\python.exe" set "SYS_PY=%ProgramFiles%\Python311\python.exe"
+)
+
+if not defined SYS_PY (
+    echo [*] Python not found in PATH or standard locations.
     echo [*] Installing Python 3.12 via winget...
     winget install Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
     if %errorlevel% neq 0 (
@@ -29,7 +36,13 @@ if not defined SYS_PY (
         pause
         exit /b 1
     )
-    set "SYS_PY=python"
+    if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+        set "SYS_PY=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    ) else if exist "%ProgramFiles%\Python312\python.exe" (
+        set "SYS_PY=%ProgramFiles%\Python312\python.exe"
+    ) else (
+        set "SYS_PY=python"
+    )
 )
 
 echo [1/4] Python detected: !SYS_PY!
@@ -41,7 +54,7 @@ set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (
     echo [2/4] Creating isolated virtual environment in stage_3_voice\.venv...
-    !SYS_PY! -m venv "%VENV_DIR%"
+    !SYS_PY! -m venv --clear "%VENV_DIR%"
     if %errorlevel% neq 0 (
         echo [ERROR] Failed to create virtual environment.
         pause

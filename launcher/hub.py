@@ -5,12 +5,21 @@ and Embedded Stage 3 Hardware Audio Routing.
 """
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
 from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
+
+# Ensure standard streams are never None under pythonw.exe (Windowless GUI on Windows)
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
+
+os.environ["TQDM_DISABLE"] = "1"
 
 import psutil
 

@@ -4,12 +4,24 @@ with automatic studio EQ, latency telemetry, and instant headphone test playback
 """
 from __future__ import annotations
 
+import io
 import logging
+import os
 from pathlib import Path
 import shutil
+import sys
 import threading
 import time
+import traceback
 from typing import Optional
+
+# Ensure standard streams are never None in pythonw.exe (Windowless GUI mode on Windows)
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
+
+os.environ["TQDM_DISABLE"] = "1"
 
 import numpy as np
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -392,6 +404,14 @@ class VoiceCloningWizard(QDialog):
             self.sig_cloning_finished.emit(str(test_file), latency_s)
 
         except Exception as e:
+            tb_str = traceback.format_exc()
+            log.error("Voice calibration failed: %s\n%s", e, tb_str)
+            try:
+                err_log_dir = PROJECT_ROOT / "stage_3_voice" / "logs"
+                err_log_dir.mkdir(parents=True, exist_ok=True)
+                (err_log_dir / "voice_cloning.log").write_text(f"Timestamp: {time.ctime()}\n{tb_str}", encoding="utf-8")
+            except Exception:
+                pass
             self.sig_error.emit(str(e))
 
     def _on_recording_tick(self, sec: int):

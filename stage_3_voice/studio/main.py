@@ -12,6 +12,14 @@ from pathlib import Path
 # Fix Windows console encoding and unbuffered output
 os.environ["PYTHONUNBUFFERED"] = "1"
 os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["TQDM_DISABLE"] = "1"
+
+# Ensure standard streams are never None under pythonw.exe
+import io
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
 
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent

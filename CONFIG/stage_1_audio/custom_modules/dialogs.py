@@ -494,6 +494,9 @@ class ModelDownloadDialog(QDialog):
                 if m["type"] == "silero-vad":
                     download_silero(proxy=self._proxy)
                 elif m["type"] in (
+                    "sherpa_sensevoice",
+                    "sherpa_parakeet",
+                    "sherpa_onnx",
                     "sensevoice",
                     "funasr-nano",
                     "funasr-mlt-nano",

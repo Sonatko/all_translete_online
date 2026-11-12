@@ -397,6 +397,21 @@ def _hf_repo_complete(org: str, name: str, min_bytes: int = 50_000_000) -> bool:
     return False
 
 
+def get_sherpa_sensevoice_paths() -> tuple[Path, Path] | None:
+    """Find SenseVoice ONNX model and tokens in local Stage 1 or shared Stage 3 directory."""
+    candidates = [
+        MODELS_DIR / "sherpa-onnx" / "sensevoice",
+        (APP_DIR.parent.parent / "stage_3_voice" / "models" / "sensevoice").resolve(),
+        (APP_DIR.parent.parent / "models" / "sensevoice").resolve(),
+    ]
+    for d in candidates:
+        m = d / "model.int8.onnx"
+        t = d / "tokens.txt"
+        if m.is_file() and t.is_file() and m.stat().st_size > 10_000_000:
+            return (m, t)
+    return None
+
+
 def is_asr_cached(engine_type, model_size="medium", hub="ms") -> bool:
     if engine_type == "sherpa_onnx" or engine_type.startswith("sherpa_"):
         sherpa_dir = MODELS_DIR / "sherpa-onnx"
@@ -409,11 +424,7 @@ def is_asr_cached(engine_type, model_size="medium", hub="ms") -> bool:
                 and (parakeet_dir / "tokens.txt").exists()
             )
         else:
-            sense_dir = sherpa_dir / "sensevoice"
-            return (
-                (sense_dir / "model.int8.onnx").exists()
-                and (sense_dir / "tokens.txt").exists()
-            )
+            return get_sherpa_sensevoice_paths() is not None
     if engine_type == "funasr" or engine_type in FUNASR_LEGACY_ENGINE_ALIASES:
         model_key = (
             FUNASR_LEGACY_ENGINE_ALIASES[engine_type]
@@ -691,16 +702,25 @@ def download_asr(engine, model_size="medium", hub="ms", proxy="system"):
             model_id = f"Systran/faster-whisper-{model_size}"
             log.info(f"Downloading {model_id} from HuggingFace...")
             snapshot_download(repo_id=model_id, cache_dir=hf_cache)
-        elif engine == "sherpa_onnx" or engine.startswith("sherpa_"):
+        elif engine == "sherpa_onnx" or engine.startswith("sherpa_") or "sherpa" in engine:
             from huggingface_hub import snapshot_download
-            if model_size == "pure_english" or engine == "sherpa_parakeet":
-                repo_id = "csukuangfj/sherpa-onnx-nemo-parakeet-tdt-ctc-110m-en-30000hrs"
-                target = str(MODELS_DIR / "sherpa-onnx" / "parakeet_tdt")
-            else:
-                repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
-                target = str(MODELS_DIR / "sherpa-onnx" / "sensevoice")
-            log.info(f"Downloading {repo_id} from HuggingFace...")
-            snapshot_download(repo_id=repo_id, local_dir=target)
+            old_endpoint = os.environ.get("HF_ENDPOINT")
+            if hub == "ms" or not os.environ.get("HF_ENDPOINT"):
+                os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+            try:
+                if model_size == "pure_english" or engine == "sherpa_parakeet":
+                    repo_id = "csukuangfj/sherpa-onnx-nemo-parakeet-tdt-ctc-110m-en-30000hrs"
+                    target = str(MODELS_DIR / "sherpa-onnx" / "parakeet_tdt")
+                else:
+                    repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+                    target = str(MODELS_DIR / "sherpa-onnx" / "sensevoice")
+                log.info(f"Downloading {repo_id} via {os.environ.get('HF_ENDPOINT')} to {target}...")
+                snapshot_download(repo_id=repo_id, local_dir=target)
+            finally:
+                if old_endpoint:
+                    os.environ["HF_ENDPOINT"] = old_endpoint
+                else:
+                    os.environ.pop("HF_ENDPOINT", None)
     log.info(f"ASR model downloaded: {engine}")
 
 

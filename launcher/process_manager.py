@@ -16,9 +16,12 @@ import psutil
 log = logging.getLogger("Launcher.Process")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PYTHON_EXE = PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "python.exe"
-PYTHONW_EXE = PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "pythonw.exe"
-PYTHONW_STAGE1 = PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / ".venv" / "Scripts" / "pythonw.exe"
+EMBEDDED_PY = PROJECT_ROOT / "python_embeded" / "python.exe"
+EMBEDDED_PYW = PROJECT_ROOT / "python_embeded" / "pythonw.exe"
+
+PYTHON_EXE = EMBEDDED_PY if EMBEDDED_PY.is_file() else (PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "python.exe")
+PYTHONW_EXE = EMBEDDED_PYW if EMBEDDED_PYW.is_file() else (PROJECT_ROOT / "stage_3_voice" / ".venv" / "Scripts" / "pythonw.exe")
+PYTHONW_STAGE1 = EMBEDDED_PYW if EMBEDDED_PYW.is_file() else (PROJECT_ROOT / "stage_1_audio" / "LiveTranslate" / ".venv" / "Scripts" / "pythonw.exe")
 
 _CPU_HARDWARE_INFO: Optional[Dict[str, Any]] = None
 
@@ -73,9 +76,13 @@ class EcosystemProcessManager:
                         cmdline = " ".join(p.cmdline() or []).lower()
                         if "hub.py" in cmdline:
                             continue
-                        if "stage_1_audio" in cmdline or "livetranslate" in cmdline:
+                        try:
+                            p_cwd = (p.cwd() or "").lower()
+                        except Exception:
+                            p_cwd = ""
+                        if "stage_1_audio" in cmdline or "livetranslate" in cmdline or "livetranslate" in p_cwd:
                             matched = "stage_1"
-                        elif "stage_3_voice" in cmdline or "studio" in cmdline:
+                        elif "stage_3_voice" in cmdline or "studio" in cmdline or "stage_3_voice" in p_cwd:
                             matched = "stage_3"
 
                     if matched and not status[matched]["running"]:
@@ -159,11 +166,20 @@ class EcosystemProcessManager:
             env = dict(os.environ)
             env["LIVETRANSLATE_SETTINGS_FILE"] = str(app_dir / "user_settings.json")
             py = str(PYTHONW_STAGE1) if PYTHONW_STAGE1.is_file() else str(PYTHONW_EXE)
+            main_script = app_dir / "main.py"
 
-            logs_dir = app_dir / "logs"
-            logs_dir.mkdir(parents=True, exist_ok=True)
-            log_file = open(logs_dir / "startup.log", "w", encoding="utf-8")
-            subprocess.Popen([py, "main.py"], cwd=str(app_dir), env=env, stdout=log_file, stderr=subprocess.STDOUT)
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+
+            subprocess.Popen(
+                [py, str(main_script)],
+                cwd=str(app_dir),
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creationflags,
+            )
             log.info("Stage 1 spawned successfully with interpreter: %s", py)
             return True
         except Exception as e:

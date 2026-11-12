@@ -7,6 +7,13 @@ set "VENV_PY=%~dp0stage_3_voice\.venv\Scripts\python.exe"
 set "VENV_PYW=%~dp0stage_3_voice\.venv\Scripts\pythonw.exe"
 set "HUB_SCRIPT=%~dp0launcher\hub.py"
 
+:: ComfyUI / Fooocus standard: prioritize standalone embedded python if present
+if exist "%~dp0python_embeded\python.exe" (
+    set "VENV_PY=%~dp0python_embeded\python.exe"
+    set "VENV_PYW=%~dp0python_embeded\pythonw.exe"
+    goto ready_env
+)
+
 if not exist "%VENV_PY%" goto need_setup
 if not exist "%~dp0stage_2_screen\OverTranslate\current\OverTranslate.exe" goto need_setup
 if not exist "%~dp0stage_1_audio\LiveTranslate\audio_capture.py" goto need_setup
@@ -14,6 +21,7 @@ if not exist "%~dp0stage_1_audio\LiveTranslate\audio_capture.py" goto need_setup
 "%VENV_PY%" -c "import PyQt6, pyaudiowpatch, ctranslate2, sherpa_onnx, pocket_tts" >nul 2>&1
 if errorlevel 1 goto need_setup
 
+:ready_env
 :: Fast patch synchronization, locale adaptation and self-healing (~0.3s)
 "%VENV_PY%" "%~dp0scripts\bootstrap_ecosystem.py" --quiet
 if errorlevel 1 goto need_setup

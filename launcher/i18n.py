@@ -92,6 +92,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "hotkeys_label": "Клавиши:",
         "res_metrics": "Память: {ram} МБ | ЦП: {cpu}%",
         "res_stopped": "Служба остановлена",
+
+        # In-App 1-Click Auto-Update
+        "update_check": "🔄 Проверить обновления",
+        "update_up_to_date": "✓ Версия актуальна",
+        "update_available": "✨ Доступно обновление ({count})",
+        "update_dialog_title": "Обновление экосистемы",
+        "update_btn_start": "🚀 Обновить в 1 клик",
+        "update_progress_stopping": "Остановка фоновых служб...",
+        "update_progress_pulling": "Загрузка обновлений из репозитория...",
+        "update_progress_syncing": "Синхронизация патчей и модулей...",
+        "update_progress_done": "Обновление успешно завершено! Перезапуск...",
     },
     "en": {
         "title": "Translation Ecosystem Programs Control Panel (Hub - 100% Offline)",
@@ -179,6 +190,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "hotkeys_label": "Hotkeys:",
         "res_metrics": "RAM: {ram} MB | CPU: {cpu}%",
         "res_stopped": "Service stopped",
+
+        # In-App 1-Click Auto-Update
+        "update_check": "🔄 Check Updates",
+        "update_up_to_date": "✓ Up to date",
+        "update_available": "✨ Update: {count} commits",
+        "update_dialog_title": "Ecosystem Update",
+        "update_btn_start": "🚀 1-Click Update",
+        "update_progress_stopping": "Stopping active services...",
+        "update_progress_pulling": "Pulling updates from repository...",
+        "update_progress_syncing": "Syncing modules and patches...",
+        "update_progress_done": "Update complete! Ready to restart...",
     },
     "zh": {
         "title": "离线翻译程序总控制台 (Hub - 100% 本地运行)",
@@ -266,6 +288,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "hotkeys_label": "快捷键:",
         "res_metrics": "内存: {ram} MB | CPU: {cpu}%",
         "res_stopped": "服务已停止",
+
+        # In-App 1-Click Auto-Update
+        "update_check": "🔄 检查更新",
+        "update_up_to_date": "✓ 已是最新版本",
+        "update_available": "✨ 发现新版本: {count} 个更新",
+        "update_dialog_title": "生态系统更新",
+        "update_btn_start": "🚀 一键在线更新",
+        "update_progress_stopping": "正在停止运行的服务...",
+        "update_progress_pulling": "正在拉取代码更新...",
+        "update_progress_syncing": "正在同步核心补丁与模块...",
+        "update_progress_done": "更新成功！准备重启...",
     },
 }
 

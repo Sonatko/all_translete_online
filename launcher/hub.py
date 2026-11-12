@@ -59,10 +59,12 @@ try:
     from launcher.i18n import I18n
     from launcher.patch_checker import PatchIntegrityChecker
     from launcher.process_manager import EcosystemProcessManager
+    from launcher.updater import UpdateCheckerWorker, UpdateDialog, get_current_commit_info
 except ImportError:
     from i18n import I18n
     from patch_checker import PatchIntegrityChecker
     from process_manager import EcosystemProcessManager
+    from updater import UpdateCheckerWorker, UpdateDialog, get_current_commit_info
 
 log = logging.getLogger("Launcher.Hub")
 
@@ -820,6 +822,7 @@ class EcosystemHub(QMainWindow):
         self._populate_patches_view()
         self._update_hub_profile_styles()
         self._refresh_all_latencies()
+        self._check_for_updates_background()
 
     def _refresh_all_latencies(self):
         m1 = None
@@ -954,6 +957,54 @@ class EcosystemHub(QMainWindow):
         config_dir = PROJECT_ROOT / "CONFIG"
         if config_dir.is_dir():
             subprocess.Popen(["explorer.exe", str(config_dir)])
+
+    def _check_for_updates_background(self):
+        """Spawn non-blocking background thread checking git / github status."""
+        self._available_commits: list = []
+        self._update_worker = UpdateCheckerWorker(self)
+        self._update_worker.update_available.connect(self._on_update_available)
+        self._update_worker.up_to_date.connect(self._on_up_to_date)
+        self._update_worker.start()
+
+    def _on_update_available(self, count: int, commits: list):
+        self._available_commits = commits
+        txt = I18n.t("update_available")
+        label = txt.format(count=count) if "{count}" in txt else f"✨ Обновление ({count})"
+        self.btn_update.setText(label)
+        self.btn_update.setStyleSheet("""
+            QPushButton {
+                background-color: #7c3aed;
+                color: #ffffff;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 12px;
+                border: 1px solid #a78bfa;
+            }
+            QPushButton:hover { background-color: #6d28d9; }
+        """)
+
+    def _on_up_to_date(self, commit_hash: str):
+        self._available_commits = []
+        self.btn_update.setText(f"✓ {commit_hash} ({I18n.t('update_up_to_date')})")
+        self.btn_update.setStyleSheet("""
+            QPushButton {
+                background-color: #064e3b;
+                color: #6ee7b7;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 12px;
+                border: 1px solid #059669;
+            }
+            QPushButton:hover { background-color: #065f46; }
+        """)
+
+    def _on_update_clicked(self):
+        dlg = UpdateDialog(self, commits=getattr(self, "_available_commits", []))
+        dlg.exec()
 
     def _create_tray_icon_fallback(self) -> QIcon:
         """Render a crisp, modern vector-sharp 64x64 tray icon."""
@@ -1185,6 +1236,26 @@ class EcosystemHub(QMainWindow):
         """)
         self.btn_tray.clicked.connect(self._minimize_to_tray)
         h.addWidget(self.btn_tray)
+
+        # In-App 1-Click Update Quick Pill
+        curr_h, _ = get_current_commit_info()
+        self.btn_update = QPushButton(f"● {curr_h} (Актуально)")
+        self.btn_update.setFixedHeight(42)
+        self.btn_update.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #94a3b8;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+                font-weight: bold;
+                border-radius: 6px;
+                padding: 0 12px;
+                border: 1px solid #334155;
+            }
+            QPushButton:hover { background-color: #0f172a; border-color: #475569; }
+        """)
+        self.btn_update.clicked.connect(self._on_update_clicked)
+        h.addWidget(self.btn_update)
 
         h.addStretch()
 
@@ -1733,6 +1804,13 @@ class EcosystemHub(QMainWindow):
         self.btn_stop_all.setText(I18n.t("stop_all"))
         if hasattr(self, "btn_tray"):
             self.btn_tray.setText(I18n.t("btn_tray"))
+        if hasattr(self, "btn_update"):
+            commits = getattr(self, "_available_commits", [])
+            if commits:
+                self.btn_update.setText(I18n.t("update_available").format(count=len(commits)))
+            else:
+                curr_h, _ = get_current_commit_info()
+                self.btn_update.setText(f"✓ {curr_h} ({I18n.t('update_up_to_date')})")
         if hasattr(self, "tray_icon") and self.tray_icon:
             self.tray_icon.setToolTip(I18n.t("title"))
             self.action_tray_restore.setText(I18n.t("tray_restore"))

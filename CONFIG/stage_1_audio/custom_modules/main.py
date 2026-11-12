@@ -3,7 +3,18 @@ LiveTranslate - Phase 0 Prototype
 Real-time audio translation using WASAPI loopback + faster-whisper + LLM.
 """
 
+import io
+import os
 import sys
+
+# Windowless/pythonw safeguard against NoneType stdout/stderr crashes
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
+os.environ["TQDM_DISABLE"] = "1"
+os.environ["PYTHONIOENCODING"] = "utf-8"
+
 import signal
 import logging
 import threading
@@ -831,7 +842,7 @@ class LiveTranslateApp:
         self._mem_last_mb = snap["rss"]
         log.info(
             f"MEM[asr#{self._mem_asr_call_count}:{kind}] RSS={snap['rss']:.1f}MB "
-            f"(Δ{delta:+.2f} since last, {total_delta:+.1f} since start) "
+            f"(d={delta:+.2f} since last, {total_delta:+.1f} since start) "
             f"worker_rss={snap['worker_rss']:.0f}MB "
             f"GPU(main alloc/reserved)={snap['gpu_alloc']:.0f}/{snap['gpu_reserved']:.0f}MB "
             f"audio={audio_seconds:.1f}s asr={asr_ms:.0f}ms "

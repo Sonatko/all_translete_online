@@ -124,16 +124,21 @@ class SherpaASREngine:
         app_models_dir = os.path.join(os.path.dirname(__file__), "models", "sherpa-onnx")
 
         if self.profile == Profile.MULTILINGUAL:
-            # Alibaba SenseVoice-Small INT8
-            local_sv_dir = os.path.join(app_models_dir, "sensevoice")
-            model_path = os.path.join(local_sv_dir, "model.int8.onnx")
-            tokens_path = os.path.join(local_sv_dir, "tokens.txt")
+            # Alibaba SenseVoice-Small INT8: check shared / cached paths first
+            from model_manager import get_sherpa_sensevoice_paths
+            cached_paths = get_sherpa_sensevoice_paths()
+            if cached_paths:
+                model_path, tokens_path = str(cached_paths[0]), str(cached_paths[1])
+            else:
+                local_sv_dir = os.path.join(app_models_dir, "sensevoice")
+                model_path = os.path.join(local_sv_dir, "model.int8.onnx")
+                tokens_path = os.path.join(local_sv_dir, "tokens.txt")
 
-            if not (os.path.exists(model_path) and os.path.exists(tokens_path)):
-                log.info("SenseVoice ONNX model missing locally. Auto-downloading on-demand...")
-                repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
-                model_path = _download_hf_file(repo_id, "model.int8.onnx", local_sv_dir)
-                tokens_path = _download_hf_file(repo_id, "tokens.txt", local_sv_dir)
+                if not (os.path.exists(model_path) and os.path.exists(tokens_path)):
+                    log.info("SenseVoice ONNX model missing locally. Auto-downloading on-demand...")
+                    repo_id = "csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+                    model_path = _download_hf_file(repo_id, "model.int8.onnx", local_sv_dir)
+                    tokens_path = _download_hf_file(repo_id, "tokens.txt", local_sv_dir)
 
             self._recognizer = sherpa_onnx.OfflineRecognizer.from_sense_voice(
                 model=model_path,

@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
-cd /d "%~dp0"
+cd /d "%~dp0.."
 title Translation Ecosystem - Update Wizard
 
 echo ======================================================================
@@ -26,13 +26,13 @@ if %errorlevel% equ 0 (
 echo.
 
 :: 2. Verify / Update Python Virtual Environment & Requirements
-set "ROOT_DIR=%~dp0"
+set "ROOT_DIR=%cd%\"
 set "VENV_DIR=%ROOT_DIR%stage_3_voice\.venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (
     echo [2/3] Virtual environment missing. Running initial setup wizard...
-    call "%~dp0scripts\setup.bat"
+    call "%ROOT_DIR%scripts\setup.bat"
     if errorlevel 1 (
         echo [ERROR] Setup failed.
         pause

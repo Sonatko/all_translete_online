@@ -369,22 +369,19 @@ class VoiceCloningWizard(QDialog):
         audio = audio.flatten()
 
         # 2. Studio Pre-processing
-        # High-pass filter 80Hz (sos)
+        # High-pass filter 80Hz (sos) to eliminate sub-bass rumble
         sos = signal.butter(2, 80, "hp", fs=sr, output="sos")
-        clean_audio = signal.sosfilt(sos, audio)
+        clean_audio = signal.sosfilt(sos, audio).astype(np.float32)
 
         # Peak normalization (-1.4 dBFS)
         peak = np.max(np.abs(clean_audio))
         if peak > 0.001:
             clean_audio = clean_audio * (0.85 / peak)
 
-        # Resample to 24000 Hz for Mimi Neural Codec
-        num_samples_24k = int(len(clean_audio) * 24000 / sr)
-        audio_24k = signal.resample(clean_audio, num_samples_24k).astype(np.float32)
-
+        # Save pristine audio at native sample rate (Pocket-TTS loads and resamples via polyphase filter)
         SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
         ref_path = SCRATCH_DIR / "my_clean_reference.wav"
-        sf.write(str(ref_path), audio_24k, 24000)
+        sf.write(str(ref_path), clean_audio, sr)
         self.ref_audio_path = ref_path
 
         # 3. Model Conditioning & Latent Extraction

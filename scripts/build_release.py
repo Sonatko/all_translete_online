@@ -84,9 +84,10 @@ def build_package(output_name: str = "Translation_Ecosystem_Windows_Portable.zip
 
     # 1. Pre-run bootstrap check to guarantee base packages and patches are in place
     try:
-        from scripts.bootstrap_ecosystem import setup_stage_1_livetranslate, setup_stage_2_overtranslate
+        from scripts.bootstrap_ecosystem import setup_stage_1_livetranslate, setup_stage_2_overtranslate, setup_stage_3_voice
         setup_stage_2_overtranslate()
         setup_stage_1_livetranslate()
+        setup_stage_3_voice()
     except Exception as e:
         log.warning("Notice during pre-release bootstrap sync: %s", e)
 

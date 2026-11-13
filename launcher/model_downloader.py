@@ -92,19 +92,39 @@ MODEL_SPECS: Dict[str, Dict] = {
     "pocket_tts_en": {
         "name": "Kyutai Pocket-TTS 24kHz Backbone (Mimi Codec)",
         "pipeline": "common",
-        "task": "TTS (Голос)",
+        "task": "TTS (Нейросеть голоса)",
         "repo": "latent-variable/pocket-tts-cloning-en",
         "dest_dir": MODELS_DIR / "pocket_tts",
         "files": [
             ("languages/english/model.safetensors", 219_029_196, "model.safetensors"),
         ],
     },
+    "author_voice": {
+        "name": "Author's Cloned Voice (my_pocket_voice.safetensors)",
+        "pipeline": "common",
+        "task": "Voice Profile (Голос автора)",
+        "repo": "Sonatko/all_translete_online",
+        "dest_dir": MODELS_DIR / "pocket_tts",
+        "files": [
+            ("CONFIG/stage_3_voice/my_pocket_voice.safetensors", 4_425_520, "my_pocket_voice.safetensors"),
+        ],
+        "is_github": True,
+    },
 }
 
 
-def build_download_urls(repo_id: str, remote_filename: str, china_mirror: bool = False) -> List[str]:
+def build_download_urls(repo_id: str, remote_filename: str, china_mirror: bool = False, is_github: bool = False) -> List[str]:
     """Build list of primary and fallback mirror URLs."""
     urls = []
+    if is_github:
+        if china_mirror:
+            urls.append(f"https://ghproxy.net/https://github.com/{repo_id}/raw/main/{remote_filename}")
+            urls.append(f"https://github.com/{repo_id}/raw/main/{remote_filename}")
+        else:
+            urls.append(f"https://github.com/{repo_id}/raw/main/{remote_filename}")
+            urls.append(f"https://ghproxy.net/https://github.com/{repo_id}/raw/main/{remote_filename}")
+        return urls
+
     if china_mirror:
         # China-safe: Prioritize fast mirror, never fall back to blocked domains
         urls.append(f"https://hf-mirror.com/{repo_id}/resolve/main/{remote_filename}")
@@ -289,8 +309,8 @@ def check_spec_status(spec_key: str) -> Dict:
 def get_pipeline_specs(pipeline: str) -> List[str]:
     """Return keys of specs required for the given pipeline ('ru_en' or 'zh_en')."""
     if pipeline == "zh_en":
-        return ["sensevoice_zh", "opus_mt_zh_en", "pocket_tts_en"]
-    return ["giga_am_ru", "opus_mt_ru_en", "pocket_tts_en"]
+        return ["sensevoice_zh", "opus_mt_zh_en", "pocket_tts_en", "author_voice"]
+    return ["giga_am_ru", "opus_mt_ru_en", "pocket_tts_en", "author_voice"]
 
 
 if HAS_PYSIDE:
@@ -320,6 +340,7 @@ if HAS_PYSIDE:
                 spec = MODEL_SPECS[key]
                 dest_dir: Path = spec["dest_dir"]
                 dest_dir.mkdir(parents=True, exist_ok=True)
+                is_gh = spec.get("is_github", False)
 
                 for file_info in spec["files"]:
                     if self._is_stopped:
@@ -340,7 +361,7 @@ if HAS_PYSIDE:
                         self.sig_file_completed.emit(local_name)
                         continue
 
-                    urls = build_download_urls(spec["repo"], remote_name, china_mirror=self.china_mirror)
+                    urls = build_download_urls(spec["repo"], remote_name, china_mirror=self.china_mirror, is_github=is_gh)
 
                     def on_progress(down: int, total: int, spd: float):
                         self.sig_progress.emit(local_name, down, total, spd)
@@ -354,6 +375,13 @@ if HAS_PYSIDE:
                     )
 
                     if ok:
+                        if key == "author_voice":
+                            vault_copy = PROJECT_ROOT / "CONFIG" / "stage_3_voice" / "my_pocket_voice.safetensors"
+                            vault_copy.parent.mkdir(parents=True, exist_ok=True)
+                            try:
+                                shutil.copy2(target_file, vault_copy)
+                            except Exception:
+                                pass
                         self.sig_file_completed.emit(local_name)
                     else:
                         if not self._is_stopped:

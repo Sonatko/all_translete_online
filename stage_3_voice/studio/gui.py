@@ -1013,6 +1013,69 @@ class StudioWindow(QMainWindow):
         h_voice_combo.addWidget(self.combo_voices_main, stretch=1)
         v_voice.addLayout(h_voice_combo)
 
+        # Voice Profile Management Toolbar (Export, Import, Delete)
+        h_voice_tools = QHBoxLayout()
+        h_voice_tools.setSpacing(6)
+
+        self.btn_export_voice = QPushButton("💾 Скачать / Экспорт")
+        self.btn_export_voice.setToolTip("Сохранить выбранный профиль голоса в отдельный файл .safetensors")
+        self.btn_export_voice.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_export_voice.setFixedHeight(26)
+        self.btn_export_voice.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #38bdf8;
+                border: 1px solid #0284c7;
+                border-radius: 4px;
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #0369a1; color: #ffffff; }
+        """)
+        self.btn_export_voice.clicked.connect(self._on_export_voice)
+        h_voice_tools.addWidget(self.btn_export_voice)
+
+        self.btn_import_voice = QPushButton("📂 Загрузить голос")
+        self.btn_import_voice.setToolTip("Импортировать готовый файл голоса (.safetensors)")
+        self.btn_import_voice.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_import_voice.setFixedHeight(26)
+        self.btn_import_voice.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #a7f3d0;
+                border: 1px solid #059669;
+                border-radius: 4px;
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #047857; color: #ffffff; }
+        """)
+        self.btn_import_voice.clicked.connect(self._on_import_voice)
+        h_voice_tools.addWidget(self.btn_import_voice)
+
+        self.btn_delete_voice = QPushButton("🗑 Удалить клон")
+        self.btn_delete_voice.setToolTip("Удалить выбранный кастомный клон голоса")
+        self.btn_delete_voice.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_delete_voice.setFixedHeight(26)
+        self.btn_delete_voice.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                color: #fca5a5;
+                border: 1px solid #dc2626;
+                border-radius: 4px;
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #b91c1c; color: #ffffff; }
+        """)
+        self.btn_delete_voice.clicked.connect(self._on_delete_voice)
+        h_voice_tools.addWidget(self.btn_delete_voice)
+        h_voice_tools.addStretch()
+        v_voice.addLayout(h_voice_tools)
+
         layout.addWidget(self.grp_voice)
 
         # 2. PTT Control Block with 1-Click Presets
@@ -1724,6 +1787,8 @@ class StudioWindow(QMainWindow):
             self.btn_voice_stock.setStyleSheet(active_style if is_stock else inactive_style)
         if hasattr(self, "btn_voice_custom"):
             self.btn_voice_custom.setStyleSheet(active_style if is_custom else inactive_style)
+        if hasattr(self, "btn_delete_voice"):
+            self.btn_delete_voice.setEnabled(is_custom)
 
     def _populate_voice_combos(self):
         """Scan all user cloned, custom, and stock voices and populate combo boxes."""
@@ -1781,7 +1846,7 @@ class StudioWindow(QMainWindow):
         self._update_voice_buttons_style()
 
     def _on_open_voice_studio_wizard(self):
-        """Launch integrated Voice Cloning Studio with custom name support."""
+        """Launch integrated Voice Cloning Studio with custom name support and overwrite protection."""
         is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
         title = "新建声音档案" if is_zh else "Имя профиля голоса"
         prompt = "请输入新声音名称 (例如: 我的声音 2):" if is_zh else "Введите название нового голоса (например: Мой голос 2):"
@@ -1798,6 +1863,32 @@ class StudioWindow(QMainWindow):
         safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in name.strip().lower())
         if not safe_name:
             safe_name = "my_custom_voice"
+
+        if safe_name == "my_pocket_voice":
+            QMessageBox.warning(
+                self,
+                "Имя зарезервировано" if not is_zh else "名称受保护",
+                "Название 'my_pocket_voice' зарезервировано для авторского голоса. Пожалуйста, укажите другое имя."
+                if not is_zh else "'my_pocket_voice' 是作者原声专属名称，请使用其他名称。"
+            )
+            return
+
+        # Overwrite Protection: Check if voice with this name already exists
+        target_file = Path("CONFIG/stage_3_voice/voices") / f"{safe_name}.safetensors"
+        if target_file.is_file():
+            reply = QMessageBox.question(
+                self,
+                "Голос уже существует" if not is_zh else "档案已存在",
+                f"Голосовой профиль '{name.strip()}' уже существует на диске.\n\nВы хотите ПЕРЕЗАПИСАТЬ его?\n(Нажмите 'Нет', чтобы сохранить с новым номером)"
+                if not is_zh else f"声音档案 '{name.strip()}' 已存在。\n\n是否覆盖此档案？\n(点击'否'将自动递增编号保存)",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                idx = 2
+                while (Path("CONFIG/stage_3_voice/voices") / f"{safe_name}_{idx}.safetensors").is_file():
+                    idx += 1
+                safe_name = f"{safe_name}_{idx}"
 
         try:
             from launcher.voice_wizard import VoiceCloningWizard
@@ -1819,6 +1910,172 @@ class StudioWindow(QMainWindow):
             self._populate_voice_combos()
             self._update_ptt_button_text()
         self._refresh_models_tab()
+
+    def _on_export_voice(self):
+        """Export/download active voice .safetensors profile to user-chosen directory."""
+        import shutil
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        cur_v = self.cfg.get("models", {}).get("tts_voice", "my_pocket_voice")
+
+        # Resolve source file
+        src_file = None
+        sugg_name = "my_author_voice.safetensors"
+        if cur_v == "my_pocket_voice":
+            for cand in [Path("CONFIG/stage_3_voice/my_pocket_voice.safetensors"), Path("stage_3_voice/models/pocket_tts/my_pocket_voice.safetensors")]:
+                if cand.is_file():
+                    src_file = cand
+                    sugg_name = "author_voice_my_pocket_voice.safetensors"
+                    break
+        elif cur_v.startswith("custom:"):
+            fname = cur_v.split(":", 1)[1]
+            cand = Path("CONFIG/stage_3_voice/voices") / fname
+            if cand.is_file():
+                src_file = cand
+                sugg_name = fname
+        else:
+            for cand in [Path("stage_3_voice/models/pocket_tts/embeddings") / f"{cur_v}.safetensors", Path("CONFIG/stage_3_voice/embeddings") / f"{cur_v}.safetensors"]:
+                if cand.is_file():
+                    src_file = cand
+                    sugg_name = f"stock_voice_{cur_v}.safetensors"
+                    break
+
+        if src_file is None or not src_file.is_file():
+            QMessageBox.warning(
+                self,
+                "Файл не найден" if not is_zh else "未找到文件",
+                "Файл текущего голосового профиля не найден на диске для экспорта."
+                if not is_zh else "当前音色文件在本地不存在，无法导出。"
+            )
+            return
+
+        dest_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспортировать / Скачать голос" if not is_zh else "导出 / 下载声音档案",
+            sugg_name,
+            "SafeTensors Files (*.safetensors);;All Files (*.*)"
+        )
+        if not dest_path:
+            return
+
+        try:
+            shutil.copy2(src_file, dest_path)
+            QMessageBox.information(
+                self,
+                "Успешный экспорт" if not is_zh else "导出成功",
+                f"Файл голоса успешно сохранен:\n{dest_path}"
+                if not is_zh else f"声音档案已成功保存至:\n{dest_path}"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка экспорта" if not is_zh else "导出失败", str(e))
+
+    def _on_import_voice(self):
+        """Import an existing .safetensors voice profile from external file."""
+        import shutil
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+
+        src_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Импортировать файл голоса" if not is_zh else "导入声音档案",
+            "",
+            "SafeTensors Files (*.safetensors);;All Files (*.*)"
+        )
+        if not src_path:
+            return
+
+        p = Path(src_path)
+        if not p.is_file() or p.stat().st_size < 1000:
+            QMessageBox.warning(
+                self,
+                "Некорректный файл" if not is_zh else "无效文件",
+                "Выбранный файл поврежден или имеет неверный формат."
+                if not is_zh else "选中的文件损坏或格式无效。"
+            )
+            return
+
+        base_name = p.stem.strip().lower()
+        safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in base_name) or "imported_voice"
+        if safe_name == "my_pocket_voice":
+            safe_name = "author_voice_imported"
+
+        voices_dir = Path("CONFIG/stage_3_voice/voices")
+        voices_dir.mkdir(parents=True, exist_ok=True)
+        models_dir = Path("stage_3_voice/models/pocket_tts")
+        models_dir.mkdir(parents=True, exist_ok=True)
+
+        target_file = voices_dir / f"{safe_name}.safetensors"
+        idx = 2
+        while target_file.is_file():
+            target_file = voices_dir / f"{safe_name}_{idx}.safetensors"
+            idx += 1
+
+        try:
+            shutil.copy2(p, target_file)
+            shutil.copy2(p, models_dir / target_file.name)
+            custom_id = f"custom:{target_file.name}"
+            self.cfg.setdefault("models", {})["tts_voice"] = custom_id
+            save_settings(self.cfg)
+            self.mm.set_voice(custom_id)
+            self._populate_voice_combos()
+            self._update_ptt_button_text()
+            self._refresh_models_tab()
+            QMessageBox.information(
+                self,
+                "Голос импортирован" if not is_zh else "导入成功",
+                f"Новый голос '{target_file.stem}' успешно добавлен и активирован!"
+                if not is_zh else f"新声音档案 '{target_file.stem}' 已成功导入并启用！"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка импорта" if not is_zh else "导入失败", str(e))
+
+    def _on_delete_voice(self):
+        """Safely delete selected custom voice profile (with protection for author/stock voices)."""
+        is_zh = (getattr(self.mm, "pipeline", "ru_en") == "zh_en")
+        cur_v = self.cfg.get("models", {}).get("tts_voice", "my_pocket_voice")
+
+        if not str(cur_v).startswith("custom:"):
+            QMessageBox.information(
+                self,
+                "Защита от удаления" if not is_zh else "保护提示",
+                "Голос автора и стандартные голоса защищены от удаления.\n\nУдалять можно только свои клонированные голоса."
+                if not is_zh else "作者原声与内置标准音色受系统保护，不可删除。\n\n仅可删除用户自行克隆的声音档案。"
+            )
+            return
+
+        fname = cur_v.split(":", 1)[1]
+        clean_name = fname.replace(".safetensors", "").replace("_", " ").title()
+
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение удаления" if not is_zh else "确认删除",
+            f"Вы уверены, что хотите навсегда удалить голос '{clean_name}'?\n\nФайл: {fname}"
+            if not is_zh else f"确定要永久删除声音档案 '{clean_name}' 吗？\n\n文件: {fname}",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Delete files
+        for p in [Path("CONFIG/stage_3_voice/voices") / fname, Path("stage_3_voice/models/pocket_tts") / fname]:
+            try:
+                if p.is_file():
+                    p.unlink()
+            except Exception:
+                pass
+
+        # Switch to author voice
+        self.cfg.setdefault("models", {})["tts_voice"] = "my_pocket_voice"
+        save_settings(self.cfg)
+        self.mm.set_voice("my_pocket_voice")
+        self._populate_voice_combos()
+        self._update_ptt_button_text()
+        self._refresh_models_tab()
+        QMessageBox.information(
+            self,
+            "Голос удален" if not is_zh else "删除成功",
+            f"Голос '{clean_name}' удален. Активным установлен голос автора."
+            if not is_zh else f"声音档案 '{clean_name}' 已删除，已切换回作者原声。"
+        )
 
     def _on_click_bind_ptt(self):
         """Open clean key capture dialog to bind any keyboard, mouse, or gamepad button."""
@@ -2100,6 +2357,12 @@ class StudioWindow(QMainWindow):
                 self.lbl_voice_main.setText("当前音色:")
             if hasattr(self, "btn_add_voice_main"):
                 self.btn_add_voice_main.setText("🎙 录制专属声音 (7秒)")
+            if hasattr(self, "btn_export_voice"):
+                self.btn_export_voice.setText("💾 下载 / 导出音色")
+            if hasattr(self, "btn_import_voice"):
+                self.btn_import_voice.setText("📂 导入音色文件")
+            if hasattr(self, "btn_delete_voice"):
+                self.btn_delete_voice.setText("🗑 删除克隆声音")
             if hasattr(self, "grp_ptt"):
                 self.grp_ptt.setTitle("🎮 按键对讲设置 (Push-to-Talk: 键盘、鼠标、VR/手柄)")
             if hasattr(self, "lbl_ptt_prompt"):
@@ -2196,6 +2459,12 @@ class StudioWindow(QMainWindow):
                 self.lbl_voice_main.setText("Активный тембр:")
             if hasattr(self, "btn_add_voice_main"):
                 self.btn_add_voice_main.setText("🎙 Записать свой голос (7 сек)")
+            if hasattr(self, "btn_export_voice"):
+                self.btn_export_voice.setText("💾 Скачать / Экспорт")
+            if hasattr(self, "btn_import_voice"):
+                self.btn_import_voice.setText("📂 Загрузить голос")
+            if hasattr(self, "btn_delete_voice"):
+                self.btn_delete_voice.setText("🗑 Удалить клон")
             if hasattr(self, "grp_ptt"):
                 self.grp_ptt.setTitle("🎮 Управление Push-to-Talk (Клавиатура, Мышь, VR / Геймпад)")
             if hasattr(self, "lbl_ptt_prompt"):

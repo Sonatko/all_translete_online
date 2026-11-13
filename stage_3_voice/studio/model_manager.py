@@ -46,7 +46,7 @@ class ModelManager:
         self._tts_current_voice: str = "my_pocket_voice"
         self._tts_status: str = "unloaded"
         self._tts_error: str = ""
-        self.tts_speed: float = 0.92  # Natural speech pacing (8% deceleration, zero robotic artifacts)
+        self.tts_speed: float = 1.0  # 1.0 = Pure neural synthesis (zero robotic / comb-filtering artifacts)
 
     def set_pipeline(self, pipeline: str, auto_reload: bool = False) -> bool:
         """Switch language pipeline between "ru_en" and "zh_en"."""
@@ -422,21 +422,20 @@ mimi:
         voices_dir = CONFIG_DIR / "voices"
         voices_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Author's Pre-trained Voice
-        clone_default = CONFIG_DIR / "my_pocket_voice.safetensors"
-        if not clone_default.is_file():
-            clone_default = MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"
-        if clone_default.is_file():
-            voices.append(("my_pocket_voice", "⭐ Голос автора (my_pocket_voice)"))
+        is_zh = (self.pipeline == "zh_en")
+
+        # 1. Author's Pre-trained Voice (Always present as primary standard)
+        author_label = "⭐ 作者原声 (my_pocket_voice)" if is_zh else "⭐ Голос автора (my_pocket_voice)"
+        voices.append(("my_pocket_voice", author_label))
 
         # 2. Standard Built-in Voices
         stock = [
-            ("juergen", "Стандартный: Juergen (Мужской, уверенный)"),
-            ("marius", "Стандартный: Marius (Мужской, спокойный)"),
-            ("paul", "Стандартный: Paul (Мужской, баритон)"),
-            ("charles", "Стандартный: Charles (Мужской, глубокий)"),
-            ("alba", "Стандартный: Alba (Женский, выразительный)"),
-            ("fantine", "Стандартный: Fantine (Женский, мягкий)"),
+            ("juergen", "标准音色: Juergen (男声, 稳重)" if is_zh else "Стандартный: Juergen (Мужской, уверенный)"),
+            ("marius", "标准音色: Marius (男声, 沉着)" if is_zh else "Стандартный: Marius (Мужской, спокойный)"),
+            ("alba", "标准音色: Alba (女声, 温暖)" if is_zh else "Стандартный: Alba (Женский, теплый)"),
+            ("fantine", "标准音色: Fantine (女声, 柔和)" if is_zh else "Стандартный: Fantine (Женский, мягкий)"),
+            ("paul", "标准音色: Paul (男声, 叙事)" if is_zh else "Стандартный: Paul (Мужской, баритон)"),
+            ("charles", "标准音色: Charles (男声, 深沉)" if is_zh else "Стандартный: Charles (Мужской, глубокий)"),
         ]
         voices.extend(stock)
 
@@ -444,7 +443,8 @@ mimi:
         for p in sorted(voices_dir.glob("*.safetensors")):
             v_id = f"custom:{p.name}"
             v_title = p.stem.replace("_", " ").title()
-            voices.append((v_id, f"👤 Мой голос: {v_title}"))
+            prefix = "👤 我的克隆: " if is_zh else "👤 Свой клон: "
+            voices.append((v_id, f"{prefix}{v_title}"))
 
         return voices
 
@@ -473,11 +473,35 @@ mimi:
                 clone_path = CONFIG_DIR / "my_pocket_voice.safetensors"
                 if not clone_path.is_file():
                     clone_path = MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"
+
+                # If missing locally on clean PC, download on-demand from GitHub / China mirror
+                if not clone_path.is_file():
+                    log.info("Author's voice missing locally. Downloading via high-speed mirror...")
+                    clone_path = CONFIG_DIR / "my_pocket_voice.safetensors"
+                    clone_path.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        from launcher.model_downloader import download_single_file
+                        urls = [
+                            "https://ghproxy.net/https://github.com/Sonatko/all_translete_online/raw/main/CONFIG/stage_3_voice/my_pocket_voice.safetensors",
+                            "https://github.com/Sonatko/all_translete_online/raw/main/CONFIG/stage_3_voice/my_pocket_voice.safetensors",
+                        ]
+                        download_single_file(urls, clone_path, expected_size=4_425_520)
+                    except Exception as dle:
+                        log.warning("On-demand author voice download error: %s", dle)
+
                 if clone_path.is_file():
+                    # Sync to models folder
+                    models_copy = MODELS_DIR / "pocket_tts" / "my_pocket_voice.safetensors"
+                    models_copy.parent.mkdir(parents=True, exist_ok=True)
+                    if not models_copy.is_file():
+                        try:
+                            shutil.copy2(clone_path, models_copy)
+                        except Exception:
+                            pass
                     self._tts_voice_state = pocket_tts.models.tts_model._import_model_state(
                         str(clone_path), self._tts_model.device
                     )
-                    log.info("Voice state loaded from user clone: %s", clone_path)
+                    log.info("Voice state loaded from author voice: %s", clone_path)
                     return True
                 else:
                     log.warning("Voice clone file not found at %s, falling back to stock voice 'juergen'", clone_path)

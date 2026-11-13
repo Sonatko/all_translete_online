@@ -204,9 +204,18 @@ class AudioEngine:
 
         # Main Game Output Stream (Playback 3/4 -> Topping Loopback 1+2)
         try:
+            out_ch = 2
+            try:
+                if out_id is not None:
+                    d_out_info = sd.query_devices(out_id)
+                    if d_out_info.get("max_output_channels", 2) < 2:
+                        out_ch = 1
+            except Exception:
+                out_ch = 2
+
             self._out_stream = sd.OutputStream(
                 device=out_id,
-                channels=1,
+                channels=out_ch,
                 samplerate=DEFAULT_SR,
                 blocksize=BLOCK_SIZE,
                 latency="low",
@@ -214,7 +223,7 @@ class AudioEngine:
                 callback=self._out_callback,
             )
             self._out_stream.start()
-            log.info("Output stream started on device: %s (id=%s)", audio_cfg.get("output_device"), out_id)
+            log.info("Output stream started on device: %s (id=%s, channels=%d)", audio_cfg.get("output_device"), out_id, out_ch)
         except Exception as oe:
             log.error("Failed to start output audio stream: %s", oe)
             self._out_stream = None
@@ -222,9 +231,17 @@ class AudioEngine:
         # Sidetone Stream (Headphones Playback 1/2) - optional monitoring
         if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
             try:
+                side_ch = 2
+                try:
+                    d_side_info = sd.query_devices(side_id)
+                    if d_side_info.get("max_output_channels", 2) < 2:
+                        side_ch = 1
+                except Exception:
+                    side_ch = 2
+
                 self._sidetone_stream = sd.OutputStream(
                     device=side_id,
-                    channels=1,
+                    channels=side_ch,
                     samplerate=DEFAULT_SR,
                     blocksize=BLOCK_SIZE,
                     latency="low",
@@ -232,7 +249,7 @@ class AudioEngine:
                     callback=self._sidetone_callback,
                 )
                 self._sidetone_stream.start()
-                log.info("Sidetone stream started on headphones: %s (id=%s)", audio_cfg.get("sidetone_device"), side_id)
+                log.info("Sidetone stream started on headphones: %s (id=%s, channels=%d)", audio_cfg.get("sidetone_device"), side_id, side_ch)
             except Exception as se:
                 log.warning("Sidetone stream could not be started: %s (monitoring disabled)", se)
                 self._sidetone_stream = None
@@ -324,9 +341,18 @@ class AudioEngine:
             self._in_stream = None
 
         try:
+            out_ch = 2
+            try:
+                if out_id is not None:
+                    d_out_info = sd.query_devices(out_id)
+                    if d_out_info.get("max_output_channels", 2) < 2:
+                        out_ch = 1
+            except Exception:
+                out_ch = 2
+
             self._out_stream = sd.OutputStream(
                 device=out_id,
-                channels=1,
+                channels=out_ch,
                 samplerate=DEFAULT_SR,
                 blocksize=BLOCK_SIZE,
                 dtype="float32",
@@ -339,9 +365,17 @@ class AudioEngine:
 
         if audio_cfg.get("sidetone_enabled", True) and side_id is not None and side_id != out_id:
             try:
+                side_ch = 2
+                try:
+                    d_side_info = sd.query_devices(side_id)
+                    if d_side_info.get("max_output_channels", 2) < 2:
+                        side_ch = 1
+                except Exception:
+                    side_ch = 2
+
                 self._sidetone_stream = sd.OutputStream(
                     device=side_id,
-                    channels=1,
+                    channels=side_ch,
                     samplerate=DEFAULT_SR,
                     blocksize=BLOCK_SIZE,
                     dtype="float32",
@@ -427,13 +461,17 @@ class AudioEngine:
                 break
         merged = np.concatenate(pending) if len(pending) > 1 else pending[0]
 
+        n_ch = outdata.shape[1]
         if len(merged) >= frames:
-            outdata[:, 0] = merged[:frames]
+            chunk = merged[:frames]
+            for c in range(n_ch):
+                outdata[:, c] = chunk
             self._out_pending = merged[frames:]
         else:
             if len(merged) > 0:
-                outdata[:len(merged), 0] = merged
-                outdata[len(merged):, 0] = 0.0
+                for c in range(n_ch):
+                    outdata[:len(merged), c] = merged
+                    outdata[len(merged):, c] = 0.0
             else:
                 outdata.fill(0.0)
             self._out_pending = np.array([], dtype=np.float32)
@@ -453,13 +491,17 @@ class AudioEngine:
                 break
         merged = np.concatenate(pending) if len(pending) > 1 else pending[0]
 
+        n_ch = outdata.shape[1]
         if len(merged) >= frames:
-            outdata[:, 0] = merged[:frames]
+            chunk = merged[:frames]
+            for c in range(n_ch):
+                outdata[:, c] = chunk
             self._sidetone_pending = merged[frames:]
         else:
             if len(merged) > 0:
-                outdata[:len(merged), 0] = merged
-                outdata[len(merged):, 0] = 0.0
+                for c in range(n_ch):
+                    outdata[:len(merged), c] = merged
+                    outdata[len(merged):, c] = 0.0
             else:
                 outdata.fill(0.0)
             self._sidetone_pending = np.array([], dtype=np.float32)
@@ -576,25 +618,32 @@ class AudioEngine:
                 if tts_audio_24k is not None and len(tts_audio_24k) > 0:
                     out_48k = signal.resample_poly(tts_audio_24k, 2, 1).astype(np.float32)
 
-                    # Chunk and dispatch to Playback 3/4 (Game) with timeout protection
-                    chunk_size = BLOCK_SIZE
-                    for i in range(0, len(out_48k), chunk_size):
-                        chunk = out_48k[i:i + chunk_size]
-                        try:
-                            self._out_queue.put(chunk, timeout=0.05)
-                        except queue.Full:
-                            break
+                    # Studio Warmth EQ: 2nd-order Butterworth low-pass at 11 kHz to remove digital fizz
+                    # and harsh metallic sibilance without sacrificing speech clarity
+                    try:
+                        sos_warmth = signal.butter(2, 11000, "low", fs=DEFAULT_SR, output="sos")
+                        out_48k = signal.sosfilt(sos_warmth, out_48k).astype(np.float32)
+                    except Exception:
+                        pass
+
+                    # Headroom peak limiting (-1.0 dBFS) to prevent DAC / WebRTC clipping
+                    peak_up = float(np.max(np.abs(out_48k)))
+                    if peak_up > 0.88:
+                        out_48k = out_48k * (0.88 / peak_up)
+
+                    # Smooth, continuous FIFO delivery to Playback 3/4 (Game) without chunking underruns
+                    try:
+                        self._out_queue.put(out_48k, timeout=0.5)
+                    except queue.Full:
+                        pass
 
                     # Dispatch to Sidetone (Headphones Playback 1/2) only if sidetone stream is active
                     if self._sidetone_stream is not None and self.config.get("audio", {}).get("sidetone_enabled", True):
                         sidetone_vol = float(self.config.get("audio", {}).get("sidetone_volume", 0.70))
-                        sidetone_chunk_arr = out_48k * sidetone_vol
-                        for i in range(0, len(sidetone_chunk_arr), chunk_size):
-                            chunk = sidetone_chunk_arr[i:i + chunk_size]
-                            try:
-                                self._sidetone_queue.put_nowait(chunk)
-                            except queue.Full:
-                                break
+                        try:
+                            self._sidetone_queue.put(out_48k * sidetone_vol, timeout=0.5)
+                        except queue.Full:
+                            pass
 
                 # Record transcript record
                 record = {

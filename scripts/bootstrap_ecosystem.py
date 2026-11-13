@@ -256,6 +256,37 @@ def setup_stage_1_livetranslate() -> bool:
     return True
 
 
+def setup_stage_3_voice() -> bool:
+    """Ensure Stage 3 models directory and author's voice profile are in place."""
+    log.info("--- [3/3] Verifying Stage 3 (Voice Studio & Author Profile) ---")
+    s3_models = PROJECT_ROOT / "stage_3_voice" / "models" / "pocket_tts"
+    s3_models.mkdir(parents=True, exist_ok=True)
+    author_cfg = CONFIG_DIR / "stage_3_voice" / "my_pocket_voice.safetensors"
+    author_dest = s3_models / "my_pocket_voice.safetensors"
+
+    if author_cfg.is_file() and not author_dest.is_file():
+        try:
+            shutil.copy2(author_cfg, author_dest)
+            log.info("Provisioned author's voice to Stage 3 models directory.")
+        except Exception as e:
+            log.warning("Could not copy author voice: %s", e)
+    elif not author_dest.is_file() and not author_cfg.is_file():
+        log.info("Author voice missing locally, fetching from high-speed mirror...")
+        urls = [
+            "https://ghproxy.net/https://github.com/Sonatko/all_translete_online/raw/main/CONFIG/stage_3_voice/my_pocket_voice.safetensors",
+            "https://github.com/Sonatko/all_translete_online/raw/main/CONFIG/stage_3_voice/my_pocket_voice.safetensors",
+        ]
+        author_cfg.parent.mkdir(parents=True, exist_ok=True)
+        if download_with_fallback(urls, author_cfg):
+            try:
+                shutil.copy2(author_cfg, author_dest)
+                log.info("Author voice successfully installed into Stage 3.")
+            except Exception:
+                pass
+
+    return True
+
+
 def verify_integrity() -> bool:
     """Audit all patches using the launcher's PatchIntegrityChecker."""
     try:
@@ -290,9 +321,10 @@ def main():
 
     ok_s2 = setup_stage_2_overtranslate()
     ok_s1 = setup_stage_1_livetranslate()
+    ok_s3 = setup_stage_3_voice()
     ok_audit = verify_integrity()
 
-    if ok_s1 and ok_s2 and ok_audit:
+    if ok_s1 and ok_s2 and ok_s3 and ok_audit:
         if "--quiet" not in sys.argv and "-q" not in sys.argv:
             log.info("============================================================")
             log.info("  [SUCCESS] ALL STAGES DEPLOYED AND PATCHED SUCCESSFULLY!")
